@@ -35,6 +35,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - Gate evidence contracts reject summary-only or wrong-kind PASS records
 - Current-digest FAIL/BLOCKED remains blocking until a new digest
 - Active execution artifacts are cross-checked; corrupt evidence/review JSON fails closed
+- Windows Vitest worker RPC teardown timeout after a fully green suite is not treated as a test failure
 
 ## [0.2.0] - 2026-08-29
 

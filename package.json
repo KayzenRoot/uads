@@ -45,7 +45,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "capture-evidence": "node scripts/validate/capture-evidence.mjs",
-    "test": "vitest run --maxWorkers=1",
+    "test": "node scripts/validate/run-vitest.mjs",
     "eval:orchestrator": "node dist/eval/run.js",
     "eval:execution": "node dist/eval/execution.js",
     "validate:skills": "node scripts/validate/validate-skills.mjs",
