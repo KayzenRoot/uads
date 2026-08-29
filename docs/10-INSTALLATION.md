@@ -38,7 +38,7 @@ Both wrappers run `scripts/install/install.mjs`, which:
 3. Copies `core/`, `skills/`, and `agents/` (skips existing files unless `--force`)
 4. Installs dependencies and builds the CLI if needed
 5. Installs the `uads` package with `npm install --global --prefix <dir>`
-6. Verifies the CLI by running `node <prefix>/node_modules/uads/dist/cli.js --help` and `doctor` (no shell interpolation of paths)
+6. Verifies the CLI by running `node <prefix>/(lib/)node_modules/uads/dist/cli.js --help` and `doctor` (no shell interpolation of paths)
 7. Prints a PATH hint if the prefix is not already on PATH
 
 If the default global npm prefix is not writable, the installer falls back to `~/.uads/npm` (or `UADS_NPM_PREFIX`) and explains the failure instead of silently skipping CLI installation.

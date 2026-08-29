@@ -70,27 +70,30 @@ function copyTree(src, dest, force) {
   }
 }
 
+function resolveModuleCli(prefix) {
+  const candidates = [
+    path.join(prefix, "node_modules", "uads", "dist", "cli.js"),
+    path.join(prefix, "lib", "node_modules", "uads", "dist", "cli.js"),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
 function resolveCli(prefix) {
   const unix = path.join(prefix, "bin", "uads");
   const winCmd = path.join(prefix, "uads.cmd");
   const winPs = path.join(prefix, "uads.ps1");
-  const moduleCli = path.join(prefix, "node_modules", "uads", "dist", "cli.js");
+  const moduleCli = resolveModuleCli(prefix);
   if (process.platform === "win32") {
     if (fs.existsSync(winCmd)) return { kind: "bin", path: winCmd };
     if (fs.existsSync(winPs)) return { kind: "bin", path: winPs };
   }
   if (fs.existsSync(unix)) return { kind: "bin", path: unix };
-  if (fs.existsSync(moduleCli)) return { kind: "node", path: moduleCli };
+  if (moduleCli) return { kind: "node", path: moduleCli };
   return null;
 }
 
 function verifyCli(prefix, resolved) {
-  const moduleCli = path.join(prefix, "node_modules", "uads", "dist", "cli.js");
-  const cliJs = fs.existsSync(moduleCli)
-    ? moduleCli
-    : resolved.kind === "node"
-      ? resolved.path
-      : null;
+  const cliJs = resolveModuleCli(prefix) ?? (resolved.kind === "node" ? resolved.path : null);
   if (!cliJs) {
     fail(`Cannot verify CLI without dist/cli.js under ${prefix}`);
   }
