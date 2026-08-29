@@ -49,14 +49,14 @@
     "uads": "node dist/cli.js"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "archiver": "^7.0.1",
-    "commander": "^12.1.0",
-    "yauzl": "^2.10.0"
+    "commander": "^12.1.0"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/archiver": "^6.0.3",
     "@types/node": "^22.10.2",
-    "@types/yauzl": "^2.10.3",
     "typescript": "^5.7.2",
     "vitest": "^3.2.7"
   }

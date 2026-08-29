@@ -256,7 +256,10 @@ export async function createReviewBundle(input: {
     requireEvidence:
       input.requireEvidence ?? EVIDENCE_FILE_NAMES.every((name) => evidenceIncluded.includes(name)),
     forbiddenSubstrings: input.forbiddenSubstrings,
-  });
+  }).catch((error: unknown): { ok: false; errors: string[] } => ({
+    ok: false,
+    errors: [`inspect-failed:${error instanceof Error ? error.message : "unknown"}`],
+  }));
 
   const manifest: ReviewManifest = {
     ...manifestBase,
