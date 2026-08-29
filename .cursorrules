@@ -1,0 +1,19 @@
+# UADS Cursor rules
+
+UADS (Universal Autonomous Development Studio) is a NexLabs project.
+
+## Architecture Freeze v0.2
+
+- Global-first: operational state under `~/.uads/`, never in the managed project by default.
+- Zero project footprint: no caches, work orders, indexes, or review ZIPs in-repo unless explicitly opted in.
+- Evidence-first: completion claims need commands, outputs, or files.
+- Review ZIPs must exclude secrets and heavy directories.
+- Do not implement the full orchestrator, specialist agents, marketplace, or deep UGAS integration in Prompt 001 leftovers.
+
+## CLI
+
+Foundation commands: `uads --help`, `uads doctor`, `uads status`, `uads review`.
+
+## Docs
+
+Normative docs live in `docs/`. Extra ideas go to `docs/14-BACKLOG.md`.

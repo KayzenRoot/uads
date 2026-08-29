@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/repository-map.schema.json",
+  "title": "UADS Repository Map",
+  "description": "Structural map used for context routing and impact analysis. Cached in the sidecar workspace.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "projectId", "generatedAt", "root"],
+  "properties": {
+    "schema": { "const": "uads.repository-map" },
+    "schemaVersion": { "const": "0.1.0" },
+    "projectId": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "root": { "type": "string" },
+    "languagePrimary": { "type": "string" },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "kind": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "kind": { "type": "string" }
+        }
+      }
+    },
+    "entrypoints": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

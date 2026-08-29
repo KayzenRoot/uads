@@ -1,0 +1,63 @@
+{
+  "name": "uads",
+  "version": "0.1.0",
+  "description": "UADS - Universal Autonomous Development Studio by NexLabs. Global-first autonomous software engineering orchestration framework.",
+  "license": "Apache-2.0",
+  "author": "NexLabs",
+  "homepage": "https://github.com/KayzenRoot/uads",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KayzenRoot/uads.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KayzenRoot/uads/issues"
+  },
+  "keywords": [
+    "uads",
+    "nexlabs",
+    "orchestration",
+    "agents",
+    "architecture",
+    "cli"
+  ],
+  "type": "module",
+  "bin": {
+    "uads": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "schemas",
+    "skills",
+    "scripts",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "VERSION"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "capture-evidence": "node scripts/validate/capture-evidence.mjs",
+    "test": "vitest run",
+    "validate": "node scripts/validate/validate-foundation.mjs",
+    "review": "node dist/cli.js review",
+    "uads": "node dist/cli.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "commander": "^12.1.0",
+    "yauzl": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^22.10.2",
+    "@types/yauzl": "^2.10.3",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.7"
+  }
+}

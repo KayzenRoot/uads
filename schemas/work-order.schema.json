@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/work-order.schema.json",
+  "title": "UADS Work Order",
+  "description": "Normalized unit of work for the orchestrator. Stored in the sidecar workspace.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "workOrderId", "projectId", "title", "status", "createdAt"],
+  "properties": {
+    "schema": { "const": "uads.work-order" },
+    "schemaVersion": { "const": "0.1.0" },
+    "workOrderId": { "type": "string" },
+    "projectId": { "type": "string" },
+    "title": { "type": "string" },
+    "intent": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "queued", "active", "blocked", "completed", "cancelled"]
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "scopeClass": {
+      "type": "string",
+      "enum": ["trivial", "local", "cross-cutting", "architectural"]
+    },
+    "contextRadius": {
+      "type": "string",
+      "enum": ["file", "module", "service", "repository", "system"]
+    },
+    "tokenBudget": {
+      "type": "object",
+      "properties": {
+        "softLimit": { "type": "integer", "minimum": 0 },
+        "hardLimit": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "riskFlags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
