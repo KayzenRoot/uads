@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isSecretFileName, shouldExcludeFromReview } from "../src/lib/exclusions.js";
+import {
+  isOrdinaryReviewableSource,
+  isSecretFileName,
+  isUnsafeZipEntryName,
+  shouldExcludeFromReview,
+} from "../src/lib/exclusions.js";
 
 describe("secret and heavy-path exclusion", () => {
   it("excludes environment files, keys, and credential names", () => {
@@ -13,7 +18,7 @@ describe("secret and heavy-path exclusion", () => {
   });
 
   it("excludes heavy generated directories", () => {
-    expect(shouldExcludeFromReview("node_modules/archiver/index.js")).toBe(true);
+    expect(shouldExcludeFromReview("node_modules/left-pad/index.js")).toBe(true);
     expect(shouldExcludeFromReview(".git/config")).toBe(true);
     expect(shouldExcludeFromReview("dist/cli.js")).toBe(true);
     expect(shouldExcludeFromReview("coverage/lcov.info")).toBe(true);
@@ -27,5 +32,23 @@ describe("secret and heavy-path exclusion", () => {
     expect(shouldExcludeFromReview("schemas/checkpoint.schema.json")).toBe(false);
     expect(shouldExcludeFromReview("skills/uads-orchestrator/SKILL.md")).toBe(false);
     expect(shouldExcludeFromReview("README.md")).toBe(false);
+  });
+
+  it("keeps ordinary source whose names mention secrets, tokens, or credentials", () => {
+    expect(shouldExcludeFromReview("src/lib/secrets.ts")).toBe(false);
+    expect(shouldExcludeFromReview("src/auth/token-service.ts")).toBe(false);
+    expect(shouldExcludeFromReview("tests/password-policy.test.ts")).toBe(false);
+    expect(shouldExcludeFromReview("docs/credential-handling.md")).toBe(false);
+    expect(isOrdinaryReviewableSource("src/lib/secrets.ts")).toBe(true);
+    expect(isOrdinaryReviewableSource("src/auth/token-service.ts")).toBe(true);
+    expect(isOrdinaryReviewableSource("tests/password-policy.test.ts")).toBe(true);
+    expect(isOrdinaryReviewableSource("docs/credential-handling.md")).toBe(true);
+  });
+
+  it("rejects unsafe ZIP entry names", () => {
+    expect(isUnsafeZipEntryName("../escape.txt")).toBe(true);
+    expect(isUnsafeZipEntryName("/abs/path.txt")).toBe(true);
+    expect(isUnsafeZipEntryName("C:/windows/path.txt")).toBe(true);
+    expect(isUnsafeZipEntryName("project/src/lib/secrets.ts")).toBe(false);
   });
 });

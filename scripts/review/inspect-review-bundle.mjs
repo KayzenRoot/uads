@@ -7,6 +7,10 @@ if (!zipPath) {
   process.exit(1);
 }
 
-const result = await inspectReviewBundle(zipPath, { requireEvidence: true });
+const result = await inspectReviewBundle(zipPath, {
+  requireEvidence: true,
+  requireGitHead: true,
+  requireCleanTree: true,
+});
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 process.exit(result.ok ? 0 : 1);

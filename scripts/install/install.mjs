@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -27,27 +28,6 @@ function parseArgs(argv) {
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exit(1);
-}
-
-function npmInvocation() {
-  const cli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-  if (fs.existsSync(cli)) {
-    return { bin: process.execPath, prefix: [cli] };
-  }
-  return {
-    bin: process.platform === "win32" ? "npm.cmd" : "npm",
-    prefix: [],
-  };
-}
-
-function runNpm(args, cwd = root) {
-  const inv = npmInvocation();
-  return spawnSync(inv.bin, [...inv.prefix, ...args], {
-    cwd,
-    encoding: "utf8",
-    env: process.env,
-    shell: inv.prefix.length === 0 && process.platform === "win32",
-  });
 }
 
 function isWritable(dir) {
@@ -104,18 +84,21 @@ function resolveCli(prefix) {
   return null;
 }
 
-function verifyCli(resolved) {
-  const help =
-    resolved.kind === "node"
-      ? spawnSync(process.execPath, [resolved.path, "--help"], { encoding: "utf8" })
-      : spawnSync(resolved.path, ["--help"], { encoding: "utf8", shell: process.platform === "win32" });
+function verifyCli(prefix, resolved) {
+  const moduleCli = path.join(prefix, "node_modules", "uads", "dist", "cli.js");
+  const cliJs = fs.existsSync(moduleCli)
+    ? moduleCli
+    : resolved.kind === "node"
+      ? resolved.path
+      : null;
+  if (!cliJs) {
+    fail(`Cannot verify CLI without dist/cli.js under ${prefix}`);
+  }
+  const help = spawnSync(process.execPath, [cliJs, "--help"], { encoding: "utf8", shell: false });
   if (help.status !== 0 || !help.stdout.includes("uads")) {
     fail(`uads --help failed after install.\n${help.stdout}\n${help.stderr}`);
   }
-  const doctor =
-    resolved.kind === "node"
-      ? spawnSync(process.execPath, [resolved.path, "doctor"], { encoding: "utf8" })
-      : spawnSync(resolved.path, ["doctor"], { encoding: "utf8", shell: process.platform === "win32" });
+  const doctor = spawnSync(process.execPath, [cliJs, "doctor"], { encoding: "utf8", shell: false });
   if (doctor.status !== 0 || !doctor.stdout.includes("UADS doctor")) {
     fail(`uads doctor failed after install.\n${doctor.stdout}\n${doctor.stderr}`);
   }
@@ -217,7 +200,7 @@ if (!resolved) {
   fail(`CLI files were not found under ${prefix} after npm install.`);
 }
 
-verifyCli(resolved);
+verifyCli(prefix, resolved);
 
 const pathHint = process.platform === "win32" ? prefix : path.join(prefix, "bin");
 fs.writeFileSync(

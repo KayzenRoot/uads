@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { runNpm, runProcess } from "./exec.js";
 import { sanitizeReviewText } from "./secrets.js";
 import type { UadsPaths } from "./workspace.js";
 
@@ -91,26 +91,9 @@ export function writeValidationSummary(evidenceDir: string, summary: ValidationS
   );
 }
 
-function runNpm(args: string[], cwd?: string) {
-  const cli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-  if (fs.existsSync(cli)) {
-    return spawnSync(process.execPath, [cli, ...args], {
-      cwd,
-      encoding: "utf8",
-      env: process.env,
-    });
-  }
-  return spawnSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
-    cwd,
-    encoding: "utf8",
-    env: process.env,
-    shell: process.platform === "win32",
-  });
-}
-
 function toolVersion(command: string): string {
   try {
-    const result = command === "npm" ? runNpm(["--version"]) : spawnSync(command, ["--version"], { encoding: "utf8" });
+    const result = command === "npm" ? runNpm(["--version"]) : runProcess(command, ["--version"]);
     return `${command} ${(result.stdout || result.stderr || "").trim() || "unknown"}`.trim();
   } catch {
     return `${command} unknown`;
@@ -125,22 +108,23 @@ export function captureFoundationEvidence(input: {
   fs.mkdirSync(evidenceDir, { recursive: true });
 
   const commands: ValidationCommandRecord[] = [];
+  const hostPaths = [input.cwd, input.paths.home, input.paths.workspace];
 
   for (const gate of FOUNDATION_GATES) {
     const startedAt = new Date().toISOString();
     const startedMs = Date.now();
     const result =
       gate.command === "npm"
-        ? runNpm(gate.args, input.cwd)
-        : spawnSync(gate.command, gate.args, {
-            cwd: input.cwd,
-            encoding: "utf8",
-            env: process.env,
-          });
+        ? runNpm(gate.args, { cwd: input.cwd })
+        : runProcess(gate.command, gate.args, { cwd: input.cwd });
     const endedAt = new Date().toISOString();
     const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-    const sanitized = sanitizeReviewText(output);
-    fs.writeFileSync(path.join(evidenceDir, gate.file), sanitized.omit ? "[REDACTED:unsanitizable-output]\n" : sanitized.text, "utf8");
+    const sanitized = sanitizeReviewText(output, hostPaths);
+    fs.writeFileSync(
+      path.join(evidenceDir, gate.file),
+      sanitized.omit ? "[REDACTED:unsanitizable-output]\n" : sanitized.text,
+      "utf8",
+    );
 
     const exitCode = result.status;
     const record: ValidationCommandRecord = {

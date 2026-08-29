@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -50,7 +51,9 @@ const requiredFiles = [
   "scripts/install/install.sh",
   "scripts/install/install.ps1",
   "scripts/install/install.mjs",
+  "scripts/lib/exec.mjs",
   "scripts/review/create-review-bundle.mjs",
+  "scripts/review/inspect-review-bundle.mjs",
   "scripts/validate/capture-evidence.mjs",
   "schemas/validation-summary.schema.json",
   "src/cli.ts",
@@ -63,22 +66,20 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-function run(command, args) {
-  const result = spawnSync(command, args, {
+function runNpmGate(args) {
+  const result = runNpm(args, {
     cwd: root,
     stdio: "inherit",
-    shell: process.platform === "win32",
   });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
 }
 
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-run(npmCmd, ["run", "lint"]);
-run(npmCmd, ["run", "typecheck"]);
-run(npmCmd, ["run", "build"]);
-run(npmCmd, ["test"]);
+runNpmGate(["run", "lint"]);
+runNpmGate(["run", "typecheck"]);
+runNpmGate(["run", "build"]);
+runNpmGate(["test"]);
 
 const cli = path.join(root, "dist", "cli.js");
 for (const args of [["--help"], ["doctor"], ["status"]]) {

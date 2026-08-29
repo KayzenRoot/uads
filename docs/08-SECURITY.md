@@ -8,8 +8,9 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 - Exclude `.env*`, private keys, tokens, credential filenames, and `memory-bank/`
 - Exclude `.git/` (history can contain secrets)
 - Sanitize Git remotes (strip userinfo) before they enter a shareable manifest
-- Redact high-confidence secret signatures in source, diffs, and evidence
-- Do not serialize absolute host paths into the shareable review manifest
+- Redact high-confidence secret signatures **and** absolute host paths in source, diffs, evidence, and generated review text
+- Do not exclude ordinary source/docs/tests just because the filename contains `secret` / `token` / `password` / `credential`
+- Do not serialize absolute host paths into the shareable review manifest or ZIP text
 - Installers must not overwrite user files without `--force` / `-Force`
 - Zero project footprint reduces accidental commit of UADS caches
 

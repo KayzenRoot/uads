@@ -16,7 +16,11 @@
     "sidecar",
     "zipFileName",
     "includedFiles",
-    "exclusions"
+    "skipped",
+    "excludedDirectoryClasses",
+    "evidenceIncluded",
+    "exclusions",
+    "inspection"
   ],
   "properties": {
     "schema": { "const": "uads.review-manifest" },
@@ -59,6 +63,10 @@
         }
       }
     },
+    "excludedDirectoryClasses": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "evidenceIncluded": {
       "type": "array",
       "items": { "type": "string" }
@@ -69,6 +77,8 @@
     },
     "inspection": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "errors"],
       "properties": {
         "ok": { "type": "boolean" },
         "errors": { "type": "array", "items": { "type": "string" } }

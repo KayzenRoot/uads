@@ -29,13 +29,6 @@ export const EXCLUDED_DIRECTORY_NAMES = new Set([
   "obj",
 ]);
 
-export const EXCLUDED_FILE_GLOBS = [
-  /^\.env(\..+)?$/i,
-  /\.(pem|key|p12|pfx|jks|keystore)$/i,
-  /^(id_rsa|id_dsa|id_ecdsa|id_ed25519)(\.pub)?$/i,
-  /(^|[-_.])(secret|secrets|credential|credentials|token|passwd|password)([-_.]|$)/i,
-];
-
 export const BINARY_EXTENSIONS = new Set([
   ".png",
   ".jpg",

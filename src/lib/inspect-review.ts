@@ -1,10 +1,25 @@
+import fs from "node:fs";
+import path from "node:path";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import addFormatsImport from "ajv-formats";
 import { EVIDENCE_FILE_NAMES } from "./evidence.js";
+import { isUnsafeZipEntryName } from "./exclusions.js";
+import { findPackageRoot } from "./version.js";
 import { readZip } from "./zip-read.js";
+import { containsAbsoluteHostPath, containsUnredactedSecret } from "./secrets.js";
 
 type ReviewManifest = {
-  schema: string;
+  schema?: string;
+  schemaVersion?: string;
   repoRoot?: unknown;
   workspace?: unknown;
+  includedFiles?: string[];
+  evidenceIncluded?: string[];
+  git?: {
+    branch?: string | null;
+    head?: string | null;
+    hasCommits?: boolean;
+  };
 };
 
 export const REQUIRED_REVIEW_ENTRIES = [
@@ -24,6 +39,7 @@ const EXCLUDED_ENTRY_MARKERS = [
   "memory-bank/",
   "/dist/",
   "coverage/",
+  ".uads/",
 ];
 
 export type InspectionResult = {
@@ -31,13 +47,44 @@ export type InspectionResult = {
   errors: string[];
 };
 
-function isAbsoluteHostPath(value: string): boolean {
-  return /[A-Za-z]:\\Users\\/i.test(value) || /\/(?:Users|home)\/[A-Za-z0-9._-]+/.test(value);
+export type InspectOptions = {
+  forbiddenSubstrings?: string[];
+  requireEvidence?: boolean;
+  requireGitHead?: boolean;
+  requireCleanTree?: boolean;
+  schemaRoot?: string;
+};
+
+function loadManifestSchema(schemaRoot?: string): Record<string, unknown> {
+  const root = schemaRoot ?? findPackageRoot();
+  const schemaPath = path.join(root, "schemas", "review-manifest.schema.json");
+  return JSON.parse(fs.readFileSync(schemaPath, "utf8")) as Record<string, unknown>;
+}
+
+function applyAjvFormats(ajv: Ajv2020): void {
+  const imported = addFormatsImport as unknown as
+    | ((instance: Ajv2020) => unknown)
+    | { default?: (instance: Ajv2020) => unknown };
+  const plugin = typeof imported === "function" ? imported : imported.default;
+  if (!plugin) {
+    throw new Error("ajv-formats plugin is unavailable");
+  }
+  plugin(ajv);
+}
+
+function validateManifestSchema(manifest: unknown, schemaRoot?: string): string[] {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  applyAjvFormats(ajv);
+  const validate = ajv.compile(loadManifestSchema(schemaRoot));
+  if (validate(manifest)) {
+    return [];
+  }
+  return (validate.errors ?? []).map((error) => `schema:${error.instancePath || "/"} ${error.message ?? "invalid"}`);
 }
 
 export async function inspectReviewBundle(
   zipPath: string,
-  options: { forbiddenSubstrings?: string[]; requireEvidence?: boolean } = {},
+  options: InspectOptions = {},
 ): Promise<InspectionResult> {
   const errors: string[] = [];
   const requireEvidence = options.requireEvidence ?? true;
@@ -49,18 +96,26 @@ export async function inspectReviewBundle(
     return { ok: false, errors: [`zip-unreadable: ${error instanceof Error ? error.message : String(error)}`] };
   }
 
-  const names = new Set(entries.map((entry) => entry.name.replace(/\\/g, "/")));
+  const names = entries.map((entry) => entry.name.replace(/\\/g, "/"));
+  if (new Set(names).size !== names.length) {
+    errors.push("duplicate-entry");
+  }
+
+  const nameSet = new Set(names);
   const required = requireEvidence
     ? REQUIRED_REVIEW_ENTRIES
     : REQUIRED_REVIEW_ENTRIES.filter((name) => !name.startsWith("evidence/"));
 
   for (const requiredName of required) {
-    if (!names.has(requiredName)) {
+    if (!nameSet.has(requiredName)) {
       errors.push(`missing-entry:${requiredName}`);
     }
   }
 
   for (const name of names) {
+    if (isUnsafeZipEntryName(name)) {
+      errors.push("unsafe-entry-path");
+    }
     for (const marker of EXCLUDED_ENTRY_MARKERS) {
       if (name.includes(marker)) {
         errors.push(`excluded-path-present:${name}`);
@@ -68,7 +123,7 @@ export async function inspectReviewBundle(
     }
   }
 
-  const manifestEntry = entries.find((entry) => entry.name === "review-manifest.json");
+  const manifestEntry = entries.find((entry) => entry.name.replace(/\\/g, "/") === "review-manifest.json");
   if (!manifestEntry) {
     errors.push("missing-entry:review-manifest.json");
     return { ok: errors.length === 0, errors };
@@ -82,23 +137,51 @@ export async function inspectReviewBundle(
     return { ok: false, errors };
   }
 
-  if (manifest.schema !== "uads.review-manifest") {
-    errors.push("manifest-schema-mismatch");
-  }
+  errors.push(...validateManifestSchema(manifest, options.schemaRoot));
+
   if ("repoRoot" in manifest) {
     errors.push("manifest-has-repoRoot");
   }
   if ("workspace" in manifest) {
     errors.push("manifest-has-workspace");
   }
-  const serialized = JSON.stringify(manifest);
-  if (isAbsoluteHostPath(serialized)) {
-    errors.push("manifest-absolute-path");
+
+  const projectFiles = names
+    .filter((name) => name.startsWith("project/"))
+    .map((name) => name.slice("project/".length))
+    .sort();
+  const listedFiles = [...(manifest.includedFiles ?? [])].sort();
+  if (JSON.stringify(projectFiles) !== JSON.stringify(listedFiles)) {
+    errors.push("includedFiles-mismatch");
+  }
+
+  const evidenceFiles = names
+    .filter((name) => name.startsWith("evidence/"))
+    .map((name) => name.slice("evidence/".length))
+    .sort();
+  const listedEvidence = [...(manifest.evidenceIncluded ?? [])].sort();
+  if (requireEvidence && JSON.stringify(evidenceFiles) !== JSON.stringify(listedEvidence)) {
+    errors.push("evidenceIncluded-mismatch");
+  }
+
+  if (options.requireGitHead && !manifest.git?.head) {
+    errors.push("git-head-missing");
+  }
+
+  if (options.requireCleanTree) {
+    const statusEntry = entries.find((entry) => entry.name.replace(/\\/g, "/") === "git-status.txt");
+    const status = statusEntry?.content.toString("utf8").trim() ?? "";
+    if (status && status !== "(clean)") {
+      errors.push("working-tree-dirty");
+    }
   }
 
   const haystack = entries.map((entry) => entry.content.toString("utf8")).join("\n");
-  if (isAbsoluteHostPath(haystack)) {
+  if (containsAbsoluteHostPath(haystack) || containsAbsoluteHostPath(JSON.stringify(manifest))) {
     errors.push("absolute-host-path");
+  }
+  if (containsUnredactedSecret(haystack)) {
+    errors.push("unredacted-secret");
   }
   for (const needle of options.forbiddenSubstrings ?? []) {
     if (needle && haystack.includes(needle)) {

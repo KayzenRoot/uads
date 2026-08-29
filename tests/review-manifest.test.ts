@@ -31,6 +31,7 @@ describe("review manifest and bundle", () => {
       cwd: repo,
       uadsHome: home,
       uadsPackageRoot: resolvedPackageRoot,
+      requireEvidence: false,
     });
 
     expect(result.zipPath.startsWith(home)).toBe(true);

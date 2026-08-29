@@ -42,8 +42,16 @@ Filename exclusion is not enough. Before any text is archived, UADS:
 
 - strips credential userinfo from Git remotes
 - redacts high-confidence secret signatures (private keys, common token formats)
-- redacts host home paths
+- redacts absolute host paths (Windows drives, UNC, Unix homes)
 - omits a file when it cannot be sanitized, recording a non-sensitive skip reason
+
+Ordinary TypeScript/Markdown/test files are not excluded merely because their names contain words such as `secret`, `token`, `password`, or `credential`. Those files are packed after content sanitization. Data files such as `.env`, `secrets.json`, `credentials.json`, and private keys remain excluded.
+
+Manifest accounting distinguishes:
+
+- `includedFiles` — packed under `project/`
+- `skipped` — omitted files with a safe reason
+- `excludedDirectoryClasses` — directory names skipped during traversal (`node_modules/`, `.git/`, …)
 
 This is not a guarantee of complete secret detection.
 
@@ -57,4 +65,15 @@ This is not a guarantee of complete secret detection.
 
 ## Checksum and inspection
 
-SHA-256 of the ZIP bytes is written beside the archive. Post-generation inspection reopens the ZIP and checks required entries, exclusions, manifest privacy, and fixture-secret absence.
+The generator writes a candidate ZIP that already contains `inspection.ok: true`, reopens **that** file, and requires the inspector to PASS. SHA-256 is computed only after that PASS. If inspection fails, `uads review` fails and does not report a successful artifact.
+
+The inspector independently checks:
+
+- required root and evidence entries
+- excluded directory/file classes are absent
+- no absolute host path remains
+- no unredacted high-confidence secret signature remains
+- `review-manifest.json` is valid JSON and conforms to `schemas/review-manifest.schema.json` (Ajv)
+- `includedFiles` / `evidenceIncluded` match ZIP entries
+- no `../`, absolute, or drive-prefixed ZIP entry names
+- duplicate ZIP entry names are rejected

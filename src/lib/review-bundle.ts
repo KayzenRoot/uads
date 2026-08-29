@@ -1,15 +1,21 @@
-import archiver from "archiver";
+import AdmZip from "adm-zip";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { MAX_REVIEW_FILE_BYTES } from "./constants.js";
-import { listSidecarEvidence, EVIDENCE_FILE_NAMES } from "./evidence.js";
-import { isBinaryFileName, shouldExcludeFromReview } from "./exclusions.js";
+import { listSidecarEvidence } from "./evidence.js";
+import {
+  isBinaryFileName,
+  isExcludedDirectoryName,
+  isSensitiveDataFile,
+  shouldExcludeFromReview,
+} from "./exclusions.js";
 import { computeProjectFingerprint } from "./fingerprint.js";
 import { readGitSummary } from "./git.js";
 import { sha256Hex, toPosix } from "./hash.js";
-import { inspectReviewBundle } from "./inspect-review.js";
+import { inspectReviewBundle, type InspectionResult } from "./inspect-review.js";
 import { sanitizeRemoteUrl } from "./sanitize-url.js";
-import { sanitizeReviewText } from "./secrets.js";
+import { hostPathVariants, sanitizeReviewText } from "./secrets.js";
 import { readUadsVersion } from "./version.js";
 import { ensureWorkspace, readOrCreateProfile } from "./workspace.js";
 
@@ -32,6 +38,7 @@ export type ReviewManifest = {
   };
   includedFiles: string[];
   skipped: Array<{ path: string; reason: string }>;
+  excludedDirectoryClasses: string[];
   evidenceIncluded: string[];
   exclusions: string[];
   inspection: {
@@ -47,8 +54,27 @@ export type ReviewBundleResult = {
   manifest: ReviewManifest;
 };
 
+export class ReviewInspectionError extends Error {
+  constructor(public readonly inspection: InspectionResult) {
+    super(`review inspection failed: ${inspection.errors.join(", ")}`);
+    this.name = "ReviewInspectionError";
+  }
+}
+
 export function walkProjectFiles(repoRoot: string): string[] {
-  const files: string[] = [];
+  return walkProject(repoRoot).candidates;
+}
+
+type WalkResult = {
+  candidates: string[];
+  skipped: Array<{ path: string; reason: string }>;
+  excludedDirectoryClasses: string[];
+};
+
+export function walkProject(repoRoot: string): WalkResult {
+  const candidates: string[] = [];
+  const skipped: Array<{ path: string; reason: string }> = [];
+  const excludedDirectoryClasses: string[] = [];
 
   const visit = (absDir: string): void => {
     let entries: fs.Dirent[];
@@ -61,23 +87,42 @@ export function walkProjectFiles(repoRoot: string): string[] {
     for (const entry of entries) {
       const abs = path.join(absDir, entry.name);
       const rel = toPosix(path.relative(repoRoot, abs));
-      if (shouldExcludeFromReview(rel)) {
-        continue;
-      }
 
       if (entry.isDirectory()) {
+        if (isExcludedDirectoryName(entry.name)) {
+          const klass = `${entry.name}/`;
+          if (!excludedDirectoryClasses.includes(klass)) {
+            excludedDirectoryClasses.push(klass);
+          }
+          continue;
+        }
         visit(abs);
         continue;
       }
 
-      if (entry.isFile()) {
-        files.push(rel);
+      if (!entry.isFile()) {
+        continue;
       }
+      if (rel.endsWith(".zip.sha256") || rel.includes("/reviews/")) {
+        skipped.push({ path: rel, reason: "review-artifact" });
+        continue;
+      }
+      if (isSensitiveDataFile(rel)) {
+        skipped.push({ path: rel, reason: "sensitive-data-file" });
+        continue;
+      }
+      if (shouldExcludeFromReview(rel)) {
+        skipped.push({ path: rel, reason: "excluded-pattern" });
+        continue;
+      }
+      candidates.push(rel);
     }
   };
 
   visit(repoRoot);
-  return files.sort((a, b) => a.localeCompare(b));
+  candidates.sort((a, b) => a.localeCompare(b));
+  excludedDirectoryClasses.sort((a, b) => a.localeCompare(b));
+  return { candidates, skipped, excludedDirectoryClasses };
 }
 
 export function buildRepositoryTree(files: string[]): string {
@@ -85,13 +130,9 @@ export function buildRepositoryTree(files: string[]): string {
 }
 
 function classifySkip(rel: string, repoRoot: string): string | null {
-  if (shouldExcludeFromReview(rel)) {
-    return "excluded-pattern";
-  }
   if (isBinaryFileName(rel)) {
     return "binary-extension";
   }
-
   const abs = path.join(repoRoot, rel);
   try {
     const stat = fs.statSync(abs);
@@ -101,16 +142,11 @@ function classifySkip(rel: string, repoRoot: string): string | null {
   } catch {
     return "unreadable";
   }
-
   return null;
 }
 
-function prepareText(text: string): { include: true; text: string } | { include: false; reason: string } {
-  const result = sanitizeReviewText(text);
-  if (result.omit) {
-    return { include: false, reason: "omitted-unsanitizable-secret" };
-  }
-  return { include: true, text: result.text };
+function uniquePaths(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))];
 }
 
 export async function createReviewBundle(input: {
@@ -118,6 +154,8 @@ export async function createReviewBundle(input: {
   uadsHome?: string;
   uadsPackageRoot?: string;
   requireEvidence?: boolean;
+  requireGitHead?: boolean;
+  requireCleanTree?: boolean;
   forbiddenSubstrings?: string[];
 }): Promise<ReviewBundleResult> {
   const cwd = path.resolve(input.cwd ?? process.cwd());
@@ -141,13 +179,24 @@ export async function createReviewBundle(input: {
   const zipPath = path.join(paths.reviews, zipFileName);
   const checksumPath = `${zipPath}.sha256`;
   const repositoryName = path.basename(repoRoot) || "repository";
+  const hostPaths = uniquePaths([repoRoot, cwd, paths.home, paths.workspace, os.homedir()]);
 
-  const candidates = walkProjectFiles(repoRoot);
+  const prepareText = (
+    text: string,
+  ): { include: true; text: string } | { include: false; reason: string } => {
+    const result = sanitizeReviewText(text, hostPaths);
+    if (result.omit) {
+      return { include: false, reason: "omitted-unsanitizable-secret" };
+    }
+    return { include: true, text: result.text };
+  };
+
+  const walked = walkProject(repoRoot);
   const includedFiles: string[] = [];
-  const skipped: Array<{ path: string; reason: string }> = [];
+  const skipped = [...walked.skipped];
   const projectTexts = new Map<string, string>();
 
-  for (const rel of candidates) {
+  for (const rel of walked.candidates) {
     const reason = classifySkip(rel, repoRoot);
     if (reason) {
       skipped.push({ path: rel, reason });
@@ -175,7 +224,7 @@ export async function createReviewBundle(input: {
   const gitStatus = prepareText(git.status);
   const gitDiff = prepareText(git.diff);
   const gitLog = prepareText(git.log);
-  const treePrepared = prepareText(buildRepositoryTree(candidates));
+  const treePrepared = prepareText(buildRepositoryTree(walked.candidates));
 
   const evidenceFiles = listSidecarEvidence(paths.evidence);
   const evidenceIncluded: string[] = [];
@@ -192,6 +241,9 @@ export async function createReviewBundle(input: {
 
   const uadsVersion = readUadsVersion(input.uadsPackageRoot);
   const originUrl = sanitizeRemoteUrl(git.originUrl);
+  const requireEvidence = input.requireEvidence ?? false;
+  const requireGitHead = input.requireGitHead ?? false;
+  const requireCleanTree = input.requireCleanTree ?? false;
 
   const manifestBase: Omit<ReviewManifest, "inspection"> = {
     schema: "uads.review-manifest",
@@ -212,6 +264,7 @@ export async function createReviewBundle(input: {
     },
     includedFiles,
     skipped,
+    excludedDirectoryClasses: walked.excludedDirectoryClasses,
     evidenceIncluded,
     exclusions: [
       "node_modules/",
@@ -220,28 +273,38 @@ export async function createReviewBundle(input: {
       "coverage/",
       "memory-bank/",
       ".env*",
-      "secrets/credentials/private keys/tokens",
+      "sensitive data files (keys, credential stores)",
       "review output directories",
-      "absolute local paths in shareable manifest",
+      "absolute local host paths",
       "common binary and cache artifacts",
     ],
   };
 
-  const readme = [
-    "UADS review bundle",
-    `generatedAt: ${generatedAt}`,
-    `projectId: ${fingerprint.projectId}`,
-    `repositoryName: ${repositoryName}`,
-    `uadsVersion: ${uadsVersion}`,
-    "Shareable manifests are privacy-minimized and do not include host paths.",
-    "Secrets, .git, node_modules, caches, memory-bank, and review outputs are excluded or redacted.",
-    "Content scanning is defense-in-depth and is not a guarantee of complete secret detection.",
-    "",
-  ].join("\n");
+  const readmePrepared = prepareText(
+    [
+      "UADS review bundle",
+      `generatedAt: ${generatedAt}`,
+      `projectId: ${fingerprint.projectId}`,
+      `repositoryName: ${repositoryName}`,
+      `uadsVersion: ${uadsVersion}`,
+      "Shareable manifests are privacy-minimized and do not include host paths.",
+      "Secrets, .git, node_modules, caches, memory-bank, and review outputs are excluded or redacted.",
+      "Content scanning is defense-in-depth and is not a guarantee of complete secret detection.",
+      "",
+    ].join("\n"),
+  );
+  const readme = readmePrepared.include ? readmePrepared.text : "UADS review bundle\n";
 
-  await writeZip(zipPath, {
-    manifest: { ...manifestBase, inspection: { ok: false, errors: [] } },
-    tree: treePrepared.include ? treePrepared.text : "(omitted)\n",
+  const inspectOptions = {
+    requireEvidence,
+    requireGitHead,
+    requireCleanTree,
+    forbiddenSubstrings: [...(input.forbiddenSubstrings ?? []), ...hostPaths.flatMap(hostPathVariants)],
+    schemaRoot: input.uadsPackageRoot,
+  };
+
+  const payload = {
+    tree: gitStatusTree(treePrepared),
     gitStatus: gitStatus.include ? gitStatus.text : "(omitted)\n",
     gitDiff: gitDiff.include ? gitDiff.text : "(omitted)\n",
     gitLog: gitLog.include ? gitLog.text : "(omitted)\n",
@@ -250,52 +313,50 @@ export async function createReviewBundle(input: {
     projectTexts,
     evidenceTexts,
     uadsVersion,
-  });
-
-  const inspection = await inspectReviewBundle(zipPath, {
-    requireEvidence:
-      input.requireEvidence ?? EVIDENCE_FILE_NAMES.every((name) => evidenceIncluded.includes(name)),
-    forbiddenSubstrings: input.forbiddenSubstrings,
-  }).catch((error: unknown): { ok: false; errors: string[] } => ({
-    ok: false,
-    errors: [`inspect-failed:${error instanceof Error ? error.message : "unknown"}`],
-  }));
-
-  const manifest: ReviewManifest = {
-    ...manifestBase,
-    inspection,
   };
 
-  const preparedManifest = prepareText(`${JSON.stringify(manifest, null, 2)}\n`);
-  if (!preparedManifest.include) {
+  const successfulManifest: ReviewManifest = {
+    ...manifestBase,
+    inspection: { ok: true, errors: [] },
+  };
+  const preparedSuccess = prepareText(`${JSON.stringify(successfulManifest, null, 2)}\n`);
+  if (!preparedSuccess.include) {
     throw new Error("review manifest could not be sanitized");
   }
 
-  await writeZip(zipPath, {
-    manifest,
-    tree: treePrepared.include ? treePrepared.text : "(omitted)\n",
-    gitStatus: gitStatus.include ? gitStatus.text : "(omitted)\n",
-    gitDiff: gitDiff.include ? gitDiff.text : "(omitted)\n",
-    gitLog: gitLog.include ? gitLog.text : "(omitted)\n",
-    readme,
-    includedFiles,
-    projectTexts,
-    evidenceTexts,
-    uadsVersion,
-    manifestText: preparedManifest.text,
-  });
+  writeZip(zipPath, { ...payload, manifestText: preparedSuccess.text });
+
+  const inspection = await inspectReviewBundle(zipPath, inspectOptions);
+  if (!inspection.ok) {
+    const failedManifest: ReviewManifest = { ...manifestBase, inspection };
+    const preparedFail = prepareText(`${JSON.stringify(failedManifest, null, 2)}\n`);
+    if (preparedFail.include) {
+      writeZip(zipPath, { ...payload, manifestText: preparedFail.text });
+    }
+    throw new ReviewInspectionError(inspection);
+  }
 
   const sha256 = sha256Hex(fs.readFileSync(zipPath));
   fs.writeFileSync(checksumPath, `${sha256}  ${zipFileName}\n`, "utf8");
 
-  return { zipPath, checksumPath, sha256, manifest };
+  return {
+    zipPath,
+    checksumPath,
+    sha256,
+    manifest: successfulManifest,
+  };
 }
 
-async function writeZip(
+function gitStatusTree(
+  treePrepared: { include: true; text: string } | { include: false; reason: string },
+): string {
+  return treePrepared.include ? treePrepared.text : "(omitted)\n";
+}
+
+function writeZip(
   zipPath: string,
   payload: {
-    manifest: ReviewManifest;
-    manifestText?: string;
+    manifestText: string;
     tree: string;
     gitStatus: string;
     gitDiff: string;
@@ -306,41 +367,31 @@ async function writeZip(
     evidenceTexts: Map<string, string>;
     uadsVersion: string;
   },
-): Promise<void> {
+): void {
   fs.mkdirSync(path.dirname(zipPath), { recursive: true });
-
-  const output = fs.createWriteStream(zipPath);
-  const archive = archiver("zip", { zlib: { level: 9 } });
-
-  const done = new Promise<void>((resolve, reject) => {
-    output.on("close", () => resolve());
-    output.on("error", reject);
-    archive.on("error", reject);
-  });
-
-  archive.pipe(output);
-
-  const manifestText = payload.manifestText ?? `${JSON.stringify(payload.manifest, null, 2)}\n`;
-  archive.append(manifestText, { name: "review-manifest.json" });
-  archive.append(payload.tree, { name: "repository-tree.txt" });
-  archive.append(`${payload.gitStatus}\n`, { name: "git-status.txt" });
-  archive.append(`${payload.gitDiff}\n`, { name: "git-diff.txt" });
-  archive.append(`${payload.gitLog}\n`, { name: "git-log.txt" });
-  archive.append(`${payload.uadsVersion}\n`, { name: "version.txt" });
-  archive.append(payload.readme, { name: "README.txt" });
-
-  for (const [name, content] of payload.evidenceTexts) {
-    archive.append(content, { name: `evidence/${name}` });
+  if (fs.existsSync(zipPath)) {
+    fs.unlinkSync(zipPath);
   }
 
+  const zip = new AdmZip();
+  zip.addFile("review-manifest.json", Buffer.from(payload.manifestText, "utf8"));
+  zip.addFile("repository-tree.txt", Buffer.from(payload.tree, "utf8"));
+  zip.addFile("git-status.txt", Buffer.from(`${payload.gitStatus}\n`, "utf8"));
+  zip.addFile("git-diff.txt", Buffer.from(`${payload.gitDiff}\n`, "utf8"));
+  zip.addFile("git-log.txt", Buffer.from(`${payload.gitLog}\n`, "utf8"));
+  zip.addFile("version.txt", Buffer.from(`${payload.uadsVersion}\n`, "utf8"));
+  zip.addFile("README.txt", Buffer.from(payload.readme, "utf8"));
+
+  for (const [name, content] of payload.evidenceTexts) {
+    zip.addFile(`evidence/${name}`, Buffer.from(content, "utf8"));
+  }
   for (const rel of payload.includedFiles) {
     const content = payload.projectTexts.get(rel);
     if (content === undefined) {
       continue;
     }
-    archive.append(content, { name: `project/${rel}` });
+    zip.addFile(`project/${rel}`, Buffer.from(content, "utf8"));
   }
 
-  await archive.finalize();
-  await done;
+  zip.writeZip(zipPath);
 }

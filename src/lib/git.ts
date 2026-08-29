@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { runProcess } from "./exec.js";
 import { sanitizeRemoteUrl } from "./sanitize-url.js";
 
 export type GitSummary = {
@@ -15,11 +15,11 @@ export type GitSummary = {
 };
 
 function runGit(args: string[], cwd: string): string {
-  return execFileSync("git", args, {
-    cwd,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
+  const result = runProcess("git", args, { cwd });
+  if (result.error || (result.status ?? 1) !== 0) {
+    throw result.error ?? new Error((result.stderr || "git failed").trim());
+  }
+  return (result.stdout || "").trim();
 }
 
 export function findGitRoot(startDir: string): string | null {
@@ -41,7 +41,7 @@ export function findGitRoot(startDir: string): string | null {
 
 export function gitAvailable(): boolean {
   try {
-    execFileSync("git", ["--version"], { stdio: ["ignore", "pipe", "pipe"] });
+    runGit(["--version"], process.cwd());
     return true;
   } catch {
     return false;

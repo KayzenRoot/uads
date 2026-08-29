@@ -2,14 +2,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const dist = path.join(root, "dist/lib/evidence.js");
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-
 if (!fs.existsSync(dist)) {
-  const build = spawnSync(npmCmd, ["run", "build"], { cwd: root, stdio: "inherit" });
+  const build = runNpm(["run", "build"], { cwd: root, stdio: "inherit" });
   if (build.status !== 0) {
     process.exit(build.status ?? 1);
   }
