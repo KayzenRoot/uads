@@ -3,6 +3,7 @@ import path from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
 import { findPackageRoot } from "./version.js";
+import { sanitizeOperationalText } from "./safe-persist.js";
 
 function applyAjvFormats(ajv: Ajv2020): void {
   const imported = addFormatsImport as unknown as
@@ -32,8 +33,8 @@ export function validateAgainstSchema(
   if (validate(data)) {
     return [];
   }
-  return (validate.errors ?? []).map(
-    (error) => `schema:${error.instancePath || "/"} ${error.message ?? "invalid"}`,
+  return (validate.errors ?? []).map((error) =>
+    sanitizeOperationalText(`schema:${error.instancePath || "/"} ${error.message ?? "invalid"}`),
   );
 }
 

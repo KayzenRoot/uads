@@ -17,7 +17,25 @@
     "updatedAt",
     "scopeClass",
     "riskLevel",
-    "nextAction"
+    "nextAction",
+    "intakeRef",
+    "routingDecisionId",
+    "includedScope",
+    "outOfScope",
+    "recommendations",
+    "riskReasons",
+    "domains",
+    "affectedAreas",
+    "specialists",
+    "assuranceReviewers",
+    "qualityGates",
+    "contextRadius",
+    "tokenBudget",
+    "dependencies",
+    "acceptanceCriteria",
+    "requiredEvidence",
+    "stopConditions",
+    "autonomyBoundary"
   ],
   "properties": {
     "schema": { "const": "uads.work-order" },
@@ -58,6 +76,7 @@
     "tokenBudget": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["softLimit", "hardLimit", "capabilityClass", "cachePreference", "expansionPolicy"],
       "properties": {
         "softLimit": { "type": "integer", "minimum": 0 },
         "hardLimit": { "type": "integer", "minimum": 0 },
@@ -76,6 +95,7 @@
     "autonomyBoundary": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["safeAutonomous", "requiresApproval"],
       "properties": {
         "safeAutonomous": { "type": "array", "items": { "type": "string" } },
         "requiresApproval": { "type": "array", "items": { "type": "string" } }

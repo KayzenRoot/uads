@@ -89,6 +89,12 @@ export function intakeFromRequest(request: string): NormalizedIntake {
     intake.domainSignals.push("api");
     intake.riskSignals.push("public-api");
   }
+  if (includesAny(text, ["dependency", "package update", "supply-chain", "upgrade npm"])) {
+    intake.riskSignals.push("dependency", "supply-chain");
+  }
+  if (includesAny(text, ["cut a release", "prepare a release", "release checklist"])) {
+    intake.domainSignals.push("release");
+  }
 
   intake.domainSignals = unique(intake.domainSignals);
   intake.riskSignals = unique(intake.riskSignals);
@@ -101,7 +107,13 @@ export function normalizeIntake(input: unknown, schemaRoot?: string): Normalized
   if (!input || typeof input !== "object") {
     throw new Error("intake must be an object");
   }
-  const raw = input as Partial<NormalizedIntake> & { objective?: string };
+  const raw = input as Partial<NormalizedIntake> & { objective?: string; schema?: string; schemaVersion?: string };
+  if (raw.schema && raw.schema !== "uads.intake") {
+    throw new Error("intake.schema is invalid");
+  }
+  if (raw.schemaVersion && raw.schemaVersion !== "0.2.0") {
+    throw new Error("intake.schemaVersion is invalid");
+  }
   if (!raw.objective || typeof raw.objective !== "string") {
     throw new Error("intake.objective is required");
   }

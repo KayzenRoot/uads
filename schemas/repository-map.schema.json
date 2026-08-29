@@ -5,7 +5,21 @@
   "description": "Compact structural map cached in the sidecar. Relative paths only; no embeddings.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schemaVersion", "projectId", "generatedAt", "repositoryName", "digest"],
+  "required": [
+    "schema",
+    "schemaVersion",
+    "projectId",
+    "generatedAt",
+    "repositoryName",
+    "digest",
+    "gitHead",
+    "branch",
+    "dirty",
+    "dirtyDigest",
+    "signals",
+    "modules",
+    "locations"
+  ],
   "properties": {
     "schema": { "const": "uads.repository-map" },
     "schemaVersion": { "const": "0.2.0" },
@@ -15,6 +29,8 @@
     "repositoryName": { "type": "string" },
     "digest": { "type": "string" },
     "gitHead": { "type": ["string", "null"] },
+    "branch": { "type": ["string", "null"] },
+    "dirty": { "type": "boolean" },
     "dirtyDigest": { "type": "string" },
     "reused": { "type": "boolean" },
     "languages": { "type": "array", "items": { "type": "string" } },
@@ -44,6 +60,16 @@
     "entrypoints": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "locations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentsMd", "cursor", "skills"],
+      "properties": {
+        "agentsMd": { "type": "array", "items": { "type": "string" } },
+        "cursor": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } }
+      }
     },
     "manifestHashes": {
       "type": "object",

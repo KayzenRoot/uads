@@ -33,6 +33,7 @@ Complete only when all are true:
 - Intake / Work Order / checkpoint / routing-decision schemas are enforced
 - Implementer is never the sole final reviewer
 - Orchestrator Skill uses progressive disclosure; skills preflight passes
+- Correction 01: secret-safe persistence, required operational schema fields, CRITICAL→C4, radius-bounded candidates, complete gate registry, task-relevant repository risk
 - Cursor adapter is tested against an isolated HOME
 - Zero project footprint after inspect/plan/status/resume
 - Orchestrator eval suite and negative-routing assertions pass

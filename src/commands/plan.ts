@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { runPlan } from "../kernel/orchestrator.js";
+import { safeErrorMessage } from "../lib/safe-persist.js";
 
 export function runPlanCommand(input: {
   cwd?: string;
@@ -11,49 +12,53 @@ export function runPlanCommand(input: {
   if (!input.request && !input.intakePath) {
     throw new Error("uads plan requires --request <text> or --intake <file>");
   }
-  let intake: unknown;
-  if (input.intakePath) {
-    intake = JSON.parse(fs.readFileSync(input.intakePath, "utf8"));
+  try {
+    let intake: unknown;
+    if (input.intakePath) {
+      intake = JSON.parse(fs.readFileSync(input.intakePath, "utf8"));
+    }
+    const result = runPlan({
+      cwd: input.cwd,
+      uadsHome: input.uadsHome,
+      request: input.request,
+      intake,
+    });
+    if (input.json) {
+      return `${JSON.stringify(
+        {
+          workOrderId: result.workOrder.workOrderId,
+          projectId: result.workOrder.projectId,
+          title: result.workOrder.title,
+          scopeClass: result.workOrder.scopeClass,
+          riskLevel: result.workOrder.riskLevel,
+          domains: result.workOrder.domains,
+          specialists: result.workOrder.specialists,
+          assuranceReviewers: result.workOrder.assuranceReviewers,
+          qualityGates: result.workOrder.qualityGates,
+          contextRadius: result.workOrder.contextRadius,
+          nextAction: result.workOrder.nextAction,
+          mapReused: result.mapReused,
+        },
+        null,
+        2,
+      )}\n`;
+    }
+    return [
+      "UADS plan",
+      `workOrderId: ${result.workOrder.workOrderId}`,
+      `scopeClass: ${result.workOrder.scopeClass}`,
+      `riskLevel: ${result.workOrder.riskLevel}`,
+      `domains: ${result.workOrder.domains.join(", ")}`,
+      `specialists: ${result.workOrder.specialists.join(", ")}`,
+      `assurance: ${result.workOrder.assuranceReviewers.join(", ")}`,
+      `gates: ${result.workOrder.qualityGates.join(", ")}`,
+      `contextRadius: ${result.workOrder.contextRadius}`,
+      `capabilityClass: ${result.workOrder.tokenBudget.capabilityClass}`,
+      `nextAction: ${result.workOrder.nextAction}`,
+      `classifier: ${input.intakePath ? "host-structured" : "fallback-text"}`,
+      "",
+    ].join("\n");
+  } catch (error) {
+    throw new Error(safeErrorMessage(error));
   }
-  const result = runPlan({
-    cwd: input.cwd,
-    uadsHome: input.uadsHome,
-    request: input.request,
-    intake,
-  });
-  if (input.json) {
-    return `${JSON.stringify(
-      {
-        workOrderId: result.workOrder.workOrderId,
-        projectId: result.workOrder.projectId,
-        title: result.workOrder.title,
-        scopeClass: result.workOrder.scopeClass,
-        riskLevel: result.workOrder.riskLevel,
-        domains: result.workOrder.domains,
-        specialists: result.workOrder.specialists,
-        assuranceReviewers: result.workOrder.assuranceReviewers,
-        qualityGates: result.workOrder.qualityGates,
-        contextRadius: result.workOrder.contextRadius,
-        nextAction: result.workOrder.nextAction,
-        mapReused: result.mapReused,
-      },
-      null,
-      2,
-    )}\n`;
-  }
-  return [
-    "UADS plan",
-    `workOrderId: ${result.workOrder.workOrderId}`,
-    `scopeClass: ${result.workOrder.scopeClass}`,
-    `riskLevel: ${result.workOrder.riskLevel}`,
-    `domains: ${result.workOrder.domains.join(", ")}`,
-    `specialists: ${result.workOrder.specialists.join(", ")}`,
-    `assurance: ${result.workOrder.assuranceReviewers.join(", ")}`,
-    `gates: ${result.workOrder.qualityGates.join(", ")}`,
-    `contextRadius: ${result.workOrder.contextRadius}`,
-    `capabilityClass: ${result.workOrder.tokenBudget.capabilityClass}`,
-    `nextAction: ${result.workOrder.nextAction}`,
-    `classifier: ${input.intakePath ? "host-structured" : "fallback-text"}`,
-    "",
-  ].join("\n");
 }

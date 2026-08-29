@@ -1,6 +1,7 @@
 import type { NormalizedIntake, RiskLevel, ScopeClass } from "./types.js";
 import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
 import { unique } from "./ids.js";
+import { GATE_REGISTRY } from "./gates.js";
 
 export type SpecialistDef = {
   id: string;
@@ -192,6 +193,19 @@ export function selectGates(input: {
   }
   if (input.domains.includes("documentation") && input.scopeClass === "trivial") {
     return gates;
+  }
+  if (
+    input.intake.riskSignals.includes("dependency") ||
+    input.intake.riskSignals.includes("supply-chain") ||
+    input.intake.domainSignals.includes("release") && input.intake.riskSignals.includes("dependency")
+  ) {
+    add("dependency-audit", GATE_REGISTRY.find((gate) => gate.id === "dependency-audit")?.purpose ?? "dependency/supply-chain audit");
+  }
+  if (input.scopeClass === "architectural") {
+    add("architecture-conformance", "architectural scope requires conformance evidence");
+  }
+  if (input.domains.includes("release") || input.intake.domainSignals.includes("release")) {
+    add("release-check", "release-domain work requires release readiness evidence");
   }
   if (input.domains.includes("api") || input.intake.riskSignals.includes("authentication")) {
     add("integration-test", "authenticated/API path needs integration coverage");

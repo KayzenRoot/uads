@@ -15,6 +15,8 @@ import {
   TOKEN_BUDGETS,
 } from "./policy.js";
 import { classifyRequestedWork } from "./scope-control.js";
+import { selectContextCandidates } from "./context-candidates.js";
+import { gateEvidence } from "./gates.js";
 import {
   assertIndependentReview,
   autonomyBoundary,
@@ -224,7 +226,7 @@ export function planFromIntake(input: {
       input.intake.acceptanceCriteria.length > 0
         ? input.intake.acceptanceCriteria
         : ["Requested objective is met", "Selected gates have evidence", "Independent review completed if implementation occurred"],
-    requiredEvidence: gates.map((gate) => `gate:${gate.id}`),
+    requiredEvidence: gates.map((gate) => gateEvidence(gate.id)),
     stopConditions: decision.stopConditions,
     autonomyBoundary: boundary,
     nextAction,
@@ -233,11 +235,11 @@ export function planFromIntake(input: {
   const contextPlan: ContextPlan = {
     radius: context.radius,
     reason: context.reason,
-    candidateAreas: [
-      ...input.intake.affectedAreas,
-      ...input.map.modules.map((mod) => mod.path),
-      ...input.map.entrypoints,
-    ].slice(0, 20),
+    candidateAreas: selectContextCandidates({
+      radius: context.radius,
+      intake: input.intake,
+      map: input.map,
+    }),
     reusableArtifacts: [
       "sidecar://index/repository-map.json",
       "sidecar://state/current.json",
@@ -265,7 +267,7 @@ export function planFromIntake(input: {
     resumeCursor: "plan-complete:await-implementation",
   };
 
-  persistPlan({
+  const persisted = persistPlan({
     paths: input.paths,
     workOrder,
     decision,
@@ -275,10 +277,10 @@ export function planFromIntake(input: {
   });
 
   return {
-    workOrder,
-    decision,
-    checkpoint,
-    contextPlan,
+    workOrder: persisted.workOrder,
+    decision: persisted.decision,
+    checkpoint: persisted.checkpoint,
+    contextPlan: persisted.contextPlan,
     map: input.map,
     mapReused: input.mapReused,
   };

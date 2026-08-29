@@ -14,6 +14,15 @@ All notable changes to UADS (NexLabs) are documented here.
 - Canonical `agents/uads-*.md` plus Cursor user-level adapter (tests use isolated HOME)
 - Routing eval suite `npm run eval:orchestrator` (E1–E8 + negative routing)
 
+### Fixed (Correction 01)
+
+- Persist orchestration state through a single secret-safe text boundary before sidecar writes
+- Require operational Work Order, routing-decision, and checkpoint fields as authoritative schema state
+- CRITICAL/architectural context radius now precedes HIGH/cross-cutting (C4, never default C5)
+- Context candidates follow radius semantics instead of appending every mapped module
+- Canonical gate registry includes dependency-audit, architecture-conformance, and release-check
+- Risk uses task-relevant repository signals only; inspector adds cheap database/migration/Web3 and relative agent/skill locations
+
 ### Notes
 
 - The kernel plans and persists; it does not execute arbitrary customer-project edits or call provider APIs

@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { atomicWriteJson, readJsonIfValid, sidecarJsonPath } from "../lib/atomic-write.js";
 import { assertSchema } from "../lib/json-schema.js";
+import { sanitizeOperationalValue } from "../lib/safe-persist.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import type { Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "./types.js";
 
@@ -19,16 +20,21 @@ export function persistPlan(input: {
   checkpoint: Checkpoint;
   contextPlan: ContextPlan;
   schemaRoot?: string;
-}): void {
-  assertSchema("work-order.schema.json", input.workOrder, input.schemaRoot);
-  assertSchema("routing-decision.schema.json", input.decision, input.schemaRoot);
-  assertSchema("checkpoint.schema.json", input.checkpoint, input.schemaRoot);
+}): { workOrder: WorkOrder; decision: RoutingDecision; checkpoint: Checkpoint; contextPlan: ContextPlan } {
+  const workOrder = sanitizeOperationalValue(input.workOrder);
+  const decision = sanitizeOperationalValue(input.decision);
+  const checkpoint = sanitizeOperationalValue(input.checkpoint);
+  const contextPlan = sanitizeOperationalValue(input.contextPlan);
+  assertSchema("work-order.schema.json", workOrder, input.schemaRoot);
+  assertSchema("routing-decision.schema.json", decision, input.schemaRoot);
+  assertSchema("checkpoint.schema.json", checkpoint, input.schemaRoot);
 
-  atomicWriteJson(sidecarJsonPath(input.paths.workOrders, input.workOrder.workOrderId), input.workOrder);
-  atomicWriteJson(sidecarJsonPath(input.paths.decisions, input.decision.routingDecisionId), input.decision);
-  atomicWriteJson(sidecarJsonPath(input.paths.checkpoints, input.checkpoint.checkpointId), input.checkpoint);
-  atomicWriteJson(input.paths.currentState, input.checkpoint);
-  atomicWriteJson(path.join(input.paths.context, "plan.json"), input.contextPlan);
+  atomicWriteJson(sidecarJsonPath(input.paths.workOrders, workOrder.workOrderId), workOrder);
+  atomicWriteJson(sidecarJsonPath(input.paths.decisions, decision.routingDecisionId), decision);
+  atomicWriteJson(sidecarJsonPath(input.paths.checkpoints, checkpoint.checkpointId), checkpoint);
+  atomicWriteJson(input.paths.currentState, checkpoint);
+  atomicWriteJson(path.join(input.paths.context, "plan.json"), contextPlan);
+  return { workOrder, decision, checkpoint, contextPlan };
 }
 
 export function readCurrentCheckpoint(paths: UadsPaths, schemaRoot?: string): Checkpoint | null {

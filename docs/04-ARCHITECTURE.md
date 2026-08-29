@@ -68,7 +68,7 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
 USER REQUEST
   → host Skill semantic intake (or CLI --request fallback)
   → deterministic kernel
-  → repository map + scope/risk/domain/specialists/gates/context/budget
+  → repository map + scope/risk (task-relevant repo context only)/domain/specialists/gates/context/budget
   → Work Order + routing decision + checkpoint (sidecar only)
   → uads resume (no full-repo re-ingestion)
 ```

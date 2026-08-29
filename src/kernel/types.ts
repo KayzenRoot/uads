@@ -35,6 +35,8 @@ export type RepositoryMap = {
   repositoryName: string;
   digest: string;
   gitHead: string | null;
+  branch: string | null;
+  dirty: boolean;
   dirtyDigest: string;
   reused: boolean;
   languages: string[];
@@ -44,6 +46,11 @@ export type RepositoryMap = {
   signals: Record<string, boolean>;
   modules: Array<{ id: string; path: string; kind: string }>;
   entrypoints: string[];
+  locations: {
+    agentsMd: string[];
+    cursor: string[];
+    skills: string[];
+  };
   manifestHashes: Record<string, string>;
 };
 

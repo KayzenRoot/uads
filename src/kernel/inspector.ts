@@ -182,7 +182,13 @@ export function inspectRepository(input: {
 
   if (!input.forceRefresh) {
     const cached = readJsonIfValid<RepositoryMap>(input.paths.repositoryMap);
-    if (cached.ok && cached.value.digest === cacheKey && cached.value.schemaVersion === "0.2.0") {
+    if (
+      cached.ok &&
+      cached.value.digest === cacheKey &&
+      cached.value.schemaVersion === "0.2.0" &&
+      cached.value.locations &&
+      typeof cached.value.dirty === "boolean"
+    ) {
       const reused = { ...cached.value, reused: true };
       return { map: reused, reused: true, fullWalk: false };
     }
@@ -200,6 +206,12 @@ export function inspectRepository(input: {
   const entrypoints = ["src/cli.ts", "src/index.ts", "src/main.ts", "app/page.tsx", "cmd/main.go"]
     .filter((rel) => existsRel(input.repoRoot, rel));
 
+  const locations = {
+    agentsMd: ["AGENTS.md", "AGENTS.override.md"].filter((rel) => existsRel(input.repoRoot, rel)),
+    cursor: [".cursor/rules", ".cursor/agents", ".cursor/skills"].filter((rel) => existsRel(input.repoRoot, rel)),
+    skills: ["skills", ".agents/skills"].filter((rel) => existsRel(input.repoRoot, rel)),
+  };
+
   const map: RepositoryMap = {
     schema: "uads.repository-map",
     schemaVersion: "0.2.0",
@@ -209,6 +221,8 @@ export function inspectRepository(input: {
     repositoryName: path.basename(input.repoRoot) || "repository",
     digest: cacheKey,
     gitHead: git.head,
+    branch: git.branch,
+    dirty: git.status !== "(clean)" && git.status.length > 0,
     dirtyDigest,
     reused: false,
     languages,
@@ -229,9 +243,26 @@ export function inspectRepository(input: {
       cursor: existsRel(input.repoRoot, ".cursor"),
       skills: existsRel(input.repoRoot, "skills") || existsRel(input.repoRoot, ".agents/skills"),
       git: Boolean(git.repoRoot),
+      database:
+        existsRel(input.repoRoot, "prisma/schema.prisma") ||
+        existsRel(input.repoRoot, "prisma") ||
+        existsRel(input.repoRoot, "supabase") ||
+        existsRel(input.repoRoot, "drizzle.config.ts") ||
+        existsRel(input.repoRoot, "knexfile.js"),
+      migrations:
+        existsRel(input.repoRoot, "prisma/migrations") ||
+        existsRel(input.repoRoot, "supabase/migrations") ||
+        existsRel(input.repoRoot, "migrations") ||
+        existsRel(input.repoRoot, "alembic"),
+      web3:
+        existsRel(input.repoRoot, "contracts") ||
+        existsRel(input.repoRoot, "foundry.toml") ||
+        existsRel(input.repoRoot, "hardhat.config.ts") ||
+        existsRel(input.repoRoot, "hardhat.config.js"),
     },
     modules,
     entrypoints,
+    locations,
     manifestHashes,
   };
 

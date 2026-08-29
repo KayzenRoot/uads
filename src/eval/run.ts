@@ -31,7 +31,7 @@ type EvalCase = {
   expect: Expectation;
 };
 
-function stubMap(projectId: string): RepositoryMap {
+function stubMap(projectId: string, extras: { web3?: boolean; migrations?: boolean; database?: boolean } = {}): RepositoryMap {
   return {
     schema: "uads.repository-map",
     schemaVersion: "0.2.0",
@@ -41,15 +41,30 @@ function stubMap(projectId: string): RepositoryMap {
     repositoryName: "eval-fixture",
     digest: "eval",
     gitHead: null,
+    branch: null,
+    dirty: false,
     dirtyDigest: "eval",
     reused: false,
     languages: ["typescript"],
     packageManager: "npm",
     frameworks: [],
     commands: { build: "build", test: "test", lint: "lint", typecheck: "typecheck" },
-    signals: { git: false, tests: true, docs: true, docker: false, ci: false, agentsMd: false, cursor: false, skills: false },
+    signals: {
+      git: false,
+      tests: true,
+      docs: true,
+      docker: false,
+      ci: false,
+      agentsMd: false,
+      cursor: false,
+      skills: false,
+      web3: extras.web3 ?? false,
+      database: extras.database ?? false,
+      migrations: extras.migrations ?? false,
+    },
     modules: [{ id: "src", path: "src", kind: "module" }],
     entrypoints: ["src/cli.ts"],
+    locations: { agentsMd: [], cursor: [], skills: [] },
     manifestHashes: {},
   };
 }
@@ -89,7 +104,11 @@ function run(): number {
       : intakeFromRequest(evalCase.request ?? "");
     const result = planFromIntake({
       intake,
-      map: stubMap(projectId),
+      map: stubMap(projectId, {
+        web3: intake.domainSignals.includes("web3") || intake.domainSignals.includes("smart-contracts"),
+        database: intake.domainSignals.includes("database"),
+        migrations: intake.riskSignals.includes("database-migration"),
+      }),
       mapReused: false,
       projectId,
       paths,

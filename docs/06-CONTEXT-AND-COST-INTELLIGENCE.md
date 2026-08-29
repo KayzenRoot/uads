@@ -4,7 +4,7 @@ Token cost is an architectural concern, not a prompt-tuning afterthought.
 
 ## Context routing
 
-The kernel selects the smallest sufficient radius (C0–C5). C5 is exceptional, not default. The host may expand one level when evidence shows missing context.
+The kernel selects the smallest sufficient radius (C0–C5). Severity is monotonic: CRITICAL or architectural → C4; HIGH or cross-cutting → C3; local → C2; trivial → C1. C5 is exceptional, not default. Candidate areas are radius-bounded from intake + the compact repository map; C1 does not append every module.
 
 ## Repository map
 

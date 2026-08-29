@@ -17,7 +17,7 @@ Command outputs are written under `~/.uads/workspaces/<project-id>/evidence/` by
 
 ## Selected gate classes (kernel)
 
-The planner picks from static, unit-test, integration-test, contract-test, build, security-review, database-migration, rollback-validation, web3-unit/fuzz/invariant, financial-numerical-validation, simulation-invariant, performance-check, and related IDs.
+The planner picks from a canonical registry: static, unit-test, integration-test, contract-test, build, security-review, dependency-audit, performance-check, architecture-conformance, database-migration, rollback-validation, web3-unit/fuzz/invariant, financial-numerical-validation, simulation-invariant, and release-check. Selection remains relevant-only.
 
 Style-only frontend work does not require Web3 fuzzing. DeFi withdrawal requires web3-unit, fuzz, invariant, and security review.
 

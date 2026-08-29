@@ -14,7 +14,15 @@
     "updatedAt",
     "phase",
     "status",
-    "nextAction"
+    "nextAction",
+    "workOrderId",
+    "routingDecisionId",
+    "completedSteps",
+    "blockers",
+    "evidenceRefs",
+    "repositoryMapDigest",
+    "contextPlanRef",
+    "resumeCursor"
   ],
   "properties": {
     "schema": { "const": "uads.checkpoint" },

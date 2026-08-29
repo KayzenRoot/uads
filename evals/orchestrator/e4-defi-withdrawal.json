@@ -7,7 +7,7 @@
     "riskIn": ["CRITICAL"],
     "specialistsInclude": ["independent-reviewer", "security-reviewer"],
     "gatesInclude": ["web3-unit", "web3-fuzz", "web3-invariant", "security-review"],
-    "contextIn": ["C3", "C4"],
+    "contextIn": ["C4"],
     "assuranceInclude": ["independent-reviewer", "security-reviewer"]
   }
 }

@@ -4,7 +4,8 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 
 ## Non-negotiable
 
-- Do not write secrets into the sidecar or review ZIP
+- Do not write secrets into the sidecar, Work Orders, routing decisions, checkpoints, or review ZIP
+- Intake-derived free text is redacted with the shared high-confidence sanitizer before durable writes; errors must not echo raw secrets
 - Exclude `.env*`, private keys, tokens, credential filenames, and `memory-bank/`
 - Exclude `.git/` (history can contain secrets)
 - Sanitize Git remotes (strip userinfo) before they enter a shareable manifest

@@ -14,7 +14,17 @@
     "scopeClass",
     "riskLevel",
     "contextRadius",
-    "capabilityClass"
+    "capabilityClass",
+    "scopeReasons",
+    "riskReasons",
+    "domains",
+    "specialists",
+    "assuranceSpecialists",
+    "gates",
+    "contextReason",
+    "orderConstraints",
+    "stopConditions",
+    "warnings"
   ],
   "properties": {
     "schema": { "const": "uads.routing-decision" },

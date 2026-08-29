@@ -60,17 +60,51 @@ export function classifyScopeSize(intake: NormalizedIntake): ScopeDecision {
   return { scopeClass, reasons, included, outOfScope, recommendations };
 }
 
-export function classifyRisk(intake: NormalizedIntake, _map: RepositoryMap): { level: RiskLevel; reasons: string[] } {
+function sensitiveUncertainty(intake: NormalizedIntake): boolean {
+  if (intake.uncertainties.length === 0) {
+    return false;
+  }
+  const sensitive = new Set([
+    "security",
+    "authentication",
+    "web3",
+    "smart-contracts",
+    "finance-economics",
+    "payments",
+    "tokenomics",
+    "database",
+    "destructive",
+    "destructive-data",
+  ]);
+  const connected = [
+    ...intake.domainSignals,
+    ...intake.riskSignals,
+    ...intake.destructiveSignals,
+    ...intake.affectedAreas.map((area) => area.toLowerCase()),
+  ];
+  return connected.some((item) => sensitive.has(item) || item.includes("auth") || item.includes("contract"));
+}
+
+export function classifyRisk(intake: NormalizedIntake, map: RepositoryMap): { level: RiskLevel; reasons: string[] } {
   const reasons: string[] = [];
   const signals = new Set([...intake.riskSignals, ...intake.destructiveSignals, ...intake.domainSignals]);
   const text = intake.objective.toLowerCase();
+  const taskTouchesContracts = signals.has("web3") || signals.has("smart-contracts") || includesAny(text, ["defi", "withdrawal path"]);
+  const taskTouchesMigrations =
+    signals.has("database-migration") || signals.has("database") || includesAny(text, ["remove a production column"]);
 
-  if (signals.has("web3") || signals.has("smart-contracts") || includesAny(text, ["defi", "withdrawal path"])) {
+  if (taskTouchesContracts) {
     reasons.push("funds/smart-contract path");
+    if (map.signals.web3) {
+      reasons.push("repository map corroborates smart-contract surface");
+    }
     return { level: "CRITICAL", reasons };
   }
   if (signals.has("destructive") || signals.has("destructive-data") || includesAny(text, ["remove a production column"])) {
     reasons.push("destructive data or production mutation");
+    if (map.signals.migrations || map.signals.database) {
+      reasons.push("repository map corroborates database/migration presence");
+    }
     return { level: "CRITICAL", reasons };
   }
   if (signals.has("financial-calculation") || signals.has("tokenomics") || signals.has("payments")) {
@@ -82,6 +116,9 @@ export function classifyRisk(intake: NormalizedIntake, _map: RepositoryMap): { l
   }
   if (signals.has("database-migration")) {
     reasons.push("schema/data migration");
+    if (map.signals.migrations || map.signals.database) {
+      reasons.push("repository map corroborates migration/database presence");
+    }
     return { level: "HIGH", reasons };
   }
   if (signals.has("authentication") || signals.has("public-api") || signals.has("infrastructure")) {
@@ -91,6 +128,14 @@ export function classifyRisk(intake: NormalizedIntake, _map: RepositoryMap): { l
   if (signals.has("performance-hot-path")) {
     reasons.push("latency-sensitive path");
     return { level: "MEDIUM", reasons };
+  }
+  if (sensitiveUncertainty(intake)) {
+    reasons.push("material uncertainty in a sensitive affected area");
+    return { level: "MEDIUM", reasons };
+  }
+  if (taskTouchesMigrations && (map.signals.migrations || map.signals.database) && signals.has("database")) {
+    reasons.push("repository map corroborates migration/database presence");
+    return { level: "HIGH", reasons };
   }
   reasons.push("no high-risk structured signals in intake");
   return { level: "LOW", reasons };
@@ -118,17 +163,17 @@ export function selectDomains(intake: NormalizedIntake): Array<{ id: string; rea
 }
 
 export function selectContextRadius(scopeClass: ScopeClass, risk: RiskLevel): { radius: ContextRadius; reason: string } {
-  if (scopeClass === "trivial") {
-    return { radius: "C1", reason: "trivial change: named/affected files only" };
+  if (risk === "CRITICAL" || scopeClass === "architectural") {
+    return { radius: "C4", reason: "architectural/critical: connected subsystems, not repository-wide" };
+  }
+  if (risk === "HIGH" || scopeClass === "cross-cutting") {
+    return { radius: "C3", reason: "cross-cutting or high risk: dependency neighborhood" };
   }
   if (scopeClass === "local") {
     return { radius: "C2", reason: "local module plus focused tests" };
   }
-  if (scopeClass === "cross-cutting" || risk === "HIGH") {
-    return { radius: "C3", reason: "cross-cutting or high risk: dependency neighborhood" };
-  }
-  if (scopeClass === "architectural" || risk === "CRITICAL") {
-    return { radius: "C4", reason: "architectural/critical: connected subsystems, not repository-wide" };
+  if (scopeClass === "trivial") {
+    return { radius: "C1", reason: "trivial change: named/affected files only" };
   }
   return { radius: "C2", reason: "default smallest sufficient module radius" };
 }
