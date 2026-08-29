@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { EXCLUDED_DIRECTORY_NAMES } from "../lib/constants.js";
-import { isBinaryFileName, isExcludedDirectoryName } from "../lib/exclusions.js";
+import { isExcludedDirectoryName } from "../lib/exclusions.js";
 import { runProcess } from "../lib/exec.js";
 import { isPathInside, sha256Hex, toPosix } from "../lib/hash.js";
 import { assertSafeRelativeProjectPath } from "./safe-path.js";
@@ -9,6 +9,7 @@ import { assertSafeRelativeProjectPath } from "./safe-path.js";
 export type PorcelainEntry = {
   code: string;
   path: string;
+  origPath?: string;
 };
 
 function runGit(args: string[], cwd: string, trim = true): string {
@@ -21,37 +22,44 @@ function runGit(args: string[], cwd: string, trim = true): string {
 }
 
 export function gitPorcelain(repoRoot: string): string {
-  return runGit(["status", "--porcelain=v1", "-uall"], repoRoot, false).replace(/(?:\r?\n)+$/, "");
+  return runGit(["status", "--porcelain=v1", "-z", "-uall"], repoRoot, false);
 }
 
 export function isWorktreeDirty(repoRoot: string): boolean {
-  return gitPorcelain(repoRoot).length > 0;
+  return parseGitPorcelain(gitPorcelain(repoRoot)).length > 0;
 }
 
 export function gitDiffHead(repoRoot: string): string {
   return runGit(["diff", "HEAD"], repoRoot, false);
 }
 
+function isRenameOrCopy(code: string): boolean {
+  return code.includes("R") || code.includes("C");
+}
+
 export function parseGitPorcelain(output: string): PorcelainEntry[] {
   const entries: PorcelainEntry[] = [];
-  for (const raw of output.split(/\r?\n/)) {
-    if (!raw.trimEnd()) {
+  const parts = output.split("\0");
+  let index = 0;
+  while (index < parts.length) {
+    const raw = parts[index] ?? "";
+    index += 1;
+    if (!raw) {
       continue;
     }
-    if (raw.length < 4) {
+    if (raw.length < 3) {
       continue;
     }
     const code = raw.slice(0, 2);
-    let rest = raw.slice(3);
-    const renameAt = rest.lastIndexOf(" -> ");
-    if (renameAt >= 0) {
-      rest = rest.slice(renameAt + 4);
+    const firstPath = toPosix(raw.slice(3)).replace(/\\/g, "/");
+    if (isRenameOrCopy(code)) {
+      const destRaw = parts[index] ?? "";
+      index += 1;
+      const dest = toPosix(destRaw).replace(/\\/g, "/");
+      entries.push({ code, path: dest, origPath: firstPath });
+      continue;
     }
-    if (rest.startsWith("\"") && rest.endsWith("\"")) {
-      rest = rest.slice(1, -1);
-    }
-    const relative = toPosix(rest).replace(/\\/g, "/");
-    entries.push({ code, path: relative });
+    entries.push({ code, path: firstPath });
   }
   return entries;
 }
@@ -63,48 +71,98 @@ export function pathHasExcludedSegment(relativePath: string): boolean {
     .some((part) => isExcludedDirectoryName(part) || EXCLUDED_DIRECTORY_NAMES.has(part));
 }
 
-export function listChangedRelativePaths(repoRoot: string): string[] {
-  const entries = parseGitPorcelain(gitPorcelain(repoRoot));
-  const paths = new Set<string>();
-  for (const entry of entries) {
-    if (pathHasExcludedSegment(entry.path)) {
+export function listChangedEntries(repoRoot: string): PorcelainEntry[] {
+  const entries: PorcelainEntry[] = [];
+  for (const entry of parseGitPorcelain(gitPorcelain(repoRoot))) {
+    const candidates = [entry.path, entry.origPath].filter((value): value is string => Boolean(value));
+    let rejected = false;
+    const safe: PorcelainEntry = { ...entry };
+    try {
+      safe.path = assertSafeRelativeProjectPath(entry.path);
+      if (entry.origPath) {
+        safe.origPath = assertSafeRelativeProjectPath(entry.origPath);
+      }
+    } catch {
+      rejected = true;
+    }
+    if (rejected || candidates.some((item) => pathHasExcludedSegment(item))) {
       continue;
     }
-    try {
-      paths.add(assertSafeRelativeProjectPath(entry.path));
-    } catch {
-      continue;
+    entries.push(safe);
+  }
+  return entries;
+}
+
+export function listChangedRelativePaths(repoRoot: string): string[] {
+  const paths = new Set<string>();
+  for (const entry of listChangedEntries(repoRoot)) {
+    paths.add(entry.path);
+    if (entry.origPath) {
+      paths.add(entry.origPath);
     }
   }
   return [...paths].sort((a, b) => a.localeCompare(b));
 }
 
-export function hashUntrackedFile(repoRoot: string, relativePath: string): string {
+export function describeSymlinkChange(
+  repoRoot: string,
+  relativePath: string,
+): { identity: string; blocked: boolean; reason?: string } {
+  const abs = path.resolve(repoRoot, relativePath);
+  if (!isPathInside(repoRoot, abs)) {
+    return { identity: "escape", blocked: true, reason: "symlink path escape" };
+  }
+  const target = fs.readlinkSync(abs);
+  if (path.isAbsolute(target) || /^[A-Za-z]:/.test(target) || target.startsWith("\\\\") || target.includes("..")) {
+    return {
+      identity: `symlink-blocked:${sha256Hex(target)}`,
+      blocked: true,
+      reason: "unsupported symlink target",
+    };
+  }
+  return { identity: `symlink:${sha256Hex(target)}`, blocked: false };
+}
+
+export function fileContentIdentity(repoRoot: string, relativePath: string): string {
   const abs = path.resolve(repoRoot, relativePath);
   if (!isPathInside(repoRoot, abs)) {
     throw new Error("path traversal rejected");
   }
-  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
-    return "missing";
+  if (!fs.existsSync(abs)) {
+    return "deleted";
+  }
+  const stat = fs.lstatSync(abs);
+  if (stat.isSymbolicLink()) {
+    return describeSymlinkChange(repoRoot, relativePath).identity;
+  }
+  if (!stat.isFile()) {
+    return `special:${stat.mode}`;
   }
   return sha256Hex(fs.readFileSync(abs));
 }
 
-export function computeChangeDigest(repoRoot: string, relativePaths: string[]): string {
+export function hashUntrackedFile(repoRoot: string, relativePath: string): string {
+  return fileContentIdentity(repoRoot, relativePath);
+}
+
+export function computeChangeDigest(repoRoot: string, entries: PorcelainEntry[]): string {
   const diff = gitDiffHead(repoRoot);
   const lines = [`diff:${sha256Hex(diff)}`];
-  for (const relative of [...relativePaths].sort((a, b) => a.localeCompare(b))) {
-    const abs = path.resolve(repoRoot, relative);
-    const exists = fs.existsSync(abs) && fs.statSync(abs).isFile();
-    if (!exists) {
-      lines.push(`${relative}:deleted`);
+  const seen = new Set<string>();
+  const ordered = [...entries].sort((a, b) => {
+    const left = `${a.origPath ?? ""}:${a.path}`;
+    const right = `${b.origPath ?? ""}:${b.path}`;
+    return left.localeCompare(right);
+  });
+  for (const entry of ordered) {
+    const key = `${entry.code}:${entry.origPath ?? ""}:${entry.path}`;
+    if (seen.has(key)) {
       continue;
     }
-    if (isBinaryFileName(relative)) {
-      lines.push(`${relative}:binary:${fs.statSync(abs).size}`);
-      continue;
-    }
-    lines.push(`${relative}:${sha256Hex(fs.readFileSync(abs))}`);
+    seen.add(key);
+    const identity = fileContentIdentity(repoRoot, entry.path);
+    const origIdentity = entry.origPath ? fileContentIdentity(repoRoot, entry.origPath) : "";
+    lines.push(`${entry.path}:${entry.code}:${entry.origPath ?? ""}:${identity}:${origIdentity}`);
   }
   return sha256Hex(lines.join("\n"));
 }

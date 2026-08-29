@@ -12,6 +12,7 @@ export function runEvidenceRecordCommand(input: {
   command?: string;
   exitCode?: string;
   output?: string;
+  file?: string;
   summary: string;
   status?: string;
 }): string {
@@ -29,6 +30,7 @@ export function runEvidenceRecordCommand(input: {
       command: input.command,
       exitCode,
       outputPath: input.output,
+      file: input.file,
       summary: input.summary,
       status: input.status as EvidenceRuntimeStatus | undefined,
     });

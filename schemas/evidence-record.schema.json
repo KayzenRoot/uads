@@ -38,6 +38,7 @@
     "exitCode": { "type": ["integer", "null"] },
     "outputRef": { "type": ["string", "null"] },
     "outputDigest": { "type": ["string", "null"] },
-    "fileRef": { "type": ["string", "null"] }
+    "fileRef": { "type": ["string", "null"] },
+    "fileDigest": { "type": ["string", "null"] }
   }
 }

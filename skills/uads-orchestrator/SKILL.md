@@ -16,7 +16,7 @@ Host-side semantic protocol for the deterministic UADS kernel. Do not dump the r
 1. Inspect state (`uads status`, `uads inspect`, `uads resume`).
 2. Normalize the user request into `schemas/intake.schema.json`.
 3. `uads plan --intake <file>` (preferred) or `uads plan --request` as fallback.
-4. `uads dispatch` — dirty worktrees block; UADS will not reset/stash/clean.
+4. `uads dispatch --session <implementer-session-id>` — dirty worktrees block; UADS will not reset/stash/clean. The session is the authoritative implementer identity.
 5. Invoke selected implementation specialist(s) from the Work Order. Edit only NECESSARY scope.
 6. `uads verify` — binds a change digest. Do not claim gates passed.
 7. Run selected gates in the host terminal. `uads evidence record` for each selected non-review gate.

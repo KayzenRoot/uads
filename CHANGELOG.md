@@ -11,7 +11,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - `uads status` / `uads resume` report active execution phase, digest, pending/failed gates, and reviewers
 - Execution schemas 0.3.0: execution-run, execution-packet, evidence-record, review-record
 - Canonical agent definitions for requirements-engineer, software-architect, implementation-planner, and test-engineer
-- Execution eval suite `npm run eval:execution` (X1–X7)
+- Execution eval suite `npm run eval:execution` (X1–X9)
 - Review ZIP includes sanitized orchestration/execution metadata when present
 
 ### Notes
@@ -19,7 +19,22 @@ All notable changes to UADS (NexLabs) are documented here.
 - The TypeScript kernel remains provider-neutral and does not edit customer projects or call model APIs
 - Dirty worktrees block dispatch; UADS does not reset, stash, or delete user files
 - Evidence and reviews bind to the current change digest; stale digest records cannot finalize
+- `uads dispatch --session` binds the authoritative implementer session before review; reviewers cannot invent it
+- Command gates require command + exit 0 + captured output digest; review gates require reviewer records
+- Current-digest FAIL/BLOCKED evidence is sticky until a new change digest
+- Change digest hashes actual file bytes, including untracked binaries; Git status is parsed as NUL-delimited porcelain
+- Corrupt authoritative evidence/review JSON fails closed
 - `uads review` remains review ZIP generation; assurance uses `uads assurance *`
+
+### Fixed (Correction 01)
+
+- Change digest hashes actual bytes of every changed regular file, including same-size untracked binaries
+- Git changed-path parsing uses `git status --porcelain=v1 -z -uall`
+- Implementer session is required at dispatch and cannot be backfilled during assurance
+- `uads assurance record` requires review phase after `uads assurance start`
+- Gate evidence contracts reject summary-only or wrong-kind PASS records
+- Current-digest FAIL/BLOCKED remains blocking until a new digest
+- Active execution artifacts are cross-checked; corrupt evidence/review JSON fails closed
 
 ## [0.2.0] - 2026-08-29
 

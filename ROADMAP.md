@@ -12,7 +12,7 @@ Deterministic planning kernel: intake, repository map, scope/risk/domain/special
 
 ## Prompt 003 — Bounded Execution Engine (complete)
 
-Dispatch, change digest, evidence ledger, independent assurance, correction loop, finalize guards, execution evals X1–X7. Host performs edits; kernel stays provider-neutral.
+Dispatch, change digest, evidence ledger, independent assurance, correction loop, finalize guards, execution evals X1–X9. Correction 01 hardens digest, session identity, assurance ordering, gate contracts, sticky failures, and fail-closed corrupt state. Host performs edits; kernel stays provider-neutral.
 
 ## Next increments (planned)
 

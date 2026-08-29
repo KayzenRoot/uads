@@ -28,7 +28,7 @@ export function runAssuranceRecordCommand(input: {
   json?: boolean;
   role: string;
   session: string;
-  implementerSession: string;
+  implementerSession?: string;
   verdict: string;
   summary: string;
   findings?: string;

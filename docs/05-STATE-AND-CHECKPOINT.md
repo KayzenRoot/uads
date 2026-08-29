@@ -18,9 +18,9 @@ Never commit UADS checkpoints, work orders, or review ZIPs to the managed projec
 
 Lifecycle: intake → classify → plan → implement → verify → review → stopped.
 
-Prompt 002 drives through **plan**. Prompt 003 adds durable execution runs under `execution-runs/<id>/`. `uads dispatch` advances the checkpoint to implement only after a clean worktree baseline. `uads resume` returns execution ids, digest, pending/failed gates, reviewers, and next action without a full repository walk.
+Prompt 002 drives through **plan**. Prompt 003 adds durable execution runs under `execution-runs/<id>/`. `uads dispatch --session` binds the implementer session and advances the checkpoint to implement only after a clean worktree baseline. `uads resume` returns execution ids, digest, pending/failed gates, reviewers, and next action without a full repository walk.
 
-Dirty pre-existing worktrees block dispatch. UADS does not reset, stash, or delete user files.
+Dirty pre-existing worktrees block dispatch. UADS does not reset, stash, or delete user files. Active checkpoint, Work Order, routing decision, run, and packet IDs are cross-checked. Corrupt evidence/review JSON fails closed rather than disappearing from the audit history.
 
 `uads resume` returns a compact packet (ids, phase, objective, specialists/gates, map digest, next action) without rereading the repository.
 

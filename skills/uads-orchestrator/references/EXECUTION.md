@@ -16,7 +16,9 @@ uads dispatch
 -> uads review when a ZIP is required
 ```
 
-`uads review` still means review ZIP generation. Assurance uses `uads assurance start` / `uads assurance record`.
+`uads dispatch --session <id>` binds the authoritative implementer session before implementation/review. Redispatch with a different session is rejected. `uads assurance record` requires review phase after `uads assurance start`; `--implementer-session` may only corroborate the bound run identity.
+
+Command PASS evidence requires `kind=command`, command text, exit 0, and a captured output digest. Review gates are satisfied only by the mapped reviewer record. Current-digest FAIL/BLOCKED stays blocking until `uads verify` produces a new digest. Change digest hashes actual file bytes (including untracked binaries) using NUL-delimited Git porcelain. Corrupt evidence/review JSON fails closed.
 
 If isolated reviewer context is unavailable, do not fake approval; record BLOCKED. The implementation agent must not self-approve.
 

@@ -141,16 +141,33 @@ export function readExecutionPacket(
   schemaRoot?: string,
 ): ExecutionPacket | null {
   const runPaths = executionRunPaths(paths, executionRunId);
+  if (!fs.existsSync(runPaths.packet)) {
+    return null;
+  }
   const parsed = readJsonIfValid<ExecutionPacket>(runPaths.packet);
   if (!parsed.ok) {
-    return null;
+    throw new InvalidOrchestrationStateError(`execution packet unreadable: ${parsed.error}`);
   }
   try {
     assertSchema("execution-packet.schema.json", parsed.value, schemaRoot);
     return parsed.value;
-  } catch {
-    return null;
+  } catch (error) {
+    throw new InvalidOrchestrationStateError(
+      `corrupt execution packet rejected: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
+}
+
+export function readRequiredExecutionPacket(
+  paths: UadsPaths,
+  executionRunId: string,
+  schemaRoot?: string,
+): ExecutionPacket {
+  const packet = readExecutionPacket(paths, executionRunId, schemaRoot);
+  if (!packet) {
+    throw new InvalidOrchestrationStateError("execution packet missing for active run");
+  }
+  return packet;
 }
 
 export function readCurrentExecutionRunId(paths: UadsPaths): string | null {
@@ -191,13 +208,15 @@ export function listEvidenceRecords(
   for (const name of fs.readdirSync(runPaths.evidence).filter((file) => file.endsWith(".json")).sort()) {
     const parsed = readJsonIfValid<EvidenceRecord>(path.join(runPaths.evidence, name));
     if (!parsed.ok) {
-      continue;
+      throw new InvalidOrchestrationStateError(`corrupt evidence record ${name}: ${parsed.error}`);
     }
     try {
       assertSchema("evidence-record.schema.json", parsed.value, schemaRoot);
       records.push(parsed.value);
-    } catch {
-      continue;
+    } catch (error) {
+      throw new InvalidOrchestrationStateError(
+        `corrupt evidence record ${name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
   records.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -214,16 +233,21 @@ export function listReviewRecords(
     return [];
   }
   const records: ReviewRecord[] = [];
-  for (const name of fs.readdirSync(runPaths.reviews).filter((file) => file.endsWith(".json") && file !== "packet.json").sort()) {
+  for (const name of fs
+    .readdirSync(runPaths.reviews)
+    .filter((file) => file.endsWith(".json") && file !== "packet.json")
+    .sort()) {
     const parsed = readJsonIfValid<ReviewRecord>(path.join(runPaths.reviews, name));
     if (!parsed.ok) {
-      continue;
+      throw new InvalidOrchestrationStateError(`corrupt review record ${name}: ${parsed.error}`);
     }
     try {
       assertSchema("review-record.schema.json", parsed.value, schemaRoot);
       records.push(parsed.value);
-    } catch {
-      continue;
+    } catch (error) {
+      throw new InvalidOrchestrationStateError(
+        `corrupt review record ${name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
   records.sort((a, b) => a.createdAt.localeCompare(b.createdAt));

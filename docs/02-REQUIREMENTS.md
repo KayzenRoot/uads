@@ -20,7 +20,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F12 | `uads resume` reconstructs next action from sidecar state without a full repository rescan |
 | F13 | Orchestrator eval suite (`npm run eval:orchestrator`) covers mandatory routing cases including non-selections |
 | F14 | Execution engine dispatches a planned Work Order, binds a change digest, records evidence/reviews, and refuses unsupported completion |
-| F15 | Execution eval suite (`npm run eval:execution`) covers happy path, fail verify, missing review, self-review, scope violation, correction loop, and CRITICAL assurance |
+| F15 | Execution eval suite (`npm run eval:execution`) covers happy path, fail verify, missing review, self-review, scope violation, correction loop, CRITICAL assurance, evidence spoof, and digest/session integrity |
 
 ## Non-functional
 

@@ -1,13 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { atomicWriteFile, readJsonIfValid } from "../lib/atomic-write.js";
+import { isSensitiveDataFile } from "../lib/exclusions.js";
 import { readGitSummary } from "../lib/git.js";
-import { sha256Hex } from "../lib/hash.js";
+import { isPathInside, sha256Hex } from "../lib/hash.js";
 import { sanitizeOperationalText, sanitizeOperationalValue } from "../lib/safe-persist.js";
 import { sanitizeReviewText } from "../lib/secrets.js";
 import { findPackageRoot } from "../lib/version.js";
 import type { UadsPaths } from "../lib/workspace.js";
-import { computeChangeDigest, isWorktreeDirty, listChangedRelativePaths } from "./change-digest.js";
+import {
+  computeChangeDigest,
+  describeSymlinkChange,
+  isWorktreeDirty,
+  listChangedEntries,
+} from "./change-digest.js";
 import { selectContextCandidates } from "./context-candidates.js";
 import {
   listEvidenceRecords,
@@ -19,7 +25,9 @@ import {
   persistReviewRecord,
   readCurrentExecutionRun,
   readExecutionPacket,
+  readRequiredExecutionPacket,
 } from "./execution-persist.js";
+import { assertActiveExecutionConsistency } from "./execution-integrity.js";
 import type {
   ChangeSet,
   EvidenceKind,
@@ -36,7 +44,7 @@ import type {
   ReviewVerdict,
   ScopeViolation,
 } from "./execution-types.js";
-import { isKnownGateId, isReviewGate, REVIEW_GATE_ROLES } from "./gates.js";
+import { gateDef, isKnownGateId, isReviewGate, REVIEW_GATE_ROLES, type GateDef } from "./gates.js";
 import { newPrefixedId } from "./ids.js";
 import {
   InvalidOrchestrationStateError,
@@ -86,13 +94,66 @@ function requiresImplementation(workOrder: WorkOrder): boolean {
   return workOrder.specialists.includes(IMPLEMENTER_ROLE);
 }
 
+function resolveImplementerSession(
+  workOrder: WorkOrder,
+  existing: ExecutionRun | null,
+  providedRaw?: string,
+): string | null {
+  const provided = providedRaw ? sanitizeOperationalText(providedRaw) : "";
+  const bound = existing && existing.workOrderId === workOrder.workOrderId ? existing.implementerSessionId : null;
+  if (requiresImplementation(workOrder)) {
+    if (bound) {
+      if (!provided) {
+        throw new ExecutionBlockedError("dispatch requires the bound implementer session", [
+          "missing implementer session",
+        ]);
+      }
+      if (provided !== bound) {
+        throw new ExecutionBlockedError("cannot rebind implementer session on an active run", [
+          "implementer session mismatch",
+        ]);
+      }
+      return bound;
+    }
+    if (!provided) {
+      throw new ExecutionBlockedError("dispatch requires a non-empty implementer session", [
+        "missing implementer session",
+      ]);
+    }
+    return provided;
+  }
+  if (bound) {
+    if (provided && provided !== bound) {
+      throw new ExecutionBlockedError("cannot rebind implementer session on an active run", [
+        "implementer session mismatch",
+      ]);
+    }
+    return bound;
+  }
+  return provided || null;
+}
+
 export function buildChangeSet(
   repoRoot: string,
   workOrder: WorkOrder,
   contextPlan: ContextPlan | null,
 ): ChangeSet {
-  const relativePaths = listChangedRelativePaths(repoRoot).map((item) => assertSafeRelativeProjectPath(item));
+  const entries = listChangedEntries(repoRoot);
+  const relativePaths = [...new Set(entries.flatMap((entry) => [entry.path, entry.origPath].filter((value): value is string => Boolean(value))))].sort(
+    (a, b) => a.localeCompare(b),
+  );
   const files = relativePaths.map((relative) => {
+    const abs = path.resolve(repoRoot, relative);
+    if (fs.existsSync(abs) && fs.lstatSync(abs).isSymbolicLink()) {
+      const symlink = describeSymlinkChange(repoRoot, relative);
+      if (symlink.blocked) {
+        return {
+          path: relative,
+          classification: "sensitive" as const,
+          reason: symlink.reason ?? "unsupported symlink",
+        };
+      }
+    }
     const classified = classifyChangedPath(relative, workOrder, contextPlan);
     return { path: relative, classification: classified.classification, reason: classified.reason };
   });
@@ -102,10 +163,57 @@ export function buildChangeSet(
       : [],
   );
   return {
-    digest: computeChangeDigest(repoRoot, relativePaths),
+    digest: computeChangeDigest(repoRoot, entries),
     files,
     violations,
   };
+}
+
+function evidenceSatisfiesGate(record: EvidenceRecord, def: GateDef): boolean {
+  if (record.status !== "PASS") {
+    return false;
+  }
+  if (!def.allowedEvidenceKinds.includes(record.kind)) {
+    return false;
+  }
+  if (def.contractKind === "command" || record.kind === "command") {
+    return (
+      record.kind === "command" &&
+      Boolean(record.command) &&
+      record.exitCode === 0 &&
+      Boolean(record.outputRef) &&
+      Boolean(record.outputDigest)
+    );
+  }
+  if (record.kind === "file") {
+    return Boolean(record.fileRef) && Boolean(record.fileDigest);
+  }
+  if (record.kind === "invariant") {
+    return Boolean((record.outputRef && record.outputDigest) || (record.fileRef && record.fileDigest));
+  }
+  return false;
+}
+
+function reviewGateState(
+  gateId: string,
+  digest: string | null,
+  reviews: ReviewRecord[],
+): GateStateSnapshot {
+  const role = REVIEW_GATE_ROLES[gateId];
+  if (!digest || !role) {
+    return { gateId, status: "PENDING", evidenceId: null };
+  }
+  const current = reviews.filter((review) => review.changeDigest === digest && review.reviewerRole === role);
+  if (current.some((review) => review.verdict === "BLOCKED")) {
+    return { gateId, status: "BLOCKED", evidenceId: null };
+  }
+  if (current.some((review) => review.verdict === "CORRECTION_NEEDED")) {
+    return { gateId, status: "FAIL", evidenceId: null };
+  }
+  if (current.some((review) => review.verdict === "APPROVED")) {
+    return { gateId, status: "PASS", evidenceId: null };
+  }
+  return { gateId, status: "PENDING", evidenceId: null };
 }
 
 export function deriveGateStates(input: {
@@ -115,31 +223,25 @@ export function deriveGateStates(input: {
   reviews: ReviewRecord[];
 }): GateStateSnapshot[] {
   return input.selectedGates.map((gateId) => {
-    const current = input.evidence.filter((item) => item.gateId === gateId && item.changeDigest === input.digest);
-    const latest = current[current.length - 1];
-    if (latest) {
-      return { gateId, status: latest.status, evidenceId: latest.evidenceId };
+    if (isReviewGate(gateId)) {
+      return reviewGateState(gateId, input.digest, input.reviews);
     }
-    if (isReviewGate(gateId) && input.digest) {
-      const role = REVIEW_GATE_ROLES[gateId];
-      const approved = input.reviews.some(
-        (review) =>
-          review.changeDigest === input.digest &&
-          review.reviewerRole === role &&
-          review.verdict === "APPROVED",
-      );
-      if (approved) {
-        return { gateId, status: "PASS", evidenceId: null };
-      }
-      const blocked = input.reviews.some(
-        (review) =>
-          review.changeDigest === input.digest &&
-          review.reviewerRole === role &&
-          review.verdict === "BLOCKED",
-      );
-      if (blocked) {
-        return { gateId, status: "BLOCKED", evidenceId: null };
-      }
+    const def = gateDef(gateId);
+    const current = input.evidence.filter((item) => item.gateId === gateId && item.changeDigest === input.digest);
+    if (current.some((item) => item.status === "BLOCKED")) {
+      const blocked = current.find((item) => item.status === "BLOCKED");
+      return { gateId, status: "BLOCKED", evidenceId: blocked?.evidenceId ?? null };
+    }
+    if (current.some((item) => item.status === "FAIL")) {
+      const failed = current.find((item) => item.status === "FAIL");
+      return { gateId, status: "FAIL", evidenceId: failed?.evidenceId ?? null };
+    }
+    if (!def) {
+      return { gateId, status: "PENDING" as GateRuntimeStatus, evidenceId: null };
+    }
+    const passing = [...current].reverse().find((item) => evidenceSatisfiesGate(item, def));
+    if (passing) {
+      return { gateId, status: "PASS", evidenceId: passing.evidenceId };
     }
     return { gateId, status: "PENDING" as GateRuntimeStatus, evidenceId: null };
   });
@@ -301,6 +403,8 @@ export function runDispatch(input: {
     throw new ExecutionBlockedError("execution run already completed", ["run already completed"]);
   }
 
+  const implementerSessionId = resolveImplementerSession(workOrder, existing, input.session);
+
   if (
     existing &&
     existing.workOrderId === workOrder.workOrderId &&
@@ -338,7 +442,7 @@ export function runDispatch(input: {
     contextRadius: workOrder.contextRadius,
     contextCandidates: contextPlan.candidateAreas,
     implementerRole: IMPLEMENTER_ROLE,
-    implementerSessionId: input.session ? sanitizeOperationalText(input.session) : existing?.implementerSessionId ?? null,
+    implementerSessionId,
     requiredReviewers: unique(workOrder.assuranceReviewers),
     selectedGates: workOrder.qualityGates,
     currentChangeDigest: null,
@@ -394,9 +498,20 @@ function loadActive(input: { cwd?: string; uadsHome?: string }): {
   }
   const workOrder = readWorkOrder(ctx.paths, checkpoint.workOrderId, schemaRoot);
   const contextPlan = readContextPlan(ctx.paths);
-  if (!workOrder || !contextPlan) {
-    throw new InvalidOrchestrationStateError("Work Order or context plan missing");
+  const routing =
+    checkpoint.routingDecisionId ? readRoutingDecision(ctx.paths, checkpoint.routingDecisionId, schemaRoot) : null;
+  if (!workOrder || !contextPlan || !routing) {
+    throw new InvalidOrchestrationStateError("Work Order, routing decision, or context plan missing");
   }
+  const packet = readRequiredExecutionPacket(ctx.paths, run.executionRunId, schemaRoot);
+  assertActiveExecutionConsistency({
+    projectId: ctx.projectId,
+    checkpoint,
+    workOrder,
+    routing,
+    run,
+    packet,
+  });
   return { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run };
 }
 
@@ -497,6 +612,78 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
   };
 }
 
+function hashProjectFileEvidence(repoRoot: string, relativePath: string): { fileRef: string; fileDigest: string } {
+  const relative = assertSafeRelativeProjectPath(relativePath);
+  if (isSensitiveDataFile(relative)) {
+    throw new ExecutionBlockedError("sensitive file evidence rejected", [`sensitive:${relative}`]);
+  }
+  const abs = path.resolve(repoRoot, relative);
+  if (!isPathInside(repoRoot, abs)) {
+    throw new ExecutionBlockedError("path traversal rejected", ["file path traversal"]);
+  }
+  if (!fs.existsSync(abs)) {
+    throw new ExecutionBlockedError("evidence file not found", ["missing file"]);
+  }
+  const stat = fs.lstatSync(abs);
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    throw new ExecutionBlockedError("file evidence must be a regular file inside the repository", ["invalid file evidence"]);
+  }
+  return { fileRef: relative, fileDigest: sha256Hex(fs.readFileSync(abs)) };
+}
+
+function assertRecordableGate(run: ExecutionRun, gateId: string): GateDef {
+  if (!isKnownGateId(gateId)) {
+    throw new ExecutionBlockedError("unknown gate cannot be recorded", [`unknown gate ${gateId}`]);
+  }
+  if (!run.selectedGates.includes(gateId)) {
+    throw new ExecutionBlockedError("unselected gate cannot be recorded", [`unselected gate ${gateId}`]);
+  }
+  const def = gateDef(gateId);
+  if (!def) {
+    throw new ExecutionBlockedError("unknown gate cannot be recorded", [`unknown gate ${gateId}`]);
+  }
+  if (isReviewGate(gateId)) {
+    throw new ExecutionBlockedError("review gates require assurance records, not generic evidence", [
+      `review-gate:${gateId}`,
+    ]);
+  }
+  return def;
+}
+
+function assertPassContract(
+  def: GateDef,
+  input: {
+    kind: EvidenceKind;
+    command?: string;
+    exitCode?: number;
+    outputRef: string | null;
+    outputDigest: string | null;
+    fileRef: string | null;
+    fileDigest: string | null;
+  },
+): void {
+  if (!def.allowedEvidenceKinds.includes(input.kind)) {
+    throw new ExecutionBlockedError("evidence kind cannot satisfy the selected gate", [
+      `kind ${input.kind} not allowed for ${def.id}`,
+    ]);
+  }
+  if (def.contractKind === "command" || input.kind === "command") {
+    if (input.kind !== "command" || !input.command || input.exitCode !== 0 || !input.outputRef || !input.outputDigest) {
+      throw new ExecutionBlockedError("command PASS requires command, exit 0, output ref, and output digest", [
+        `insufficient command evidence for ${def.id}`,
+      ]);
+    }
+  }
+  if (input.kind === "file" && (!input.fileRef || !input.fileDigest)) {
+    throw new ExecutionBlockedError("file evidence requires a relative fileRef and file digest", ["missing file digest"]);
+  }
+  if (input.kind === "invariant" && !((input.outputRef && input.outputDigest) || (input.fileRef && input.fileDigest))) {
+    throw new ExecutionBlockedError("invariant PASS requires a concrete output or file digest", [
+      "summary-only invariant rejected",
+    ]);
+  }
+}
+
 function copySanitizedOutput(input: {
   paths: UadsPaths;
   repoRoot: string;
@@ -535,6 +722,7 @@ export function runEvidenceRecord(input: {
   command?: string;
   exitCode?: number;
   outputPath?: string;
+  file?: string;
   summary: string;
   status?: EvidenceRuntimeStatus;
 }): { record: EvidenceRecord; run: ExecutionRun; gateStates: GateStateSnapshot[] } {
@@ -545,6 +733,7 @@ export function runEvidenceRecord(input: {
   if (run.phase !== "verify" && run.phase !== "review" && run.status !== "correction_needed") {
     throw new ExecutionBlockedError("evidence recording requires an active verified run", [`phase is ${run.phase}`]);
   }
+  const def = assertRecordableGate(run, sanitizeOperationalText(input.gateId));
   if (input.kind === "command" && input.exitCode === undefined) {
     throw new ExecutionBlockedError("command evidence requires --exit-code", ["missing exit code"]);
   }
@@ -558,6 +747,9 @@ export function runEvidenceRecord(input: {
       ]);
     }
   }
+  if (input.status === "BLOCKED") {
+    status = "BLOCKED";
+  }
 
   const createdAt = nowIso();
   const evidenceId = newPrefixedId("ev", `${run.executionRunId}:${input.gateId}:${run.currentChangeDigest}:${createdAt}`);
@@ -568,6 +760,19 @@ export function runEvidenceRecord(input: {
     evidenceId,
     outputPath: input.outputPath,
   });
+  const fileProof = input.file ? hashProjectFileEvidence(ctx.repoRoot, input.file) : { fileRef: null, fileDigest: null };
+  if (status === "PASS") {
+    assertPassContract(def, {
+      kind: input.kind,
+      command: input.command,
+      exitCode: input.exitCode,
+      outputRef: copied.outputRef,
+      outputDigest: copied.outputDigest,
+      fileRef: fileProof.fileRef,
+      fileDigest: fileProof.fileDigest,
+    });
+  }
+
   const record: EvidenceRecord = {
     schema: "uads.evidence-record",
     schemaVersion: "0.3.0",
@@ -586,6 +791,8 @@ export function runEvidenceRecord(input: {
     exitCode: input.kind === "command" ? (input.exitCode ?? null) : undefined,
     outputRef: copied.outputRef,
     outputDigest: copied.outputDigest,
+    fileRef: fileProof.fileRef,
+    fileDigest: fileProof.fileDigest,
   };
   persistEvidenceRecord({ paths: ctx.paths, record, schemaRoot });
 
@@ -714,27 +921,47 @@ export function runAssuranceRecord(input: {
   uadsHome?: string;
   role: string;
   session: string;
-  implementerSession: string;
+  implementerSession?: string;
   verdict: ReviewVerdict;
   summary: string;
   findingsJson?: string;
   findingsFile?: string;
 }): { record: ReviewRecord; run: ExecutionRun } {
   const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
-  if (run.phase !== "review" && run.phase !== "verify") {
-    throw new ExecutionBlockedError("assurance record requires review phase", [`phase is ${run.phase}`]);
+  if (run.phase !== "review") {
+    throw new ExecutionBlockedError("assurance record requires review phase after uads assurance start", [
+      `phase is ${run.phase}`,
+    ]);
+  }
+  if (run.status === "completed" || run.status === "blocked" || run.status === "failed") {
+    throw new ExecutionBlockedError("assurance record requires an active review run", [`status is ${run.status}`]);
   }
   if (!run.currentChangeDigest) {
     throw new ExecutionBlockedError("assurance record requires a current change digest", ["missing change digest"]);
   }
+  if (requiresImplementation(workOrder) && !run.implementerSessionId) {
+    throw new ExecutionBlockedError("missing authoritative implementer session; re-dispatch a new run", [
+      "missing implementer session",
+    ]);
+  }
   const reviewerRole = sanitizeOperationalText(input.role);
   const reviewSessionId = sanitizeOperationalText(input.session);
-  const implementerSessionId = sanitizeOperationalText(input.implementerSession);
-  const trueImplementerSession = run.implementerSessionId ?? implementerSessionId;
+  const providedImplementer = input.implementerSession ? sanitizeOperationalText(input.implementerSession) : "";
+  const implementerSessionId = run.implementerSessionId;
+  if (!implementerSessionId) {
+    throw new ExecutionBlockedError("missing authoritative implementer session; reviewer cannot invent it", [
+      "missing implementer session",
+    ]);
+  }
+  if (providedImplementer && providedImplementer !== implementerSessionId) {
+    throw new ExecutionBlockedError("caller implementer session does not match the bound run session", [
+      "implementer session mismatch",
+    ]);
+  }
   if (reviewerRole === run.implementerRole || reviewerRole === IMPLEMENTER_ROLE) {
     throw new ExecutionBlockedError("implementer cannot self-review", ["reviewer role equals implementer role"]);
   }
-  if (reviewSessionId === implementerSessionId || reviewSessionId === trueImplementerSession) {
+  if (reviewSessionId === implementerSessionId) {
     throw new ExecutionBlockedError("same implementer/reviewer session", [
       "same implementer/reviewer session",
     ]);
@@ -761,9 +988,7 @@ export function runAssuranceRecord(input: {
   };
   persistReviewRecord({ paths: ctx.paths, record, schemaRoot });
 
-  const implementerSession = run.implementerSessionId ?? implementerSessionId;
   let updated = touchRun(run, {
-    implementerSessionId: implementerSession,
     reviewRefs: unique([
       ...run.reviewRefs,
       `sidecar://execution-runs/${run.executionRunId}/reviews/${record.reviewId}.json`,
@@ -827,6 +1052,9 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
   if (run.phase === "implement" || run.phase === "verify" || run.status === "correction_needed") {
     blockers.push("cannot finalize before independent review");
   }
+  if (requiresImplementation(workOrder) && !run.implementerSessionId) {
+    blockers.push("missing authoritative implementer session");
+  }
   const live = currentGitDigest(ctx.repoRoot, workOrder, contextPlan);
   if (run.currentChangeDigest && live !== run.currentChangeDigest) {
     blockers.push("current git digest differs from verified digest");
@@ -867,6 +1095,9 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     }
     if (independent.reviewSessionId === independent.implementerSessionId) {
       blockers.push("same implementer/reviewer session");
+    }
+    if (run.implementerSessionId && independent.implementerSessionId !== run.implementerSessionId) {
+      blockers.push("review does not carry the authoritative implementer session");
     }
     if (run.reviewedChangeDigest && run.reviewedChangeDigest !== run.currentChangeDigest) {
       blockers.push("reviewed digest does not match current digest");

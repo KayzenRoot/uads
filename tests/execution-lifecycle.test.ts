@@ -21,7 +21,7 @@ describe("execution lifecycle guards", { timeout: 120_000 }, () => {
     planFrontend(repo, home);
     const dirty = path.join(repo, "src", "keep-me.css");
     fs.writeFileSync(dirty, "keep\n");
-    expect(() => runDispatch({ cwd: repo, uadsHome: home })).toThrow(ExecutionBlockedError);
+    expect(() => runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" })).toThrow(ExecutionBlockedError);
     expect(fs.readFileSync(dirty, "utf8")).toBe("keep\n");
     expect(fs.existsSync(dirty)).toBe(true);
   });

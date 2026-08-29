@@ -22,4 +22,4 @@ The planner picks from a canonical registry: static, unit-test, integration-test
 
 Style-only frontend work does not require Web3 fuzzing. DeFi withdrawal requires web3-unit, fuzz, invariant, and security review.
 
-A selected Work Order gate is PASS only with current-digest evidence (or a matching current-digest assurance record for review gates). FAIL/BLOCKED evidence blocks `uads finalize`. Unknown gate IDs cannot satisfy a selected gate.
+A selected Work Order gate is PASS only with current-digest evidence that matches the gate contract (command gates: command + exit 0 + output digest; review gates: mapped reviewer APPROVED). FAIL/BLOCKED evidence on the current digest stays blocking even if a later PASS is recorded. Unknown or unselected gate IDs cannot satisfy a selected gate. Corrupt evidence JSON fails closed.

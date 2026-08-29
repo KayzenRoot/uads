@@ -50,7 +50,8 @@ Complete only when all are true:
 - Dirty worktree blocks dispatch without mutating user files
 - Implementer cannot self-approve; required assurance roles are enforced
 - Every currently selectable core role has a canonical `agents/uads-*.md` definition
-- Execution evals X1–X7 pass; orchestrator evals remain 9/9
+- Execution evals X1–X9 pass; orchestrator evals remain 9/9
+- Correction 01: content-hashed change digest, authoritative implementer session, assurance ordering, gate evidence contracts, sticky FAIL/BLOCKED, referential/corrupt-state fail-closed
 - Version is 0.3.0; lint/typecheck/build/tests/validate/npm audit pass
 
 ## Ongoing product DoD

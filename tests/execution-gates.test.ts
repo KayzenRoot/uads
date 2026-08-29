@@ -56,16 +56,18 @@ describe("execution gate evidence", { timeout: 120_000 }, () => {
     runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
     fs.writeFileSync(path.join(repo, "src", "button.css"), "button { color: red; }\n");
     runVerify({ cwd: repo, uadsHome: home });
-    runEvidenceRecord({
-      cwd: repo,
-      uadsHome: home,
-      gateId: "not-a-real-gate",
-      kind: "command",
-      role: "test-engineer",
-      command: "true",
-      exitCode: 0,
-      summary: "spoof",
-    });
+    expect(() =>
+      runEvidenceRecord({
+        cwd: repo,
+        uadsHome: home,
+        gateId: "not-a-real-gate",
+        kind: "command",
+        role: "test-engineer",
+        command: "true",
+        exitCode: 0,
+        summary: "spoof",
+      }),
+    ).toThrow(/unknown gate/i);
     expect(() => runFinalize({ cwd: repo, uadsHome: home })).toThrow(/pending gate|finalize refused/i);
   });
 });

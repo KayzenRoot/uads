@@ -109,6 +109,7 @@ export type EvidenceRecord = {
   outputRef?: string | null;
   outputDigest?: string | null;
   fileRef?: string | null;
+  fileDigest?: string | null;
 };
 
 export type ReviewFinding = {

@@ -49,6 +49,8 @@ describe("execution security", { timeout: 120_000 }, () => {
     fs.writeFileSync(path.join(repo, "src", "button.css"), "button { color: red; }\n");
     runVerify({ cwd: repo, uadsHome: home });
     const pwned = path.join(repo, "PWNED.txt");
+    const outputPath = path.join(home, "static-out.txt");
+    fs.writeFileSync(outputPath, "static ok\n");
     const recorded = runEvidenceRecord({
       cwd: repo,
       uadsHome: home,
@@ -57,6 +59,7 @@ describe("execution security", { timeout: 120_000 }, () => {
       role: "test-engineer",
       command: `node -e "require('fs').writeFileSync('PWNED.txt','pwned')"`,
       exitCode: 0,
+      outputPath,
       summary: `token ghp_${"a".repeat(36)}`,
     });
     expect(fs.existsSync(pwned)).toBe(false);

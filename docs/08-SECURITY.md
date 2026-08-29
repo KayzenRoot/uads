@@ -15,7 +15,8 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 - Installers must not overwrite user files without `--force` / `-Force`
 - Execution state uses relative project paths only; `../`, drive paths, and UNC paths are rejected
 - Dirty worktrees block dispatch; the engine never reset/stash/cleans user files
-- Implementer cannot self-approve; reviewer session must differ from implementer session
+- Implementer cannot self-approve; the implementer session is bound at dispatch and cannot be invented during review
+- Change digest hashes actual changed file bytes (including untracked binaries); Git paths are parsed with NUL-delimited porcelain
 
 Content scanning is **defense-in-depth**, not a claim of complete secret detection.
 

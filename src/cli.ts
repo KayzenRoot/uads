@@ -81,6 +81,7 @@ evidence
   .option("--command <text>", "command text for command evidence")
   .option("--exit-code <n>", "exit code for command evidence")
   .option("--output <path>", "sanitized output file to copy into the sidecar")
+  .option("--file <relative-path>", "relative project file for file/invariant evidence")
   .requiredOption("--summary <text>", "concise evidence summary")
   .option("--status <status>", "PASS | FAIL | BLOCKED (derived from exit code for command evidence)")
   .option("--json", "JSON output")
@@ -92,6 +93,7 @@ evidence
       command?: string;
       exitCode?: string;
       output?: string;
+      file?: string;
       summary: string;
       status?: string;
       json?: boolean;
@@ -105,6 +107,7 @@ evidence
           command: options.command,
           exitCode: options.exitCode,
           output: options.output,
+          file: options.file,
           summary: options.summary,
           status: options.status,
         }),

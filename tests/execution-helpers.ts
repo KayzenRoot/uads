@@ -38,6 +38,8 @@ export function recordGates(repo: string, home: string, gates: string[], exitCod
     if (isReviewGate(gate)) {
       continue;
     }
+    const outputPath = path.join(home, `gate-${gate}.txt`);
+    fs.writeFileSync(outputPath, `${gate} captured output\n`);
     runEvidenceRecord({
       cwd: repo,
       uadsHome: home,
@@ -46,6 +48,7 @@ export function recordGates(repo: string, home: string, gates: string[], exitCod
       role: "test-engineer",
       command: `npm run ${gate}`,
       exitCode,
+      outputPath,
       summary: `${gate} recorded`,
     });
   }

@@ -88,6 +88,8 @@ function recordGates(repo: string, home: string, gates: string[], exitCode = 0):
     if (isReviewGate(gate)) {
       continue;
     }
+    const outputPath = path.join(home, `gate-${gate}.txt`);
+    fs.writeFileSync(outputPath, `${gate} captured output\n`);
     runEvidenceRecord({
       cwd: repo,
       uadsHome: home,
@@ -96,6 +98,7 @@ function recordGates(repo: string, home: string, gates: string[], exitCode = 0):
       role: "test-engineer",
       command: `eval:${gate}`,
       exitCode,
+      outputPath,
       summary: `${gate} ${exitCode === 0 ? "pass" : "fail"}`,
     });
   }
@@ -250,6 +253,76 @@ function runScenario(id: string, home: string, repo: string): void {
     if (runFinalize({ cwd: repo, uadsHome: home }).run.status !== "completed") {
       throw new Error("X7 did not complete with assurance");
     }
+    return;
+  }
+  if (id === "X8") {
+    seedFrontend(repo);
+    const planned = runPlan({ cwd: repo, uadsHome: home, intake: frontendIntake() });
+    runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+    fs.writeFileSync(path.join(repo, "src", "button.css"), "button { color: red; }\n");
+    runVerify({ cwd: repo, uadsHome: home });
+    const gate = planned.workOrder.qualityGates.find((id) => id !== "security-review" && id !== "performance-check") ?? "unit-test";
+    expectThrow(
+      () =>
+        runEvidenceRecord({
+          cwd: repo,
+          uadsHome: home,
+          gateId: gate,
+          kind: "invariant",
+          role: "test-engineer",
+          summary: "ok",
+        }),
+      "X8 invariant spoof",
+    );
+    expectThrow(
+      () =>
+        runEvidenceRecord({
+          cwd: repo,
+          uadsHome: home,
+          gateId: gate,
+          kind: "command",
+          role: "test-engineer",
+          command: `eval:${gate}`,
+          exitCode: 0,
+          summary: "summary-only",
+        }),
+      "X8 summary-only",
+    );
+    recordGates(repo, home, planned.workOrder.qualityGates);
+    approve(repo, home, planned.workOrder.assuranceReviewers);
+    if (runFinalize({ cwd: repo, uadsHome: home }).run.status !== "completed") {
+      throw new Error("X8 valid command evidence should complete");
+    }
+    return;
+  }
+  if (id === "X9") {
+    seedFrontend(repo);
+    const planned = runPlan({ cwd: repo, uadsHome: home, intake: frontendIntake() });
+    runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+    expectThrow(() => runDispatch({ cwd: repo, uadsHome: home, session: "imp-forged" }), "X9 rebind");
+    fs.writeFileSync(path.join(repo, "src", "icon.bin"), Buffer.alloc(16, 1));
+    const first = runVerify({ cwd: repo, uadsHome: home });
+    recordGates(repo, home, planned.workOrder.qualityGates);
+    runAssuranceStart({ cwd: repo, uadsHome: home });
+    expectThrow(
+      () =>
+        runAssuranceRecord({
+          cwd: repo,
+          uadsHome: home,
+          role: "independent-reviewer",
+          session: "rev-1",
+          implementerSession: "imp-forged",
+          verdict: "APPROVED",
+          summary: "forged identity",
+        }),
+      "X9 forged session",
+    );
+    fs.writeFileSync(path.join(repo, "src", "icon.bin"), Buffer.alloc(16, 2));
+    const second = runVerify({ cwd: repo, uadsHome: home });
+    if (second.changeSet.digest === first.changeSet.digest) {
+      throw new Error("X9 same-size binary digest did not change");
+    }
+    expectThrow(() => runFinalize({ cwd: repo, uadsHome: home }), "X9 stale digest");
     return;
   }
   throw new Error(`unknown scenario ${id}`);
