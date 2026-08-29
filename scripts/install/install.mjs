@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -136,13 +136,14 @@ const uadsHome = process.env.UADS_HOME
   ? path.resolve(process.env.UADS_HOME)
   : path.join(os.homedir(), ".uads");
 
-for (const dir of ["core", "skills", "agents", "workspaces", "npm"]) {
+for (const dir of ["core", "skills", "agents", "adapters", "cache", "workspaces", "npm"]) {
   fs.mkdirSync(path.join(uadsHome, dir), { recursive: true });
 }
 
 copyTree(path.join(root, "core"), path.join(uadsHome, "core"), options.force);
 copyTree(path.join(root, "skills"), path.join(uadsHome, "skills"), options.force);
 copyTree(path.join(root, "agents"), path.join(uadsHome, "agents"), options.force);
+copyTree(path.join(root, "adapters"), path.join(uadsHome, "adapters"), options.force);
 
 if (!options.skipBuild) {
   if (!fs.existsSync(path.join(root, "node_modules"))) {
@@ -228,3 +229,27 @@ process.stdout.write(`UADS global layout ready at ${uadsHome}\n`);
 process.stdout.write(`uads CLI installed via npm prefix ${prefix}\n`);
 process.stdout.write(`Add to PATH: ${pathHint}\n`);
 process.stdout.write("Zero project footprint: no project files were modified.\n");
+
+try {
+  const adapterPath = path.join(root, "dist", "adapters", "cursor-agents.js");
+  if (fs.existsSync(adapterPath)) {
+    const { installCursorAgents } = await import(pathToFileURL(adapterPath).href);
+    const cursorUserHome = process.env.CURSOR_USER_HOME || os.homedir();
+    const adapterResult = installCursorAgents({
+      uadsHome,
+      cursorUserHome,
+      packageRoot: root,
+    });
+    if (adapterResult.error) {
+      process.stderr.write(`${adapterResult.error}\n`);
+    } else {
+      process.stdout.write(
+        `Cursor adapter agents: ${adapterResult.installed.join(", ") || "(none)"}\n`,
+      );
+    }
+  }
+} catch (error) {
+  process.stderr.write(
+    `Cursor adapter optional install skipped: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
+}

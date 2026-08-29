@@ -2,16 +2,27 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uads.dev/schemas/checkpoint.schema.json",
   "title": "UADS Checkpoint",
-  "description": "Durable orchestrator checkpoint stored in the global sidecar workspace, never in the managed project by default.",
+  "description": "Durable orchestrator checkpoint stored in the global sidecar workspace.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schemaVersion", "checkpointId", "projectId", "createdAt", "phase", "status"],
+  "required": [
+    "schema",
+    "schemaVersion",
+    "checkpointId",
+    "projectId",
+    "createdAt",
+    "updatedAt",
+    "phase",
+    "status",
+    "nextAction"
+  ],
   "properties": {
     "schema": { "const": "uads.checkpoint" },
-    "schemaVersion": { "const": "0.1.0" },
+    "schemaVersion": { "const": "0.2.0" },
     "checkpointId": { "type": "string", "minLength": 1 },
     "projectId": { "type": "string", "minLength": 1 },
-    "workOrderId": { "type": "string" },
+    "workOrderId": { "type": ["string", "null"] },
+    "routingDecisionId": { "type": ["string", "null"] },
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "phase": {
@@ -22,23 +33,12 @@
       "type": "string",
       "enum": ["pending", "in_progress", "blocked", "completed", "failed"]
     },
-    "scopeClass": {
-      "type": "string",
-      "enum": ["trivial", "local", "cross-cutting", "architectural"]
-    },
-    "summary": { "type": "string" },
-    "resumeCursor": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "nextAction": { "type": "string" },
-        "completedSteps": { "type": "array", "items": { "type": "string" } },
-        "blockedReason": { "type": "string" }
-      }
-    },
-    "evidenceIds": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
+    "completedSteps": { "type": "array", "items": { "type": "string" } },
+    "nextAction": { "type": "string" },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "repositoryMapDigest": { "type": ["string", "null"] },
+    "contextPlanRef": { "type": ["string", "null"] },
+    "resumeCursor": { "type": "string" }
   }
 }

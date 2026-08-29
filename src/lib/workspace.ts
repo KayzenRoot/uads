@@ -8,12 +8,22 @@ export type UadsPaths = {
   core: string;
   skills: string;
   agents: string;
+  adapters: string;
+  cache: string;
   workspaces: string;
   workspace: string;
   reviews: string;
   evidence: string;
   state: string;
+  checkpoints: string;
+  workOrders: string;
+  decisions: string;
+  index: string;
+  context: string;
   profile: string;
+  currentState: string;
+  repositoryMap: string;
+  repositoryMapMeta: string;
 };
 
 export function resolveUadsHome(override?: string): string {
@@ -35,18 +45,28 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     core: path.join(home, "core"),
     skills: path.join(home, "skills"),
     agents: path.join(home, "agents"),
+    adapters: path.join(home, "adapters"),
+    cache: path.join(home, "cache"),
     workspaces: path.join(home, "workspaces"),
     workspace,
     reviews: path.join(workspace, "reviews"),
     evidence: path.join(workspace, "evidence"),
     state: path.join(workspace, "state"),
+    checkpoints: path.join(workspace, "state", "checkpoints"),
+    workOrders: path.join(workspace, "work-orders"),
+    decisions: path.join(workspace, "decisions"),
+    index: path.join(workspace, "index"),
+    context: path.join(workspace, "context"),
     profile: path.join(workspace, "profile.json"),
+    currentState: path.join(workspace, "state", "current.json"),
+    repositoryMap: path.join(workspace, "index", "repository-map.json"),
+    repositoryMapMeta: path.join(workspace, "index", "repository-map.meta.json"),
   };
 }
 
 export function ensureGlobalLayout(uadsHome?: string): string {
   const home = resolveUadsHome(uadsHome);
-  for (const dir of ["core", "skills", "agents", "workspaces"]) {
+  for (const dir of ["core", "skills", "agents", "adapters", "cache", "workspaces"]) {
     fs.mkdirSync(path.join(home, dir), { recursive: true });
   }
   return home;
@@ -59,9 +79,18 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
 
   const paths = getUadsPaths(projectId, uadsHome);
   ensureGlobalLayout(uadsHome);
-  fs.mkdirSync(paths.reviews, { recursive: true });
-  fs.mkdirSync(paths.evidence, { recursive: true });
-  fs.mkdirSync(paths.state, { recursive: true });
+  for (const dir of [
+    paths.reviews,
+    paths.evidence,
+    paths.state,
+    paths.checkpoints,
+    paths.workOrders,
+    paths.decisions,
+    paths.index,
+    paths.context,
+  ]) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   return paths;
 }
 

@@ -15,20 +15,22 @@ Architecture Freeze **v0.2** for UADS by NexLabs.
 9. **Portable** — CLI and review bundle do not require a proprietary runtime.
 10. **Tested** — foundation is not done until validation passes.
 
-## Logical modules (future implementation in `core/`)
+## Logical modules
+
+Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reserved READMEs so the published tree does not imply a finished platform.
 
 | Module | Responsibility |
 | --- | --- |
-| orchestration | Work-order lifecycle |
-| routing | Model and skill routing |
-| context | Context packing and radius |
-| cost | Token budget manager |
-| risk | Change-risk classification |
-| gates | Quality/security/performance gates |
+| orchestration | Work-order lifecycle through `plan`; later phases represented but not falsely completed |
+| routing | Domain/specialist/gate routing (provider-neutral) |
+| context | Context radius C0–C5; default smallest sufficient; C5 exceptional |
+| cost | Token budget by capability class: economy / balanced / strong / critical |
+| risk | Structured-signal risk classification |
+| gates | Selected quality/security/performance gates |
 | evidence | Evidence protocol |
-| state | Checkpoints and sidecar profile |
+| state | Atomic sidecar checkpoints and resume packets |
 
-Foundation CLI lives in `src/` and already implements fingerprint, sidecar paths, and review packaging.
+Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review packaging, and the orchestrator kernel.
 
 ## Global layout
 
@@ -37,10 +39,18 @@ Foundation CLI lives in `src/` and already implements fingerprint, sidecar paths
   core/
   skills/
   agents/
+  adapters/
+  cache/
   workspaces/
     <project-id>/
       profile.json
-      state/
+      state/current.json
+      checkpoints/
+      work-orders/
+      decisions/
+      index/repository-map.json
+      context/
+      evidence/
       reviews/
 ```
 
@@ -48,18 +58,21 @@ Foundation CLI lives in `src/` and already implements fingerprint, sidecar paths
 
 ## Adapters
 
-- `adapters/cursor` — Cursor / Agent Skills
+- `adapters/cursor` — Cursor / Agent Skills; optional user-level `~/.cursor/agents/uads-*`
 - `adapters/codex` — Codex-compatible invocation
 - `adapters/generic` — any agent that can read `SKILL.md` and run the CLI
 
-## Data flow (foundation)
+## Data flow (Prompt 002)
 
 ```
-cwd → git root → fingerprint → sidecar workspace
-                              → doctor/status
-                              → review ZIP + sha256
+USER REQUEST
+  → host Skill semantic intake (or CLI --request fallback)
+  → deterministic kernel
+  → repository map + scope/risk/domain/specialists/gates/context/budget
+  → Work Order + routing decision + checkpoint (sidecar only)
+  → uads resume (no full-repo re-ingestion)
 ```
 
 ## Freeze status
 
-v0.2 is frozen for Prompt 001. Breaking these defaults requires a documented freeze bump.
+v0.2 architecture freeze remains in force. Prompt 002 implements the kernel inside that freeze; breaking global-first / ZPF defaults requires a documented freeze bump.

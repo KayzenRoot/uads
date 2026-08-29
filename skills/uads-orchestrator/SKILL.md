@@ -1,72 +1,40 @@
 ---
 name: uads-orchestrator
 description: >
-  UADS orchestrator by NexLabs. Invoke when planning or implementing software with
-  architecture discipline, quality gates, security and performance verification,
-  evidence-based delivery, and a review ZIP for external audit. Global-first,
-  zero project footprint by default.
+  UADS orchestrator kernel by NexLabs. Use to inspect a repo, normalize a request
+  into structured intake, call uads plan, bound scope/risk/gates/context, persist
+  checkpoints, require independent review, and collect evidence. Global-first,
+  zero project footprint.
 ---
 
 # UADS Orchestrator
 
-Use this skill when work needs orchestration rather than a one-shot code edit.
+Host-side semantic protocol for the deterministic UADS kernel. Do not dump the repository into context.
 
-## When to invoke
+## Protocol
 
-- Architecture, multi-file, or cross-cutting changes
-- Quality, security, or performance verification is required
-- The user asks for evidence, audit, or a review bundle
-- Scope is unclear and must be classified before editing
+1. Inspect UADS/project state first (`uads status`, `uads inspect`).
+2. Read the latest checkpoint (`uads resume`) before planning duplicate work.
+3. Semantically normalize the user request into `schemas/intake.schema.json`.
+4. Call the kernel: `uads plan --intake <file>` (preferred) or `uads plan --request` only as a documented fallback.
+5. Obey the Work Order, routing decision, and context radius. Do not add unrelated features.
+6. Use only the specialists listed in the plan.
+7. Keep context at the planned radius (C0–C4 by default; C5 is exceptional).
+8. If implementation occurs, independent review is mandatory. The implementer is never the sole approver.
+9. Collect evidence for selected gates.
+10. Stop on material blockers or approval-gated actions.
+11. Update sidecar checkpoint state; do not write operational files into the project.
+12. Never claim completion without the required gates.
 
-Do not invoke for trivial single-file edits with no verification need.
+## Fallback classifier
 
-## Global-first behavior
+`uads plan --request` is a conservative text heuristic for humans. It is not the authoritative semantic architecture. Prefer structured intake from this skill.
 
-UADS installs and stores operational state under `~/.uads/`, never inside the managed project by default.
+## References
 
-```
-~/.uads/core
-~/.uads/skills
-~/.uads/agents
-~/.uads/workspaces/<project-id>/
-```
-
-Identify the git root, compute a stable project fingerprint, and use `~/.uads/workspaces/<project-id>/` as the sidecar.
-
-## Zero project footprint
-
-Do not write UADS cache, work orders, checkpoints, indexes, or review ZIPs into the project unless the user explicitly opts in. Project files change only as the requested product work.
-
-## Checkpoint / state discipline
-
-- Persist resume state in the sidecar, not in git.
-- After each meaningful phase, record what completed, what remains, and the next action.
-- On resume, read the latest checkpoint before repeating work.
-
-## Scope classification
-
-Classify before large edits: `trivial` | `local` | `cross-cutting` | `architectural`.
-
-Expand context radius only as far as the class requires.
-
-## Context radius policy
-
-Send the smallest sufficient context. Prefer repository map + targeted files over dumping the tree. Cache derived maps in the sidecar (cache-first prompting).
-
-## Quality gates
-
-Do not claim completion without the relevant gates: lint/typecheck, tests, security-sensitive review, and performance checks when the change can affect them.
-
-## Evidence requirements
-
-Every completion claim needs a command, output, or file. If evidence is missing, the work is not done.
-
-## Review ZIP
-
-Run `uads review` (or `scripts/review/create-review-bundle.*`). Output goes to `~/.uads/workspaces/<project-id>/reviews/` with a SHA-256 checksum. Secrets, `.git/`, `node_modules/`, and caches must be excluded.
-
-## Stop conditions
-
-Stop and report blocked when: repository is inaccessible; required credentials are missing; a destructive action outside the repo would be required; or acceptance criteria cannot be met without new product decisions.
-
-Deeper rules live in `docs/` (Architecture Freeze v0.2).
+- `references/ORCHESTRATION-PROTOCOL.md`
+- `references/INTAKE.md`
+- `references/ROUTING.md`
+- `references/RISK-AND-GATES.md`
+- `references/CONTEXT.md`
+- `references/EVIDENCE.md`

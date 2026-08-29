@@ -24,7 +24,7 @@ export function runDoctor(cwd: string = process.cwd()): string {
     { name: "uads-home", ok: fs.existsSync(home), detail: home },
     {
       name: "global-layout",
-      ok: ["core", "skills", "agents", "workspaces"].every((dir) =>
+      ok: ["core", "skills", "agents", "adapters", "cache", "workspaces"].every((dir) =>
         fs.existsSync(path.join(home, dir)),
       ),
       detail: home,

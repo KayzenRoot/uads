@@ -1,18 +1,19 @@
 # 14 — Backlog
 
-Ideas that must **not** land in Prompt 001.
+Ideas that must **not** land in Prompt 002.
 
-- Full autonomous orchestrator runtime
-- Specialist agent roster and delegation bus
+- Arbitrary customer-project code-edit execution engine
+- Provider API clients and hard-coded model price tables
+- Full multi-provider model router
+- Complete 30+ department specialist catalog
 - Production Skill registry / marketplace
 - Dashboard, cloud control plane, enterprise server
 - Deep UGAS integration (beyond `integrations/ugas/` stub)
-- Incremental repository-map indexer
-- Model provider matrix and spend tracking
+- Embeddings / vector database / whole-repository semantic index
 - Policy-as-code engine in `policies/`
-- Eval harness in `evals/`
 - Signed review bundles (beyond SHA-256)
 - Optional in-project footprint opt-in flag UX
 - Windows code-signing of the CLI
+- Production deployment automation, wallet custody, on-chain execution
 
-If a change is useful but not required for foundation DoD, add it here rather than expanding `src/`.
+If a change is useful but not required for Prompt 002 DoD, add it here rather than expanding `src/`.

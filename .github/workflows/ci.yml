@@ -9,7 +9,7 @@ jobs:
   foundation:
     name: Foundation checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +34,12 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Orchestrator eval
+        run: npm run eval:orchestrator
+
+      - name: Skills preflight
+        run: npm run validate:skills
 
       - name: Validate foundation
         run: npm run validate

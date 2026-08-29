@@ -20,6 +20,7 @@ describe("global install", () => {
         ...process.env,
         UADS_HOME: uadsHome,
         UADS_NPM_PREFIX: prefix,
+        CURSOR_USER_HOME: fs.mkdtempSync(path.join(os.tmpdir(), "uads-cursor-home-")),
       },
     });
 

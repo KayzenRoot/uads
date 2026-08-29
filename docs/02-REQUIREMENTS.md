@@ -10,12 +10,15 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F2 | Compute a stable project fingerprint and project-id |
 | F3 | Create/read a global sidecar under `~/.uads/workspaces/<project-id>/` |
 | F4 | Default to zero project footprint |
-| F5 | CLI commands: `--help`, `doctor`, `status`, `review` |
+| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `status`, `resume`, `review` |
 | F6 | Generate a review ZIP outside the project with SHA-256 checksum |
 | F7 | Exclude secrets and heavy/generated directories from review ZIPs |
-| F8 | Global install skeleton populates `~/.uads/{core,skills,agents,workspaces}` without silent overwrites |
-| F9 | Agent Skill entrypoint exists at `skills/uads-orchestrator/SKILL.md` |
-| F10 | JSON schemas exist for checkpoint, work order, evidence, review, profile, repository map |
+| F8 | Global install skeleton populates `~/.uads/{core,skills,agents,adapters,cache,workspaces}` without silent overwrites |
+| F9 | Agent Skill entrypoint exists at `skills/uads-orchestrator/SKILL.md` with one-level `references/` |
+| F10 | JSON schemas exist for intake, checkpoint, work order, routing decision, evidence, review, profile, repository map |
+| F11 | Orchestrator kernel plans Work Orders, routing decisions, context radius, and checkpoints in the sidecar |
+| F12 | `uads resume` reconstructs next action from sidecar state without a full repository rescan |
+| F13 | Orchestrator eval suite (`npm run eval:orchestrator`) covers mandatory routing cases including non-selections |
 
 ## Non-functional
 
@@ -27,6 +30,6 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | NF4 | Token-aware architecture documented even before the orchestrator exists |
 | NF5 | Foundation is tested; CI must pass |
 
-## Future (not Prompt 001)
+## Future (not Prompt 002)
 
-Full orchestrator, specialist agents, multi-agent delegation, Skill registry, marketplace, dashboard, cloud control plane, deep UGAS integration.
+Arbitrary customer-project execution engine, provider API clients, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings.

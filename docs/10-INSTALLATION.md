@@ -9,6 +9,8 @@ UADS belongs in the user home, not in each git clone of a product.
 ~/.uads/core/
 ~/.uads/skills/
 ~/.uads/agents/
+~/.uads/adapters/
+~/.uads/cache/
 ~/.uads/workspaces/
 ~/.uads/npm/          # fallback CLI prefix when the default npm global prefix is not writable
 ```
@@ -35,11 +37,12 @@ Both wrappers run `scripts/install/install.mjs`, which:
 
 1. Validates Node.js and npm
 2. Creates the `~/.uads` layout
-3. Copies `core/`, `skills/`, and `agents/` (skips existing files unless `--force`)
+3. Copies `core/`, `skills/`, `agents/`, and `adapters/` (skips existing files unless `--force`)
 4. Installs dependencies and builds the CLI if needed
 5. Installs the `uads` package with `npm install --global --prefix <dir>`
-6. Verifies the CLI by running `node <prefix>/(lib/)node_modules/uads/dist/cli.js --help` and `doctor` (no shell interpolation of paths)
-7. Prints a PATH hint if the prefix is not already on PATH
+6. Optionally installs managed `uads-*` Cursor agents into `$CURSOR_USER_HOME/.cursor/agents` (defaults to the real user home; tests must set `CURSOR_USER_HOME`)
+7. Verifies the CLI by running `node <prefix>/(lib/)node_modules/uads/dist/cli.js --help` and `doctor` (no shell interpolation of paths)
+8. Prints a PATH hint if the prefix is not already on PATH
 
 If the default global npm prefix is not writable, the installer falls back to `~/.uads/npm` (or `UADS_NPM_PREFIX`) and explains the failure instead of silently skipping CLI installation.
 

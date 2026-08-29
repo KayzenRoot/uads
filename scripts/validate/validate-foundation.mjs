@@ -48,6 +48,13 @@ const requiredFiles = [
   "schemas/review-manifest.schema.json",
   "schemas/project-profile.schema.json",
   "schemas/repository-map.schema.json",
+  "schemas/intake.schema.json",
+  "schemas/routing-decision.schema.json",
+  "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
+  "evals/orchestrator/e1-frontend-style.json",
+  "agents/uads-repo-inspector.md",
+  "src/kernel/orchestrator.ts",
+  "src/eval/run.ts",
   "scripts/install/install.sh",
   "scripts/install/install.ps1",
   "scripts/install/install.mjs",
@@ -80,9 +87,11 @@ runNpmGate(["run", "lint"]);
 runNpmGate(["run", "typecheck"]);
 runNpmGate(["run", "build"]);
 runNpmGate(["test"]);
+runNpmGate(["run", "eval:orchestrator"]);
+runNpmGate(["run", "validate:skills"]);
 
 const cli = path.join(root, "dist", "cli.js");
-for (const args of [["--help"], ["doctor"], ["status"]]) {
+for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) {
   const result = spawnSync(process.execPath, [cli, ...args], {
     cwd: root,
     encoding: "utf8",
@@ -94,6 +103,14 @@ for (const args of [["--help"], ["doctor"], ["status"]]) {
   if (!result.stdout || result.stdout.trim().length === 0) {
     process.stderr.write(`CLI produced no output for: uads ${args.join(" ")}\n`);
     process.exit(1);
+  }
+  if (args[0] === "--help") {
+    for (const command of ["inspect", "plan", "status", "resume", "review", "doctor"]) {
+      if (!result.stdout.includes(command)) {
+        process.stderr.write(`CLI help missing command: ${command}\n`);
+        process.exit(1);
+      }
+    }
   }
 }
 

@@ -4,7 +4,7 @@
 
 UADS is a global-first autonomous software engineering orchestration framework. It helps agents build Web2, Web3, SaaS, AI, finance, quant, math-heavy systems and games with architecture discipline, quality gates, security and performance verification, evidence-based delivery, and review bundles for external audit.
 
-This repository is the public open-source foundation (Prompt 001). The full orchestrator is not implemented yet.
+This repository is the public open-source UADS product. Prompt 001 delivered the foundation. **v0.2.0** adds the Orchestrator Kernel: inspect, plan, status, and resume. It plans and persists Work Orders; it does not yet autonomously edit arbitrary customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -39,7 +39,10 @@ npm install
 npm run build
 node dist/cli.js --help
 node dist/cli.js doctor
+node dist/cli.js inspect
+node dist/cli.js plan --request "Change the primary button color."
 node dist/cli.js status
+node dist/cli.js resume
 node dist/cli.js review
 ```
 
@@ -54,8 +57,10 @@ Review bundles and validation evidence are written **outside** the project:
 
 | Path | Role |
 | --- | --- |
-| `src/` | Foundation CLI |
-| `skills/uads-orchestrator/` | Agent Skill entrypoint |
+| `src/` | CLI + orchestrator kernel |
+| `skills/uads-orchestrator/` | Agent Skill + `references/` |
+| `agents/` | Canonical `uads-*` specialist markdown |
+| `evals/` | Orchestrator routing evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Cursor / Codex / generic adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map |

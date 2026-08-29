@@ -12,18 +12,33 @@ b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcn
 UADSFAKEPRIVATEKEYMATERIALNOTAREALSECRETVALUEXXXXXXXXXXXX
 -----END OPENSSH PRIVATE KEY-----`;
 
+const gitEnv = {
+  ...process.env,
+  GIT_CONFIG_NOSYSTEM: "1",
+  GIT_AUTHOR_NAME: "UADS Tests",
+  GIT_AUTHOR_EMAIL: "uads@example.com",
+  GIT_COMMITTER_NAME: "UADS Tests",
+  GIT_COMMITTER_EMAIL: "uads@example.com",
+};
+
 export function initRepo(root: string, originUrl?: string): void {
-  execFileSync("git", ["init", "-b", "main"], { cwd: root });
-  execFileSync("git", ["config", "user.email", "uads@example.com"], { cwd: root });
-  execFileSync("git", ["config", "user.name", "UADS Tests"], { cwd: root });
+  execFileSync("git", ["init", "-b", "main"], { cwd: root, env: gitEnv });
+  execFileSync("git", ["-c", "user.email=uads@example.com", "-c", "user.name=UADS Tests", "config", "commit.gpgsign", "false"], {
+    cwd: root,
+    env: gitEnv,
+  });
   if (originUrl) {
-    execFileSync("git", ["remote", "add", "origin", originUrl], { cwd: root });
+    execFileSync("git", ["remote", "add", "origin", originUrl], { cwd: root, env: gitEnv });
   }
 }
 
 export function gitCommit(root: string, message: string): void {
-  execFileSync("git", ["add", "-A"], { cwd: root });
-  execFileSync("git", ["commit", "-m", message], { cwd: root });
+  execFileSync("git", ["add", "-A"], { cwd: root, env: gitEnv });
+  execFileSync(
+    "git",
+    ["-c", "commit.gpgsign=false", "-c", "user.email=uads@example.com", "-c", "user.name=UADS Tests", "commit", "-m", message],
+    { cwd: root, env: gitEnv },
+  );
 }
 
 export function tempDirs(): { repo: string; home: string } {

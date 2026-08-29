@@ -2,44 +2,85 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uads.dev/schemas/work-order.schema.json",
   "title": "UADS Work Order",
-  "description": "Normalized unit of work for the orchestrator. Stored in the sidecar workspace.",
+  "description": "Normalized unit of planned work. Stored in the sidecar workspace. schemaVersion 0.2.0.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schemaVersion", "workOrderId", "projectId", "title", "status", "createdAt"],
+  "required": [
+    "schema",
+    "schemaVersion",
+    "workOrderId",
+    "projectId",
+    "title",
+    "objective",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "scopeClass",
+    "riskLevel",
+    "nextAction"
+  ],
   "properties": {
     "schema": { "const": "uads.work-order" },
-    "schemaVersion": { "const": "0.1.0" },
-    "workOrderId": { "type": "string" },
-    "projectId": { "type": "string" },
-    "title": { "type": "string" },
-    "intent": { "type": "string" },
+    "schemaVersion": { "const": "0.2.0" },
+    "workOrderId": { "type": "string", "minLength": 1 },
+    "projectId": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "objective": { "type": "string", "minLength": 1 },
     "status": {
       "type": "string",
-      "enum": ["draft", "queued", "active", "blocked", "completed", "cancelled"]
+      "enum": ["draft", "planned", "active", "blocked", "completed", "cancelled"]
     },
     "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "intakeRef": { "type": "string" },
+    "routingDecisionId": { "type": "string" },
     "scopeClass": {
       "type": "string",
       "enum": ["trivial", "local", "cross-cutting", "architectural"]
     },
+    "includedScope": { "type": "array", "items": { "type": "string" } },
+    "outOfScope": { "type": "array", "items": { "type": "string" } },
+    "recommendations": { "type": "array", "items": { "type": "string" } },
+    "riskLevel": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    },
+    "riskReasons": { "type": "array", "items": { "type": "string" } },
+    "domains": { "type": "array", "items": { "type": "string" } },
+    "affectedAreas": { "type": "array", "items": { "type": "string" } },
+    "specialists": { "type": "array", "items": { "type": "string" } },
+    "assuranceReviewers": { "type": "array", "items": { "type": "string" } },
+    "qualityGates": { "type": "array", "items": { "type": "string" } },
     "contextRadius": {
       "type": "string",
-      "enum": ["file", "module", "service", "repository", "system"]
+      "enum": ["C0", "C1", "C2", "C3", "C4", "C5"]
     },
     "tokenBudget": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "softLimit": { "type": "integer", "minimum": 0 },
-        "hardLimit": { "type": "integer", "minimum": 0 }
+        "hardLimit": { "type": "integer", "minimum": 0 },
+        "capabilityClass": {
+          "type": "string",
+          "enum": ["economy", "balanced", "strong", "critical"]
+        },
+        "cachePreference": { "type": "string", "enum": ["prefer-cache", "refresh"] },
+        "expansionPolicy": { "type": "string" }
       }
     },
-    "acceptanceCriteria": {
-      "type": "array",
-      "items": { "type": "string" }
+    "dependencies": { "type": "array", "items": { "type": "string" } },
+    "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+    "requiredEvidence": { "type": "array", "items": { "type": "string" } },
+    "stopConditions": { "type": "array", "items": { "type": "string" } },
+    "autonomyBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "safeAutonomous": { "type": "array", "items": { "type": "string" } },
+        "requiresApproval": { "type": "array", "items": { "type": "string" } }
+      }
     },
-    "riskFlags": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
+    "nextAction": { "type": "string" }
   }
 }

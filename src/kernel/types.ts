@@ -1,0 +1,161 @@
+export const SCHEMA_VERSION = "0.2.0";
+
+export type ScopeClass = "trivial" | "local" | "cross-cutting" | "architectural";
+export type ScopeControl = "NECESSARY" | "IMPORTANT" | "FUTURE" | "OUT_OF_SCOPE";
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type ContextRadius = "C0" | "C1" | "C2" | "C3" | "C4" | "C5";
+export type CapabilityClass = "economy" | "balanced" | "strong" | "critical";
+export type Phase = "intake" | "classify" | "plan" | "implement" | "verify" | "review" | "stopped";
+export type IntakeClassifier = "host-structured" | "fallback-text";
+
+export type NormalizedIntake = {
+  schema: "uads.intake";
+  schemaVersion: "0.2.0";
+  objective: string;
+  constraints: string[];
+  requestedArtifacts: string[];
+  inScope: string[];
+  outOfScope: string[];
+  acceptanceCriteria: string[];
+  domainSignals: string[];
+  riskSignals: string[];
+  destructiveSignals: string[];
+  affectedAreas: string[];
+  uncertainties: string[];
+  approvedBoundaries: string[];
+  classifier: IntakeClassifier;
+};
+
+export type RepositoryMap = {
+  schema: "uads.repository-map";
+  schemaVersion: "0.2.0";
+  projectId: string;
+  generatedAt: string;
+  mapVersion: "0.2.0";
+  repositoryName: string;
+  digest: string;
+  gitHead: string | null;
+  dirtyDigest: string;
+  reused: boolean;
+  languages: string[];
+  packageManager: string | null;
+  frameworks: string[];
+  commands: Record<string, string | null>;
+  signals: Record<string, boolean>;
+  modules: Array<{ id: string; path: string; kind: string }>;
+  entrypoints: string[];
+  manifestHashes: Record<string, string>;
+};
+
+export type RoutingDecision = {
+  schema: "uads.routing-decision";
+  schemaVersion: "0.2.0";
+  routingDecisionId: string;
+  projectId: string;
+  createdAt: string;
+  scopeClass: ScopeClass;
+  scopeReasons: string[];
+  riskLevel: RiskLevel;
+  riskReasons: string[];
+  domains: Array<{ id: string; reason: string }>;
+  specialists: string[];
+  assuranceSpecialists: string[];
+  gates: Array<{ id: string; reason: string }>;
+  contextRadius: ContextRadius;
+  contextReason: string;
+  capabilityClass: CapabilityClass;
+  orderConstraints: string[];
+  stopConditions: string[];
+  warnings: string[];
+};
+
+export type WorkOrder = {
+  schema: "uads.work-order";
+  schemaVersion: "0.2.0";
+  workOrderId: string;
+  projectId: string;
+  title: string;
+  objective: string;
+  status: "draft" | "planned" | "active" | "blocked" | "completed" | "cancelled";
+  createdAt: string;
+  updatedAt: string;
+  intakeRef: string;
+  routingDecisionId: string;
+  scopeClass: ScopeClass;
+  includedScope: string[];
+  outOfScope: string[];
+  recommendations: string[];
+  riskLevel: RiskLevel;
+  riskReasons: string[];
+  domains: string[];
+  affectedAreas: string[];
+  specialists: string[];
+  assuranceReviewers: string[];
+  qualityGates: string[];
+  contextRadius: ContextRadius;
+  tokenBudget: {
+    softLimit: number;
+    hardLimit: number;
+    capabilityClass: CapabilityClass;
+    cachePreference: "prefer-cache" | "refresh";
+    expansionPolicy: string;
+  };
+  dependencies: string[];
+  acceptanceCriteria: string[];
+  requiredEvidence: string[];
+  stopConditions: string[];
+  autonomyBoundary: {
+    safeAutonomous: string[];
+    requiresApproval: string[];
+  };
+  nextAction: string;
+};
+
+export type Checkpoint = {
+  schema: "uads.checkpoint";
+  schemaVersion: "0.2.0";
+  checkpointId: string;
+  projectId: string;
+  workOrderId: string | null;
+  routingDecisionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  phase: Phase;
+  status: "pending" | "in_progress" | "blocked" | "completed" | "failed";
+  completedSteps: string[];
+  nextAction: string;
+  blockers: string[];
+  evidenceRefs: string[];
+  repositoryMapDigest: string | null;
+  contextPlanRef: string | null;
+  resumeCursor: string;
+};
+
+export type ResumePacket = {
+  projectId: string;
+  workOrderId: string | null;
+  phase: Phase | null;
+  status: string;
+  objective: string | null;
+  completedSteps: string[];
+  scopeClass: ScopeClass | null;
+  riskLevel: RiskLevel | null;
+  specialists: string[];
+  gates: string[];
+  repositoryMapDigest: string | null;
+  contextPlanRef: string | null;
+  evidenceRefs: string[];
+  blockers: string[];
+  nextAction: string;
+  invalidState?: string;
+};
+
+export type ContextPlan = {
+  radius: ContextRadius;
+  reason: string;
+  candidateAreas: string[];
+  reusableArtifacts: string[];
+};
+
+export const IMPLEMENTER_ROLE = "implementation-agent";
+export const INDEPENDENT_REVIEWER_ROLE = "independent-reviewer";

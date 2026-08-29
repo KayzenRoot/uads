@@ -1,23 +1,26 @@
 # Roadmap
 
-UADS by NexLabs. Staged implementation; this repository starts at foundation only.
+UADS by NexLabs. Staged implementation.
 
-## Prompt 001 — Foundation (current)
+## Prompt 001 — Foundation (complete)
 
-Repository governance, Architecture Freeze v0.2 docs, minimal CLI (`help`, `doctor`, `status`, `review`), global install skeleton, Agent Skill entrypoint, schemas, tests, CI, review ZIP generator.
+Repository governance, Architecture Freeze v0.2 docs, minimal CLI (`help`, `doctor`, `status`, `review`), global install, Agent Skill entrypoint, schemas, tests, CI, privacy-minimized review ZIP.
+
+## Prompt 002 — Orchestrator Kernel (current)
+
+Deterministic planning kernel: intake, repository map, scope/risk/domain/specialist/gates/context/budget, Work Order + routing decision + checkpoint, `inspect`/`plan`/`status`/`resume`, evals, Cursor `uads-*` adapter.
 
 ## Next increments (planned)
 
-1. Orchestrator core: work orders, checkpoints, scope classification
-2. Context intelligence: repository map, impact map, cache-first packing
-3. Quality gates engine (lint/test/security/performance adapters)
-4. Cursor adapter depth + generic/Codex adapter
-5. Evidence protocol runtime and review bundle enrichment
-6. Specialist agents (still not a free-form multi-agent marketplace)
-7. UGAS integration (reserved under `integrations/ugas/`)
+1. Implementation execution engine for in-scope product edits (still bounded by Work Orders)
+2. Deeper context packing and impact maps
+3. Broader specialist catalog (still not a marketplace)
+4. Provider adapters mapping capability classes to models
+5. Cursor adapter depth + generic/Codex execution
+6. UGAS integration (reserved under `integrations/ugas/`)
 
 ## Explicitly later
 
-Marketplace, dashboard, cloud control plane, enterprise server, production third-party Skill registry.
+Marketplace, dashboard, cloud control plane, enterprise server, production third-party Skill registry, embeddings.
 
 See `docs/14-BACKLOG.md`.

@@ -12,17 +12,21 @@ Never commit UADS checkpoints, work orders, or review ZIPs to the managed projec
 
 `profile.json` follows `schemas/project-profile.schema.json`. The foundation CLI creates or updates it when generating a review bundle.
 
-## Checkpoint (schema only in Prompt 001)
+## Checkpoint (v0.2, durable)
 
-`schemas/checkpoint.schema.json` defines:
+`schemas/checkpoint.schema.json` is persisted at `state/current.json` plus `state/checkpoints/`. Writes are temp+rename. Corrupt current state is reported, not silently trusted; a prior valid checkpoint may be recovered.
 
-- `phase`: intake → classify → plan → implement → verify → review → stopped
-- `status`: pending | in_progress | blocked | completed | failed
-- `resumeCursor` so a later orchestrator can continue without repeating finished steps
+Lifecycle: intake → classify → plan → implement → verify → review → stopped.
+
+Prompt 002 drives through **plan**. Later phases may appear in the schema but must not be marked completed unless they happened.
+
+`uads resume` returns a compact packet (ids, phase, objective, specialists/gates, map digest, next action) without rereading the repository.
 
 ## Work orders
 
-`schemas/work-order.schema.json` is the unit of planned work. Not executed in Prompt 001.
+`schemas/work-order.schema.json` v0.2.0 is the unit of planned work. The kernel plans; it does not autonomously edit customer projects in this increment.
+
+Routing conclusions live in `schemas/routing-decision.schema.json`.
 
 ## Discipline
 

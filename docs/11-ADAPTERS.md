@@ -4,7 +4,12 @@ UADS is adapter-shaped: the core is portable; hosts bind through a thin layer.
 
 ## Cursor
 
-`adapters/cursor/` — Agent Skills (`SKILL.md`) plus CLI for doctor/status/review. Cursor is a first-class execution environment for this repository.
+Canonical specialist markdown lives in the UADS package `agents/` directory and is copied to `~/.uads/agents/`.
+
+The Cursor adapter may also install managed `uads-*` files under the **user-level** Cursor agents directory (`~/.cursor/agents/` or `$CURSOR_USER_HOME/.cursor/agents/`). It does not write project-level `.cursor/agents`. Unrelated user agent files are left untouched. Adapter install failure is reported and must not corrupt the canonical UADS copy.
+
+Invoke `skills/uads-orchestrator/SKILL.md` plus the CLI (`inspect`, `plan`, `status`, `resume`, `review`). Codex/generic adapters use the same Skill + CLI contract without Cursor-specific paths.
+
 
 ## Codex / generic
 

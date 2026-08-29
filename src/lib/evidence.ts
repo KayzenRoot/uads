@@ -12,6 +12,8 @@ export const EVIDENCE_FILE_NAMES = [
   "typecheck.txt",
   "build.txt",
   "tests.txt",
+  "orchestrator-eval.txt",
+  "skills-validation.txt",
   "foundation-validation.txt",
   "npm-audit.txt",
 ] as const;
@@ -55,6 +57,8 @@ export const FOUNDATION_GATES: GateSpec[] = [
   { id: "typecheck", command: "npm", args: ["run", "typecheck"], file: "typecheck.txt" },
   { id: "build", command: "npm", args: ["run", "build"], file: "build.txt" },
   { id: "tests", command: "npm", args: ["test"], file: "tests.txt" },
+  { id: "orchestrator-eval", command: "npm", args: ["run", "eval:orchestrator"], file: "orchestrator-eval.txt" },
+  { id: "skills-validation", command: "npm", args: ["run", "validate:skills"], file: "skills-validation.txt" },
   { id: "validate", command: "npm", args: ["run", "validate"], file: "foundation-validation.txt" },
   { id: "npm-audit", command: "npm", args: ["audit"], file: "npm-audit.txt" },
 ];
