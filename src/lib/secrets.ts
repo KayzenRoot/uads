@@ -81,7 +81,7 @@ function shouldOmit(text: string, redactionCount: number, kinds: Set<SecretKind>
 const WINDOWS_DRIVE_PATH =
   /(?<![A-Za-z])[A-Za-z]:(?:\\[^\n\r"'<>|*?]+|\/(?!\/)[^\n\r"'<>|*?]*)/g;
 const UNIX_HOME_PATH = /(?:^|[\s"'=(])(\/(?:home|Users)\/[A-Za-z0-9._-]+(?:\/[^\n\r"'<>|*?]*)?)/g;
-const UNC_BACKSLASH = /\\\\[^\s\\/]+\\[^\n\r"'<>|*?]+/g;
+const UNC_BACKSLASH = /\\\\[A-Za-z0-9._-]+\\[A-Za-z0-9._$-]+(?:\\[^\n\r"'<>|*?]*)?/g;
 const UNC_SLASH = /(?:^|[\s"'=(])(\/\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+[^\n\r"'<>|*?]*)/g;
 const FILE_URL_PATH = /file:\/\/\/[A-Za-z]:[^\n\r"'<>|*?\s]*/gi;
 
