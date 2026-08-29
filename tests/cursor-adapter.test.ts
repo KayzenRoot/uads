@@ -18,6 +18,8 @@ describe("Cursor adapter and skills preflight", () => {
     expect(result.error).toBeUndefined();
     expect(result.installed.some((name) => name.startsWith(UADS_AGENT_PREFIX))).toBe(true);
     expect(fs.existsSync(path.join(foreign, "uads-repo-inspector.md"))).toBe(true);
+    expect(fs.existsSync(path.join(foreign, "uads-test-engineer.md"))).toBe(true);
+    expect(fs.existsSync(path.join(foreign, "uads-requirements-engineer.md"))).toBe(true);
     expect(fs.readFileSync(unrelated, "utf8")).toContain("keep me");
     const manifest = JSON.parse(fs.readFileSync(path.join(foreign, MANIFEST_NAME), "utf8")) as { files: string[] };
     expect(manifest.files.every((name) => name.startsWith(UADS_AGENT_PREFIX))).toBe(true);

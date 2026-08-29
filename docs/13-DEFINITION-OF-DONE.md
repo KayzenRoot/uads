@@ -40,6 +40,19 @@ Complete only when all are true:
 - lint, typecheck, build, tests, aggregate validation, and npm audit pass
 - Final commit is on origin/main with a privacy-minimized review ZIP
 
+## Prompt 003 increment
+
+Complete only when all are true:
+
+- Execution-run/packet schemas exist and persist in the sidecar
+- `uads dispatch`, `verify`, `evidence record`, `assurance start/record`, and `finalize` work
+- Evidence/reviews bind to the current change digest; stale digest cannot finalize
+- Dirty worktree blocks dispatch without mutating user files
+- Implementer cannot self-approve; required assurance roles are enforced
+- Every currently selectable core role has a canonical `agents/uads-*.md` definition
+- Execution evals X1–X7 pass; orchestrator evals remain 9/9
+- Version is 0.3.0; lint/typecheck/build/tests/validate/npm audit pass
+
 ## Ongoing product DoD
 
 A work order is done only with evidence for selected gates, footprint, independent review when implementation occurred, and (when requested) a review bundle.

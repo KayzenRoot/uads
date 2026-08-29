@@ -18,13 +18,15 @@ Never commit UADS checkpoints, work orders, or review ZIPs to the managed projec
 
 Lifecycle: intake → classify → plan → implement → verify → review → stopped.
 
-Prompt 002 drives through **plan**. Later phases may appear in the schema but must not be marked completed unless they happened.
+Prompt 002 drives through **plan**. Prompt 003 adds durable execution runs under `execution-runs/<id>/`. `uads dispatch` advances the checkpoint to implement only after a clean worktree baseline. `uads resume` returns execution ids, digest, pending/failed gates, reviewers, and next action without a full repository walk.
+
+Dirty pre-existing worktrees block dispatch. UADS does not reset, stash, or delete user files.
 
 `uads resume` returns a compact packet (ids, phase, objective, specialists/gates, map digest, next action) without rereading the repository.
 
 ## Work orders
 
-`schemas/work-order.schema.json` v0.2.0 is the unit of planned work. The kernel plans; it does not autonomously edit customer projects in this increment.
+`schemas/work-order.schema.json` v0.2.0 is the unit of planned work. The kernel plans; it does not call model APIs. Host agents apply in-scope edits after `uads dispatch`. Completion requires `uads finalize`.
 
 Routing conclusions live in `schemas/routing-decision.schema.json`.
 

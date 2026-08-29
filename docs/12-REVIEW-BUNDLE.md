@@ -32,6 +32,7 @@ Validation evidence is stored in the sidecar (`.../evidence/`), never in git.
 - `git-status.txt`, `git-diff.txt`, `git-log.txt`
 - `version.txt`, `README.txt`
 - `evidence/validation-summary.json` and per-command outputs
+- `orchestration/` — sanitized checkpoint/Work Order/routing/execution/evidence/review snapshot when present
 - `project/` — included source/docs/configs after sanitization
 
 The shareable manifest uses `repositoryName`, `projectId`, and `sidecar://workspaces/<project-id>`. It does not include absolute `repoRoot` or sidecar filesystem paths.

@@ -12,7 +12,7 @@ The kernel selects the smallest sufficient radius (C0–C5). Severity is monoton
 
 ## Dependency / impact map
 
-Before cross-cutting edits, use repository-map modules plus intake `affectedAreas` as the candidate set. Widen only on evidence of missing references.
+Execution packets stay metadata-first: Work Order, checkpoint, compact map, context candidates, then source. If the planned radius is insufficient, expand one step (`uads context expand --reason ...`). Never jump C1→C5. C5 remains exceptional (`--approve-c5`). Expansion does not widen product scope.
 
 ## Token budget manager
 

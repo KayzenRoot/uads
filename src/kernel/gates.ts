@@ -35,3 +35,16 @@ export function assertUniqueGateIds(): void {
     throw new Error("gate registry contains duplicate IDs");
   }
 }
+
+export const REVIEW_GATE_ROLES: Record<string, string> = {
+  "security-review": "security-reviewer",
+  "performance-check": "performance-reviewer",
+};
+
+export function isReviewGate(gateId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(REVIEW_GATE_ROLES, gateId);
+}
+
+export function isKnownGateId(gateId: string): boolean {
+  return GATE_REGISTRY.some((gate) => gate.id === gateId);
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/evidence-record.schema.json",
+  "title": "UADS Execution Evidence Record",
+  "description": "Append-only evidence bound to a change digest. schemaVersion 0.3.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "evidenceId",
+    "projectId",
+    "workOrderId",
+    "executionRunId",
+    "changeDigest",
+    "gateId",
+    "sourceRole",
+    "kind",
+    "createdAt",
+    "status",
+    "summary"
+  ],
+  "properties": {
+    "schema": { "const": "uads.evidence-record" },
+    "schemaVersion": { "const": "0.3.0" },
+    "evidenceId": { "type": "string", "minLength": 1 },
+    "projectId": { "type": "string", "minLength": 1 },
+    "workOrderId": { "type": "string", "minLength": 1 },
+    "executionRunId": { "type": "string", "minLength": 1 },
+    "changeDigest": { "type": "string", "minLength": 1 },
+    "gateId": { "type": "string", "minLength": 1 },
+    "sourceRole": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["command", "file", "invariant", "review"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED"] },
+    "summary": { "type": "string" },
+    "command": { "type": "string" },
+    "exitCode": { "type": ["integer", "null"] },
+    "outputRef": { "type": ["string", "null"] },
+    "outputDigest": { "type": ["string", "null"] },
+    "fileRef": { "type": ["string", "null"] }
+  }
+}

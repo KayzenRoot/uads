@@ -2,6 +2,7 @@ import { computeProjectFingerprint } from "../lib/fingerprint.js";
 import { readGitSummary } from "../lib/git.js";
 import { readUadsVersion } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
+import { loadExecutionView } from "../kernel/execution.js";
 import { readCurrentCheckpoint, readWorkOrder } from "../kernel/persist.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -21,6 +22,9 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     checkpoint?.workOrderId && fs.existsSync(paths.workOrders)
       ? readWorkOrder(paths, checkpoint.workOrderId)
       : null;
+  const execution = fs.existsSync(paths.workspace)
+    ? loadExecutionView({ cwd, uadsHome: options.uadsHome })
+    : null;
 
   if (options.json) {
     return `${JSON.stringify(
@@ -37,7 +41,14 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         scopeClass: workOrder?.scopeClass ?? null,
         specialists: workOrder?.specialists ?? [],
         gates: workOrder?.qualityGates ?? [],
-        nextAction: checkpoint?.nextAction ?? null,
+        nextAction: execution?.executionRunId ? execution.nextAction : checkpoint?.nextAction ?? null,
+        executionRunId: execution?.executionRunId ?? null,
+        attempt: execution?.attempt ?? null,
+        changeDigest: execution?.changeDigest ?? null,
+        pendingGates: execution?.pendingGates ?? [],
+        failedGates: execution?.failedGates ?? [],
+        requiredReviewers: execution?.requiredReviewers ?? [],
+        completedReviewers: execution?.completedReviewers ?? [],
       },
       null,
       2,
@@ -56,12 +67,17 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     `zeroProjectFootprint: true`,
     `workingTree: ${dirty ? "dirty" : "clean"}`,
     `workOrderId: ${workOrder?.workOrderId ?? "(none)"}`,
+    `executionRunId: ${execution?.executionRunId ?? "(none)"}`,
     `phase: ${checkpoint?.phase ?? "(none)"}`,
+    `executionStatus: ${execution?.status ?? "(none)"}`,
+    `attempt: ${execution?.attempt ?? "(none)"}`,
+    `changeDigest: ${execution?.changeDigest ?? "(none)"}`,
     `riskLevel: ${workOrder?.riskLevel ?? "(none)"}`,
     `scopeClass: ${workOrder?.scopeClass ?? "(none)"}`,
     `specialists: ${workOrder?.specialists.join(", ") || "(none)"}`,
     `gates: ${workOrder?.qualityGates.join(", ") || "(none)"}`,
-    `nextAction: ${checkpoint?.nextAction ?? "(none)"}`,
+    `pendingGates: ${execution?.pendingGates.join(", ") || "(none)"}`,
+    `nextAction: ${execution?.executionRunId ? execution.nextAction : checkpoint?.nextAction ?? "(none)"}`,
     "",
   ].join("\n");
 }

@@ -38,6 +38,9 @@ jobs:
       - name: Orchestrator eval
         run: npm run eval:orchestrator
 
+      - name: Execution eval
+        run: npm run eval:execution
+
       - name: Skills preflight
         run: npm run validate:skills
 

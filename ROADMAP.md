@@ -6,18 +6,21 @@ UADS by NexLabs. Staged implementation.
 
 Repository governance, Architecture Freeze v0.2 docs, minimal CLI (`help`, `doctor`, `status`, `review`), global install, Agent Skill entrypoint, schemas, tests, CI, privacy-minimized review ZIP.
 
-## Prompt 002 — Orchestrator Kernel (current)
+## Prompt 002 — Orchestrator Kernel (complete)
 
 Deterministic planning kernel: intake, repository map, scope/risk/domain/specialist/gates/context/budget, Work Order + routing decision + checkpoint, `inspect`/`plan`/`status`/`resume`, evals, Cursor `uads-*` adapter.
 
+## Prompt 003 — Bounded Execution Engine (complete)
+
+Dispatch, change digest, evidence ledger, independent assurance, correction loop, finalize guards, execution evals X1–X7. Host performs edits; kernel stays provider-neutral.
+
 ## Next increments (planned)
 
-1. Implementation execution engine for in-scope product edits (still bounded by Work Orders)
-2. Deeper context packing and impact maps
-3. Broader specialist catalog (still not a marketplace)
-4. Provider adapters mapping capability classes to models
-5. Cursor adapter depth + generic/Codex execution
-6. UGAS integration (reserved under `integrations/ugas/`)
+1. Deeper context packing and impact maps
+2. Broader specialist catalog (still not a marketplace)
+3. Provider adapters mapping capability classes to models
+4. Cursor adapter depth + generic/Codex execution
+5. UGAS integration (reserved under `integrations/ugas/`)
 
 ## Explicitly later
 

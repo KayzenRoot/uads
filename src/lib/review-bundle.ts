@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { MAX_REVIEW_FILE_BYTES } from "./constants.js";
 import { listSidecarEvidence } from "./evidence.js";
+import { collectOrchestrationSnapshot } from "../kernel/execution.js";
 import {
   isBinaryFileName,
   isExcludedDirectoryName,
@@ -239,6 +240,16 @@ export async function createReviewBundle(input: {
     evidenceTexts.set(file.name, prepared.text);
   }
 
+  const orchestrationTexts = new Map<string, string>();
+  for (const file of collectOrchestrationSnapshot(paths)) {
+    const prepared = prepareText(file.content);
+    if (!prepared.include) {
+      skipped.push({ path: file.name, reason: prepared.reason });
+      continue;
+    }
+    orchestrationTexts.set(file.name, prepared.text);
+  }
+
   const uadsVersion = readUadsVersion(input.uadsPackageRoot);
   const originUrl = sanitizeRemoteUrl(git.originUrl);
   const requireEvidence = input.requireEvidence ?? false;
@@ -312,6 +323,7 @@ export async function createReviewBundle(input: {
     includedFiles,
     projectTexts,
     evidenceTexts,
+    orchestrationTexts,
     uadsVersion,
   };
 
@@ -365,6 +377,7 @@ function writeZip(
     includedFiles: string[];
     projectTexts: Map<string, string>;
     evidenceTexts: Map<string, string>;
+    orchestrationTexts: Map<string, string>;
     uadsVersion: string;
   },
 ): void {
@@ -384,6 +397,9 @@ function writeZip(
 
   for (const [name, content] of payload.evidenceTexts) {
     zip.addFile(`evidence/${name}`, Buffer.from(content, "utf8"));
+  }
+  for (const [name, content] of payload.orchestrationTexts) {
+    zip.addFile(name, Buffer.from(content, "utf8"));
   }
   for (const rel of payload.includedFiles) {
     const content = payload.projectTexts.get(rel);

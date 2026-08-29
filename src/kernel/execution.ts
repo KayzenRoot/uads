@@ -1,0 +1,1053 @@
+import fs from "node:fs";
+import path from "node:path";
+import { atomicWriteFile, readJsonIfValid } from "../lib/atomic-write.js";
+import { readGitSummary } from "../lib/git.js";
+import { sha256Hex } from "../lib/hash.js";
+import { sanitizeOperationalText, sanitizeOperationalValue } from "../lib/safe-persist.js";
+import { sanitizeReviewText } from "../lib/secrets.js";
+import { findPackageRoot } from "../lib/version.js";
+import type { UadsPaths } from "../lib/workspace.js";
+import { computeChangeDigest, isWorktreeDirty, listChangedRelativePaths } from "./change-digest.js";
+import { selectContextCandidates } from "./context-candidates.js";
+import {
+  listEvidenceRecords,
+  listReviewRecords,
+  persistEvidenceRecord,
+  persistExecutionPacket,
+  persistExecutionRun,
+  persistReviewPacket,
+  persistReviewRecord,
+  readCurrentExecutionRun,
+  readExecutionPacket,
+} from "./execution-persist.js";
+import type {
+  ChangeSet,
+  EvidenceKind,
+  EvidenceRecord,
+  EvidenceRuntimeStatus,
+  ExecutionPacket,
+  ExecutionResumeView,
+  ExecutionRun,
+  GateRuntimeStatus,
+  GateStateSnapshot,
+  ReviewFinding,
+  ReviewPacket,
+  ReviewRecord,
+  ReviewVerdict,
+  ScopeViolation,
+} from "./execution-types.js";
+import { isKnownGateId, isReviewGate, REVIEW_GATE_ROLES } from "./gates.js";
+import { newPrefixedId } from "./ids.js";
+import {
+  InvalidOrchestrationStateError,
+  persistPlan,
+  readContextPlan,
+  readCurrentCheckpoint,
+  readRoutingDecision,
+  readWorkOrder,
+} from "./persist.js";
+import { resolveProjectContext } from "./project-context.js";
+import { assertSafeRelativeProjectPath } from "./safe-path.js";
+import { classifyChangedPath } from "./scope-guard.js";
+import type { Checkpoint, ContextPlan, ContextRadius, RepositoryMap, WorkOrder } from "./types.js";
+import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
+
+export class ExecutionBlockedError extends Error {
+  readonly code = "BLOCKED";
+
+  constructor(
+    message: string,
+    readonly blockers: string[] = [],
+  ) {
+    super(message);
+    this.name = "ExecutionBlockedError";
+  }
+}
+
+const RADIUS_ORDER: ContextRadius[] = ["C0", "C1", "C2", "C3", "C4", "C5"];
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function schemaRootOf(): string {
+  return findPackageRoot();
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function touchRun(run: ExecutionRun, patch: Partial<ExecutionRun>): ExecutionRun {
+  return { ...run, ...patch, updatedAt: nowIso() };
+}
+
+function requiresImplementation(workOrder: WorkOrder): boolean {
+  return workOrder.specialists.includes(IMPLEMENTER_ROLE);
+}
+
+export function buildChangeSet(
+  repoRoot: string,
+  workOrder: WorkOrder,
+  contextPlan: ContextPlan | null,
+): ChangeSet {
+  const relativePaths = listChangedRelativePaths(repoRoot).map((item) => assertSafeRelativeProjectPath(item));
+  const files = relativePaths.map((relative) => {
+    const classified = classifyChangedPath(relative, workOrder, contextPlan);
+    return { path: relative, classification: classified.classification, reason: classified.reason };
+  });
+  const violations: ScopeViolation[] = files.flatMap((file) =>
+    file.classification === "out-of-scope" || file.classification === "sensitive"
+      ? [{ path: file.path, classification: file.classification, reason: file.reason }]
+      : [],
+  );
+  return {
+    digest: computeChangeDigest(repoRoot, relativePaths),
+    files,
+    violations,
+  };
+}
+
+export function deriveGateStates(input: {
+  selectedGates: string[];
+  digest: string | null;
+  evidence: EvidenceRecord[];
+  reviews: ReviewRecord[];
+}): GateStateSnapshot[] {
+  return input.selectedGates.map((gateId) => {
+    const current = input.evidence.filter((item) => item.gateId === gateId && item.changeDigest === input.digest);
+    const latest = current[current.length - 1];
+    if (latest) {
+      return { gateId, status: latest.status, evidenceId: latest.evidenceId };
+    }
+    if (isReviewGate(gateId) && input.digest) {
+      const role = REVIEW_GATE_ROLES[gateId];
+      const approved = input.reviews.some(
+        (review) =>
+          review.changeDigest === input.digest &&
+          review.reviewerRole === role &&
+          review.verdict === "APPROVED",
+      );
+      if (approved) {
+        return { gateId, status: "PASS", evidenceId: null };
+      }
+      const blocked = input.reviews.some(
+        (review) =>
+          review.changeDigest === input.digest &&
+          review.reviewerRole === role &&
+          review.verdict === "BLOCKED",
+      );
+      if (blocked) {
+        return { gateId, status: "BLOCKED", evidenceId: null };
+      }
+    }
+    return { gateId, status: "PENDING" as GateRuntimeStatus, evidenceId: null };
+  });
+}
+
+export function buildExecutionResumeView(
+  run: ExecutionRun | null,
+  evidence: EvidenceRecord[] = [],
+  reviews: ReviewRecord[] = [],
+): ExecutionResumeView {
+  if (!run) {
+    return {
+      executionRunId: null,
+      attempt: null,
+      phase: null,
+      status: "none",
+      changeDigest: null,
+      pendingGates: [],
+      failedGates: [],
+      requiredReviewers: [],
+      completedReviewers: [],
+      blockers: [],
+      nextAction: "No execution run. Run uads dispatch after a valid plan.",
+    };
+  }
+  const gates = deriveGateStates({
+    selectedGates: run.selectedGates,
+    digest: run.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  const completedReviewers = unique(
+    reviews
+      .filter((review) => review.changeDigest === run.currentChangeDigest && review.verdict === "APPROVED")
+      .map((review) => review.reviewerRole),
+  );
+  return {
+    executionRunId: run.executionRunId,
+    attempt: run.attempt,
+    phase: run.phase,
+    status: run.status,
+    changeDigest: run.currentChangeDigest,
+    pendingGates: gates.filter((gate) => gate.status === "PENDING").map((gate) => gate.gateId),
+    failedGates: gates.filter((gate) => gate.status === "FAIL" || gate.status === "BLOCKED").map((gate) => gate.gateId),
+    requiredReviewers: run.requiredReviewers,
+    completedReviewers,
+    blockers: run.blockers,
+    nextAction: run.nextAction,
+  };
+}
+
+function buildPacket(run: ExecutionRun, workOrder: WorkOrder): ExecutionPacket {
+  return {
+    schema: "uads.execution-packet",
+    schemaVersion: "0.3.0",
+    executionRunId: run.executionRunId,
+    workOrderId: workOrder.workOrderId,
+    objective: workOrder.objective,
+    includedScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    riskLevel: workOrder.riskLevel,
+    domains: workOrder.domains,
+    contextRadius: run.contextRadius,
+    contextCandidates: run.contextCandidates,
+    specialists: workOrder.specialists,
+    assuranceReviewers: workOrder.assuranceReviewers,
+    selectedGates: run.selectedGates,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    requiredEvidence: workOrder.requiredEvidence,
+    safeAutonomousActions: workOrder.autonomyBoundary.safeAutonomous,
+    approvalGatedActions: workOrder.autonomyBoundary.requiresApproval,
+    stopConditions: [
+      ...workOrder.stopConditions,
+      "Begin from Work Order, checkpoint, compact repository map, and context candidates before source files.",
+    ],
+    baselineGitHead: run.baseline.gitHead,
+    nextAction: run.nextAction,
+  };
+}
+
+function writeCheckpoint(paths: UadsPaths, checkpoint: Checkpoint, workOrder: WorkOrder, contextPlan: ContextPlan, schemaRoot?: string): Checkpoint {
+  const routing = workOrder.routingDecisionId
+    ? readRoutingDecision(paths, workOrder.routingDecisionId, schemaRoot)
+    : null;
+  if (!routing) {
+    throw new InvalidOrchestrationStateError("routing decision missing for checkpoint update");
+  }
+  return persistPlan({
+    paths,
+    workOrder,
+    decision: routing,
+    checkpoint,
+    contextPlan,
+    schemaRoot,
+  }).checkpoint;
+}
+
+export function runDispatch(input: {
+  cwd?: string;
+  uadsHome?: string;
+  session?: string;
+}): { run: ExecutionRun; packet: ExecutionPacket; workOrder: WorkOrder } {
+  const cwd = input.cwd ?? process.cwd();
+  const schemaRoot = schemaRootOf();
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
+  const checkpoint = readCurrentCheckpoint(ctx.paths, schemaRoot);
+  if (!checkpoint?.workOrderId || !checkpoint.routingDecisionId) {
+    throw new ExecutionBlockedError("cannot dispatch without a valid planned Work Order", [
+      "missing planned Work Order",
+    ]);
+  }
+  if (checkpoint.phase !== "plan" && checkpoint.phase !== "implement") {
+    const existing = readCurrentExecutionRun(ctx.paths, schemaRoot);
+    if (!existing || existing.workOrderId !== checkpoint.workOrderId) {
+      throw new ExecutionBlockedError("cannot dispatch without a valid planned Work Order", [
+        `checkpoint phase is ${checkpoint.phase}`,
+      ]);
+    }
+  }
+
+  const workOrder = readWorkOrder(ctx.paths, checkpoint.workOrderId, schemaRoot);
+  const routing = readRoutingDecision(ctx.paths, checkpoint.routingDecisionId, schemaRoot);
+  const contextPlan = readContextPlan(ctx.paths);
+  if (!workOrder || workOrder.status === "draft") {
+    throw new ExecutionBlockedError("cannot dispatch without a valid planned Work Order", [
+      "Work Order missing or still draft",
+    ]);
+  }
+  if (!routing || !contextPlan) {
+    throw new InvalidOrchestrationStateError("routing decision or context plan missing");
+  }
+
+  const dirty = isWorktreeDirty(ctx.repoRoot);
+  const existing = readCurrentExecutionRun(ctx.paths, schemaRoot);
+  if (dirty) {
+    const blocked = existing && existing.workOrderId === workOrder.workOrderId
+      ? touchRun(existing, {
+          status: "blocked",
+          phase: "stopped",
+          blockers: unique([...existing.blockers, "pre-existing dirty worktree at dispatch"]),
+          nextAction: "Clean or commit unrelated local changes, then re-run uads dispatch. UADS will not reset, stash, or delete user files.",
+        })
+      : null;
+    if (blocked) {
+      persistExecutionRun({ paths: ctx.paths, run: blocked, schemaRoot });
+    }
+    const nextCheckpoint: Checkpoint = {
+      ...checkpoint,
+      updatedAt: nowIso(),
+      status: "blocked",
+      blockers: unique([...checkpoint.blockers, "pre-existing dirty worktree at dispatch"]),
+      nextAction: "Refuse dispatch: dirty worktree. Do not reset/stash/clean. Resolve ownership, then dispatch.",
+    };
+    writeCheckpoint(ctx.paths, nextCheckpoint, workOrder, contextPlan, schemaRoot);
+    throw new ExecutionBlockedError("dirty worktree blocks dispatch", ["pre-existing dirty worktree at dispatch"]);
+  }
+
+  if (existing && existing.workOrderId === workOrder.workOrderId && existing.status === "completed") {
+    throw new ExecutionBlockedError("execution run already completed", ["run already completed"]);
+  }
+
+  if (
+    existing &&
+    existing.workOrderId === workOrder.workOrderId &&
+    existing.status !== "failed" &&
+    existing.status !== "blocked"
+  ) {
+    const packet = readExecutionPacket(ctx.paths, existing.executionRunId, schemaRoot) ?? buildPacket(existing, workOrder);
+    return { run: existing, packet, workOrder };
+  }
+
+  const createdAt = nowIso();
+  const executionRunId =
+    existing && existing.workOrderId === workOrder.workOrderId
+      ? existing.executionRunId
+      : newPrefixedId("er", `${workOrder.workOrderId}:${createdAt}`);
+  const gitHead = readGitSummary(ctx.repoRoot).head;
+
+  const run: ExecutionRun = {
+    schema: "uads.execution-run",
+    schemaVersion: "0.3.0",
+    executionRunId,
+    projectId: ctx.projectId,
+    workOrderId: workOrder.workOrderId,
+    routingDecisionId: workOrder.routingDecisionId,
+    createdAt: existing?.createdAt ?? createdAt,
+    updatedAt: createdAt,
+    attempt: existing && existing.workOrderId === workOrder.workOrderId ? existing.attempt : 1,
+    phase: "implement",
+    status: "ready",
+    baseline: {
+      gitHead,
+      dirty: false,
+      capturedAt: createdAt,
+    },
+    contextRadius: workOrder.contextRadius,
+    contextCandidates: contextPlan.candidateAreas,
+    implementerRole: IMPLEMENTER_ROLE,
+    implementerSessionId: input.session ? sanitizeOperationalText(input.session) : existing?.implementerSessionId ?? null,
+    requiredReviewers: unique(workOrder.assuranceReviewers),
+    selectedGates: workOrder.qualityGates,
+    currentChangeDigest: null,
+    reviewedChangeDigest: null,
+    changedFiles: [],
+    scopeViolations: [],
+    evidenceRefs: existing?.evidenceRefs ?? [],
+    reviewRefs: existing?.reviewRefs ?? [],
+    blockers: [],
+    nextAction:
+      "Invoke selected implementation specialist(s). Edit only NECESSARY in-scope files. Then run uads verify.",
+    expansionHistory: existing?.expansionHistory ?? [],
+  };
+
+  const packet = buildPacket(run, workOrder);
+  persistExecutionRun({ paths: ctx.paths, run, packet, schemaRoot });
+
+  const activeWorkOrder: WorkOrder = {
+    ...workOrder,
+    status: "active",
+    updatedAt: createdAt,
+    nextAction: packet.nextAction,
+  };
+  const nextCheckpoint: Checkpoint = {
+    ...checkpoint,
+    updatedAt: createdAt,
+    phase: "implement",
+    status: "in_progress",
+    completedSteps: unique([...checkpoint.completedSteps, "dispatch"]),
+    blockers: [],
+    nextAction: packet.nextAction,
+    resumeCursor: "implement:await-edits",
+  };
+  writeCheckpoint(ctx.paths, nextCheckpoint, activeWorkOrder, contextPlan, schemaRoot);
+  return { run, packet, workOrder: activeWorkOrder };
+}
+
+function loadActive(input: { cwd?: string; uadsHome?: string }): {
+  ctx: ReturnType<typeof resolveProjectContext>;
+  schemaRoot: string;
+  checkpoint: Checkpoint;
+  workOrder: WorkOrder;
+  contextPlan: ContextPlan;
+  run: ExecutionRun;
+} {
+  const cwd = input.cwd ?? process.cwd();
+  const schemaRoot = schemaRootOf();
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
+  const checkpoint = readCurrentCheckpoint(ctx.paths, schemaRoot);
+  const run = readCurrentExecutionRun(ctx.paths, schemaRoot);
+  if (!checkpoint?.workOrderId || !run) {
+    throw new ExecutionBlockedError("no active execution run", ["dispatch has not succeeded"]);
+  }
+  const workOrder = readWorkOrder(ctx.paths, checkpoint.workOrderId, schemaRoot);
+  const contextPlan = readContextPlan(ctx.paths);
+  if (!workOrder || !contextPlan) {
+    throw new InvalidOrchestrationStateError("Work Order or context plan missing");
+  }
+  return { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run };
+}
+
+export function runVerify(input: { cwd?: string; uadsHome?: string }): {
+  run: ExecutionRun;
+  changeSet: ChangeSet;
+  pendingGates: string[];
+} {
+  const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
+  if (run.status === "completed" || run.status === "failed") {
+    throw new ExecutionBlockedError("execution run is not active", [`status is ${run.status}`]);
+  }
+  const canVerify =
+    run.phase === "implement" ||
+    run.phase === "verify" ||
+    run.phase === "review" ||
+    run.status === "correction_needed";
+  if (!canVerify) {
+    throw new ExecutionBlockedError("cannot verify before dispatch or after the run has stopped", [
+      `phase is ${run.phase}`,
+    ]);
+  }
+
+  const changeSet = buildChangeSet(ctx.repoRoot, workOrder, contextPlan);
+  if (requiresImplementation(workOrder) && changeSet.files.length === 0) {
+    const blocked = touchRun(run, {
+      status: "blocked",
+      blockers: unique([...run.blockers, "no implementation change to verify"]),
+      nextAction: "Implement in-scope edits, then re-run uads verify.",
+    });
+    persistExecutionRun({ paths: ctx.paths, run: blocked, schemaRoot });
+    throw new ExecutionBlockedError("no implementation change to verify", ["no implementation change to verify"]);
+  }
+
+  if (changeSet.violations.length > 0) {
+    const blocked = touchRun(run, {
+      status: "blocked",
+      phase: "stopped",
+      currentChangeDigest: changeSet.digest,
+      changedFiles: changeSet.files.map((file) => file.path),
+      scopeViolations: changeSet.violations,
+      blockers: unique([
+        ...run.blockers,
+        ...changeSet.violations.map((item) => `${item.classification}: ${item.path}`),
+      ]),
+      nextAction: "Out-of-scope or sensitive changes block verification. Create a new plan or revert the extra files.",
+    });
+    persistExecutionRun({ paths: ctx.paths, run: blocked, schemaRoot });
+    const nextCheckpoint: Checkpoint = {
+      ...checkpoint,
+      updatedAt: nowIso(),
+      status: "blocked",
+      phase: "stopped",
+      blockers: blocked.blockers,
+      nextAction: blocked.nextAction,
+    };
+    writeCheckpoint(ctx.paths, nextCheckpoint, workOrder, contextPlan, schemaRoot);
+    throw new ExecutionBlockedError(
+      `scope or sensitive path violations: ${changeSet.violations.map((item) => `${item.classification}:${item.path}`).join(", ")}`,
+      blocked.blockers,
+    );
+  }
+
+  const updated = touchRun(run, {
+    phase: "verify",
+    status: run.status === "correction_needed" ? "in_progress" : "in_progress",
+    currentChangeDigest: changeSet.digest,
+    changedFiles: changeSet.files.map((file) => file.path),
+    scopeViolations: [],
+    blockers: [],
+    reviewedChangeDigest: run.phase === "review" ? null : run.reviewedChangeDigest,
+    nextAction: "Record PASS evidence for selected non-review gates, then uads assurance start.",
+  });
+  persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
+  const evidence = listEvidenceRecords(ctx.paths, updated.executionRunId, schemaRoot);
+  const reviews = listReviewRecords(ctx.paths, updated.executionRunId, schemaRoot);
+  const gates = deriveGateStates({
+    selectedGates: updated.selectedGates,
+    digest: updated.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  const nextCheckpoint: Checkpoint = {
+    ...checkpoint,
+    updatedAt: nowIso(),
+    phase: "verify",
+    status: "in_progress",
+    completedSteps: unique([...checkpoint.completedSteps, "verify"]),
+    blockers: [],
+    nextAction: updated.nextAction,
+    resumeCursor: "verify:await-evidence",
+  };
+  writeCheckpoint(ctx.paths, nextCheckpoint, workOrder, contextPlan, schemaRoot);
+  return {
+    run: updated,
+    changeSet,
+    pendingGates: gates.filter((gate) => gate.status === "PENDING").map((gate) => gate.gateId),
+  };
+}
+
+function copySanitizedOutput(input: {
+  paths: UadsPaths;
+  repoRoot: string;
+  executionRunId: string;
+  evidenceId: string;
+  outputPath?: string;
+}): { outputRef: string | null; outputDigest: string | null } {
+  if (!input.outputPath) {
+    return { outputRef: null, outputDigest: null };
+  }
+  if (input.outputPath.split(/[\\/]/).includes("..")) {
+    throw new ExecutionBlockedError("path traversal rejected", ["output path traversal"]);
+  }
+  const abs = path.resolve(input.outputPath);
+  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+    throw new ExecutionBlockedError("evidence output file not found", ["missing output file"]);
+  }
+  const raw = fs.readFileSync(abs, "utf8");
+  const sanitized = sanitizeReviewText(raw, [input.repoRoot, input.paths.home, input.paths.workspace]);
+  const text = sanitized.omit ? "[REDACTED:unsanitizable-output]\n" : sanitized.text;
+  const destName = `${input.evidenceId}.output.txt`;
+  const dest = path.join(input.paths.executionRuns, input.executionRunId, "evidence", destName);
+  atomicWriteFile(dest, text);
+  return {
+    outputRef: `sidecar://execution-runs/${input.executionRunId}/evidence/${destName}`,
+    outputDigest: sha256Hex(text),
+  };
+}
+
+export function runEvidenceRecord(input: {
+  cwd?: string;
+  uadsHome?: string;
+  gateId: string;
+  kind: EvidenceKind;
+  role: string;
+  command?: string;
+  exitCode?: number;
+  outputPath?: string;
+  summary: string;
+  status?: EvidenceRuntimeStatus;
+}): { record: EvidenceRecord; run: ExecutionRun; gateStates: GateStateSnapshot[] } {
+  const { ctx, schemaRoot, workOrder, contextPlan, checkpoint, run } = loadActive(input);
+  if (!run.currentChangeDigest) {
+    throw new ExecutionBlockedError("cannot record evidence before verify", ["missing change digest"]);
+  }
+  if (run.phase !== "verify" && run.phase !== "review" && run.status !== "correction_needed") {
+    throw new ExecutionBlockedError("evidence recording requires an active verified run", [`phase is ${run.phase}`]);
+  }
+  if (input.kind === "command" && input.exitCode === undefined) {
+    throw new ExecutionBlockedError("command evidence requires --exit-code", ["missing exit code"]);
+  }
+  let status: EvidenceRuntimeStatus = input.status ?? "PASS";
+  if (input.kind === "command") {
+    const exitCode = input.exitCode ?? 1;
+    status = exitCode === 0 ? "PASS" : "FAIL";
+    if (input.status === "PASS" && exitCode !== 0) {
+      throw new ExecutionBlockedError("PASS command evidence is incompatible with a non-zero exit code", [
+        "status/exit-code mismatch",
+      ]);
+    }
+  }
+
+  const createdAt = nowIso();
+  const evidenceId = newPrefixedId("ev", `${run.executionRunId}:${input.gateId}:${run.currentChangeDigest}:${createdAt}`);
+  const copied = copySanitizedOutput({
+    paths: ctx.paths,
+    repoRoot: ctx.repoRoot,
+    executionRunId: run.executionRunId,
+    evidenceId,
+    outputPath: input.outputPath,
+  });
+  const record: EvidenceRecord = {
+    schema: "uads.evidence-record",
+    schemaVersion: "0.3.0",
+    evidenceId,
+    projectId: run.projectId,
+    workOrderId: run.workOrderId,
+    executionRunId: run.executionRunId,
+    changeDigest: run.currentChangeDigest,
+    gateId: sanitizeOperationalText(input.gateId),
+    sourceRole: sanitizeOperationalText(input.role),
+    kind: input.kind,
+    createdAt,
+    status,
+    summary: sanitizeOperationalText(input.summary),
+    command: input.command ? sanitizeOperationalText(input.command) : undefined,
+    exitCode: input.kind === "command" ? (input.exitCode ?? null) : undefined,
+    outputRef: copied.outputRef,
+    outputDigest: copied.outputDigest,
+  };
+  persistEvidenceRecord({ paths: ctx.paths, record, schemaRoot });
+
+  const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const gateStates = deriveGateStates({
+    selectedGates: run.selectedGates,
+    digest: run.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  const failed = gateStates.filter((gate) => gate.status === "FAIL" || gate.status === "BLOCKED").map((gate) => gate.gateId);
+  const updated = touchRun(run, {
+    evidenceRefs: unique([...run.evidenceRefs, `sidecar://execution-runs/${run.executionRunId}/evidence/${record.evidenceId}.json`]),
+    blockers: failed.length > 0 ? unique([...run.blockers.filter((item) => !item.startsWith("gate-fail:")), ...failed.map((id) => `gate-fail: ${id}`)]) : run.blockers.filter((item) => !item.startsWith("gate-fail:")),
+    nextAction:
+      failed.length > 0
+        ? "Selected gate evidence FAIL/BLOCKED. Fix implementation, re-verify, and record new evidence."
+        : run.nextAction,
+  });
+  persistExecutionRun({ paths: ctx.paths, run: updated, schemaRoot });
+  writeCheckpoint(
+    ctx.paths,
+    {
+      ...checkpoint,
+      updatedAt: createdAt,
+      evidenceRefs: unique([...checkpoint.evidenceRefs, ...updated.evidenceRefs]),
+      nextAction: updated.nextAction,
+    },
+    workOrder,
+    contextPlan,
+    schemaRoot,
+  );
+  return { record, run: updated, gateStates };
+}
+
+export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
+  run: ExecutionRun;
+  packet: ReviewPacket;
+} {
+  const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
+  if (run.phase !== "verify" && run.phase !== "review") {
+    throw new ExecutionBlockedError("assurance start requires verify phase", [`phase is ${run.phase}`]);
+  }
+  if (!run.currentChangeDigest) {
+    throw new ExecutionBlockedError("assurance start requires a current change digest", ["missing change digest"]);
+  }
+  const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const gateStates = deriveGateStates({
+    selectedGates: run.selectedGates,
+    digest: run.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  const blocking = gateStates.filter((gate) => !isReviewGate(gate.gateId) && gate.status !== "PASS");
+  if (blocking.length > 0) {
+    throw new ExecutionBlockedError("selected non-review gates are not PASS", blocking.map((gate) => `${gate.gateId}:${gate.status}`));
+  }
+
+  const packet: ReviewPacket = {
+    schema: "uads.review-packet",
+    schemaVersion: "0.3.0",
+    executionRunId: run.executionRunId,
+    workOrderId: run.workOrderId,
+    objective: workOrder.objective,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    includedScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    changedFiles: run.changedFiles,
+    changeDigest: run.currentChangeDigest,
+    gateStates: gateStates.map((gate) => ({ gateId: gate.gateId, status: gate.status })),
+    evidenceRefs: run.evidenceRefs,
+    requiredReviewers: run.requiredReviewers,
+    riskLevel: workOrder.riskLevel,
+    nextAction: "Invoke distinct reviewer session(s). Do not self-approve. Record verdicts with uads assurance record.",
+  };
+  persistReviewPacket(ctx.paths, packet);
+  const updated = touchRun(run, {
+    phase: "review",
+    status: "in_progress",
+    nextAction: packet.nextAction,
+  });
+  persistExecutionRun({ paths: ctx.paths, run: updated, schemaRoot });
+  writeCheckpoint(
+    ctx.paths,
+    {
+      ...checkpoint,
+      updatedAt: nowIso(),
+      phase: "review",
+      status: "in_progress",
+      completedSteps: unique([...checkpoint.completedSteps, "assurance-start"]),
+      nextAction: packet.nextAction,
+      resumeCursor: "review:await-verdicts",
+    },
+    workOrder,
+    contextPlan,
+    schemaRoot,
+  );
+  return { run: updated, packet };
+}
+
+function parseFindings(raw?: string, file?: string): ReviewFinding[] {
+  if (file && file.split(/[\\/]/).includes("..")) {
+    throw new ExecutionBlockedError("path traversal rejected", ["findings path traversal"]);
+  }
+  const text = file ? fs.readFileSync(file, "utf8") : raw ?? "[]";
+  const parsed = JSON.parse(text) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new ExecutionBlockedError("findings must be a JSON array", ["invalid findings"]);
+  }
+  return sanitizeOperationalValue(
+    parsed.map((item) => {
+      const row = item as ReviewFinding;
+      return {
+        severity: row.severity,
+        category: String(row.category ?? "general"),
+        message: String(row.message ?? ""),
+      };
+    }),
+  );
+}
+
+export function runAssuranceRecord(input: {
+  cwd?: string;
+  uadsHome?: string;
+  role: string;
+  session: string;
+  implementerSession: string;
+  verdict: ReviewVerdict;
+  summary: string;
+  findingsJson?: string;
+  findingsFile?: string;
+}): { record: ReviewRecord; run: ExecutionRun } {
+  const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
+  if (run.phase !== "review" && run.phase !== "verify") {
+    throw new ExecutionBlockedError("assurance record requires review phase", [`phase is ${run.phase}`]);
+  }
+  if (!run.currentChangeDigest) {
+    throw new ExecutionBlockedError("assurance record requires a current change digest", ["missing change digest"]);
+  }
+  const reviewerRole = sanitizeOperationalText(input.role);
+  const reviewSessionId = sanitizeOperationalText(input.session);
+  const implementerSessionId = sanitizeOperationalText(input.implementerSession);
+  const trueImplementerSession = run.implementerSessionId ?? implementerSessionId;
+  if (reviewerRole === run.implementerRole || reviewerRole === IMPLEMENTER_ROLE) {
+    throw new ExecutionBlockedError("implementer cannot self-review", ["reviewer role equals implementer role"]);
+  }
+  if (reviewSessionId === implementerSessionId || reviewSessionId === trueImplementerSession) {
+    throw new ExecutionBlockedError("same implementer/reviewer session", [
+      "same implementer/reviewer session",
+    ]);
+  }
+
+  const createdAt = nowIso();
+  const record: ReviewRecord = {
+    schema: "uads.review-record",
+    schemaVersion: "0.3.0",
+    reviewId: newPrefixedId("rv", `${run.executionRunId}:${reviewerRole}:${run.currentChangeDigest}:${createdAt}`),
+    projectId: run.projectId,
+    workOrderId: run.workOrderId,
+    executionRunId: run.executionRunId,
+    changeDigest: run.currentChangeDigest,
+    reviewerRole,
+    reviewSessionId,
+    implementerRole: run.implementerRole,
+    implementerSessionId,
+    verdict: input.verdict,
+    summary: sanitizeOperationalText(input.summary),
+    findings: parseFindings(input.findingsJson, input.findingsFile),
+    evidenceRefs: run.evidenceRefs,
+    createdAt,
+  };
+  persistReviewRecord({ paths: ctx.paths, record, schemaRoot });
+
+  const implementerSession = run.implementerSessionId ?? implementerSessionId;
+  let updated = touchRun(run, {
+    implementerSessionId: implementerSession,
+    reviewRefs: unique([
+      ...run.reviewRefs,
+      `sidecar://execution-runs/${run.executionRunId}/reviews/${record.reviewId}.json`,
+    ]),
+  });
+
+  if (input.verdict === "CORRECTION_NEEDED") {
+    updated = touchRun(updated, {
+      phase: "implement",
+      status: "correction_needed",
+      attempt: run.attempt + 1,
+      reviewedChangeDigest: null,
+      nextAction: "Address review findings, edit in-scope files, then uads verify (new digest required).",
+    });
+  } else if (input.verdict === "BLOCKED") {
+    updated = touchRun(updated, {
+      status: "blocked",
+      phase: "stopped",
+      blockers: unique([...updated.blockers, `review-blocked:${reviewerRole}`]),
+      nextAction: "Independent review BLOCKED. Do not continue automatically.",
+    });
+  } else {
+    updated = touchRun(updated, {
+      reviewedChangeDigest: run.currentChangeDigest,
+      nextAction: "If all required reviewers approved this digest, run uads finalize.",
+    });
+  }
+
+  persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
+  writeCheckpoint(
+    ctx.paths,
+    {
+      ...checkpoint,
+      updatedAt: createdAt,
+      phase: updated.phase === "implement" ? "implement" : updated.phase === "stopped" ? "stopped" : "review",
+      status: updated.status === "blocked" ? "blocked" : "in_progress",
+      blockers: updated.blockers,
+      nextAction: updated.nextAction,
+      resumeCursor: updated.status === "correction_needed" ? "implement:correction" : "review:recorded",
+    },
+    workOrder,
+    contextPlan,
+    schemaRoot,
+  );
+  return { record, run: updated };
+}
+
+function currentGitDigest(repoRoot: string, workOrder: WorkOrder, contextPlan: ContextPlan): string {
+  return buildChangeSet(repoRoot, workOrder, contextPlan).digest;
+}
+
+export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: ExecutionRun } {
+  const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
+  const blockers: string[] = [];
+  if (run.status === "completed") {
+    return { run };
+  }
+  if (!run.currentChangeDigest) {
+    blockers.push("missing change digest");
+  }
+  if (run.phase === "implement" || run.phase === "verify" || run.status === "correction_needed") {
+    blockers.push("cannot finalize before independent review");
+  }
+  const live = currentGitDigest(ctx.repoRoot, workOrder, contextPlan);
+  if (run.currentChangeDigest && live !== run.currentChangeDigest) {
+    blockers.push("current git digest differs from verified digest");
+  }
+  if (run.scopeViolations.length > 0) {
+    blockers.push("unresolved out-of-scope or sensitive changes");
+  }
+  const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const gateStates = deriveGateStates({
+    selectedGates: run.selectedGates,
+    digest: run.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  for (const gate of gateStates) {
+    if (!isKnownGateId(gate.gateId) && run.selectedGates.includes(gate.gateId)) {
+      blockers.push(`unknown selected gate ${gate.gateId}`);
+    }
+    if (gate.status === "PENDING") {
+      blockers.push(`pending gate ${gate.gateId}`);
+    }
+    if (gate.status === "FAIL" || gate.status === "BLOCKED") {
+      blockers.push(`${gate.status.toLowerCase()} gate ${gate.gateId}`);
+    }
+  }
+  const currentReviews = reviews.filter((item) => item.changeDigest === run.currentChangeDigest);
+  const independent = currentReviews.find((item) => item.reviewerRole === INDEPENDENT_REVIEWER_ROLE);
+  if (!independent) {
+    blockers.push("missing independent review");
+  } else if (independent.verdict === "CORRECTION_NEEDED") {
+    blockers.push("CORRECTION_NEEDED review is not an approval");
+  } else if (independent.verdict !== "APPROVED") {
+    blockers.push("independent reviewer has not APPROVED");
+  } else {
+    if (independent.reviewerRole === independent.implementerRole) {
+      blockers.push("implementer self-review");
+    }
+    if (independent.reviewSessionId === independent.implementerSessionId) {
+      blockers.push("same implementer/reviewer session");
+    }
+    if (run.reviewedChangeDigest && run.reviewedChangeDigest !== run.currentChangeDigest) {
+      blockers.push("reviewed digest does not match current digest");
+    }
+    if (live !== independent.changeDigest) {
+      blockers.push("current git digest differs from reviewed digest");
+    }
+  }
+  for (const role of run.requiredReviewers) {
+    const found = currentReviews.find((item) => item.reviewerRole === role && item.verdict === "APPROVED");
+    if (!found) {
+      blockers.push(`missing required assurance reviewer ${role}`);
+    }
+  }
+  if (workOrder.acceptanceCriteria.length > 0 && evidence.filter((item) => item.changeDigest === run.currentChangeDigest && item.status === "PASS").length === 0) {
+    blockers.push("required acceptance evidence missing");
+  }
+  if (run.blockers.length > 0 && run.status === "blocked") {
+    blockers.push(...run.blockers);
+  }
+
+  if (blockers.length > 0) {
+    throw new ExecutionBlockedError("finalize refused", unique(blockers));
+  }
+
+  const completedAt = nowIso();
+  const updated = touchRun(run, {
+    phase: "stopped",
+    status: "completed",
+    nextAction: "Generate a review ZIP if required. Do not deploy or transfer funds.",
+  });
+  persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
+  const completedWorkOrder: WorkOrder = {
+    ...workOrder,
+    status: "completed",
+    updatedAt: completedAt,
+    nextAction: updated.nextAction,
+  };
+  writeCheckpoint(
+    ctx.paths,
+    {
+      ...checkpoint,
+      updatedAt: completedAt,
+      phase: "stopped",
+      status: "completed",
+      completedSteps: unique([...checkpoint.completedSteps, "finalize"]),
+      blockers: [],
+      nextAction: updated.nextAction,
+      resumeCursor: "complete:await-review-bundle",
+    },
+    completedWorkOrder,
+    contextPlan,
+    schemaRoot,
+  );
+  return { run: updated };
+}
+
+export function runContextExpand(input: {
+  cwd?: string;
+  uadsHome?: string;
+  reason: string;
+  approveC5?: boolean;
+}): { run: ExecutionRun; packet: ExecutionPacket } {
+  const { ctx, schemaRoot, workOrder, contextPlan, checkpoint, run } = loadActive(input);
+  const index = RADIUS_ORDER.indexOf(run.contextRadius);
+  if (index < 0 || index >= RADIUS_ORDER.length - 1) {
+    throw new ExecutionBlockedError("context radius cannot expand further", [`radius is ${run.contextRadius}`]);
+  }
+  const next = RADIUS_ORDER[index + 1];
+  if (!next) {
+    throw new ExecutionBlockedError("context radius cannot expand further", [`radius is ${run.contextRadius}`]);
+  }
+  if (next === "C5" && !input.approveC5) {
+    throw new ExecutionBlockedError("C5 is exceptional and blocked by default", ["C5 requires explicit approval"]);
+  }
+  const mapParsed = readJsonIfValid<RepositoryMap>(ctx.paths.repositoryMap);
+  const candidates = mapParsed.ok
+    ? selectContextCandidates({
+        radius: next,
+        intake: {
+          schema: "uads.intake",
+          schemaVersion: "0.2.0",
+          objective: workOrder.objective,
+          constraints: [],
+          requestedArtifacts: [],
+          inScope: workOrder.includedScope,
+          outOfScope: workOrder.outOfScope,
+          acceptanceCriteria: workOrder.acceptanceCriteria,
+          domainSignals: workOrder.domains,
+          riskSignals: workOrder.riskReasons,
+          destructiveSignals: [],
+          affectedAreas: workOrder.affectedAreas,
+          uncertainties: [],
+          approvedBoundaries: [],
+          classifier: "host-structured",
+        },
+        map: mapParsed.value,
+      })
+    : unique([...run.contextCandidates]);
+  const updated = touchRun(run, {
+    contextRadius: next,
+    contextCandidates: candidates,
+    expansionHistory: [
+      ...run.expansionHistory,
+      { from: run.contextRadius, to: next, reason: sanitizeOperationalText(input.reason), at: nowIso() },
+    ],
+    nextAction: `Context expanded to ${next}. Do not treat this as permission to edit unrelated areas.`,
+  });
+  const packet = persistExecutionPacket(ctx.paths, buildPacket(updated, workOrder), schemaRoot);
+  persistExecutionRun({ paths: ctx.paths, run: updated, packet, schemaRoot });
+  const nextPlan: ContextPlan = { ...contextPlan, radius: next, candidateAreas: candidates, reason: `${contextPlan.reason}; expanded: ${input.reason}` };
+  writeCheckpoint(ctx.paths, { ...checkpoint, updatedAt: nowIso(), nextAction: updated.nextAction }, workOrder, nextPlan, schemaRoot);
+  return { run: updated, packet };
+}
+
+export function loadExecutionView(input: { cwd?: string; uadsHome?: string }): ExecutionResumeView {
+  const cwd = input.cwd ?? process.cwd();
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
+  try {
+    const run = readCurrentExecutionRun(ctx.paths);
+    if (!run) {
+      return buildExecutionResumeView(null);
+    }
+    const evidence = listEvidenceRecords(ctx.paths, run.executionRunId);
+    const reviews = listReviewRecords(ctx.paths, run.executionRunId);
+    return buildExecutionResumeView(run, evidence, reviews);
+  } catch (error) {
+    if (error instanceof InvalidOrchestrationStateError) {
+      return {
+        ...buildExecutionResumeView(null),
+        status: "invalid-state",
+        blockers: [error.message],
+        nextAction: "Do not guess. Restore or recreate a valid execution run from a planned Work Order.",
+      };
+    }
+    throw error;
+  }
+}
+
+export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: string; content: string }> {
+  const files: Array<{ name: string; content: string }> = [];
+  const add = (name: string, abs: string): void => {
+    if (!fs.existsSync(abs)) {
+      return;
+    }
+    files.push({ name, content: fs.readFileSync(abs, "utf8") });
+  };
+  add("orchestration/current-checkpoint.json", paths.currentState);
+  const checkpoint = readCurrentCheckpoint(paths);
+  if (checkpoint?.workOrderId) {
+    add("orchestration/current-work-order.json", path.join(paths.workOrders, `${checkpoint.workOrderId}.json`));
+  }
+  if (checkpoint?.routingDecisionId) {
+    add(
+      "orchestration/current-routing-decision.json",
+      path.join(paths.decisions, `${checkpoint.routingDecisionId}.json`),
+    );
+  }
+  add("orchestration/context-plan.json", path.join(paths.context, "plan.json"));
+  const run = (() => {
+    try {
+      return readCurrentExecutionRun(paths);
+    } catch {
+      return null;
+    }
+  })();
+  if (run) {
+    add("orchestration/current-execution-run.json", path.join(paths.executionRuns, run.executionRunId, "run.json"));
+    add("orchestration/execution-packet.json", path.join(paths.executionRuns, run.executionRunId, "packet.json"));
+    const evidenceDir = path.join(paths.executionRuns, run.executionRunId, "evidence");
+    if (fs.existsSync(evidenceDir)) {
+      for (const name of fs.readdirSync(evidenceDir).filter((file) => file.endsWith(".json")).sort()) {
+        add(`orchestration/evidence/${name}`, path.join(evidenceDir, name));
+      }
+    }
+    const reviewsDir = path.join(paths.executionRuns, run.executionRunId, "reviews");
+    if (fs.existsSync(reviewsDir)) {
+      for (const name of fs.readdirSync(reviewsDir).filter((file) => file.endsWith(".json")).sort()) {
+        add(`orchestration/reviews/${name}`, path.join(reviewsDir, name));
+      }
+    }
+  }
+  return files;
+}

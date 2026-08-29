@@ -1,8 +1,8 @@
 # 14 — Backlog
 
-Ideas that must **not** land in Prompt 002.
+Ideas that must **not** land in Prompt 003.
 
-- Arbitrary customer-project code-edit execution engine
+- Semantic dependency graph / deep impact graph
 - Provider API clients and hard-coded model price tables
 - Full multi-provider model router
 - Complete 30+ department specialist catalog
@@ -15,5 +15,6 @@ Ideas that must **not** land in Prompt 002.
 - Optional in-project footprint opt-in flag UX
 - Windows code-signing of the CLI
 - Production deployment automation, wallet custody, on-chain execution
+- Formal waiver UX for selected gates
 
-If a change is useful but not required for Prompt 002 DoD, add it here rather than expanding `src/`.
+If a change is useful but not required for Prompt 003 DoD, add it here rather than expanding `src/`.

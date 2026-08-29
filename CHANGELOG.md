@@ -2,6 +2,25 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.3.0] - 2026-08-29
+
+### Added
+
+- Bounded execution engine: durable execution runs, compact execution packets, change-digest binding, evidence ledger, independent assurance records, correction loop, and `uads finalize`
+- CLI: `uads dispatch`, `uads verify`, `uads evidence record`, `uads assurance start`, `uads assurance record`, `uads finalize`, `uads context expand`
+- `uads status` / `uads resume` report active execution phase, digest, pending/failed gates, and reviewers
+- Execution schemas 0.3.0: execution-run, execution-packet, evidence-record, review-record
+- Canonical agent definitions for requirements-engineer, software-architect, implementation-planner, and test-engineer
+- Execution eval suite `npm run eval:execution` (X1–X7)
+- Review ZIP includes sanitized orchestration/execution metadata when present
+
+### Notes
+
+- The TypeScript kernel remains provider-neutral and does not edit customer projects or call model APIs
+- Dirty worktrees block dispatch; UADS does not reset, stash, or delete user files
+- Evidence and reviews bind to the current change digest; stale digest records cannot finalize
+- `uads review` remains review ZIP generation; assurance uses `uads assurance *`
+
 ## [0.2.0] - 2026-08-29
 
 ### Added

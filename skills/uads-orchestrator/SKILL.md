@@ -2,33 +2,33 @@
 name: uads-orchestrator
 description: >
   UADS orchestrator kernel by NexLabs. Use to inspect a repo, normalize a request
-  into structured intake, call uads plan, bound scope/risk/gates/context, persist
-  checkpoints, require independent review, and collect evidence. Global-first,
+  into structured intake, call uads plan, dispatch a bounded execution run, collect
+  digest-bound evidence, require independent review, and finalize. Global-first,
   zero project footprint.
 ---
 
 # UADS Orchestrator
 
-Host-side semantic protocol for the deterministic UADS kernel. Do not dump the repository into context.
+Host-side semantic protocol for the deterministic UADS kernel. Do not dump the repository into context. Do not call provider APIs from the kernel.
 
 ## Protocol
 
-1. Inspect UADS/project state first (`uads status`, `uads inspect`).
-2. Read the latest checkpoint (`uads resume`) before planning duplicate work.
-3. Semantically normalize the user request into `schemas/intake.schema.json`.
-4. Call the kernel: `uads plan --intake <file>` (preferred) or `uads plan --request` only as a documented fallback.
-5. Obey the Work Order, routing decision, and context radius. Do not add unrelated features.
-6. Use only the specialists listed in the plan.
-7. Keep context at the planned radius (C0–C4 by default; C5 is exceptional).
-8. If implementation occurs, independent review is mandatory. The implementer is never the sole approver.
-9. Collect evidence for selected gates.
-10. Stop on material blockers or approval-gated actions.
-11. Update sidecar checkpoint state; do not write operational files into the project.
-12. Never claim completion without the required gates.
+1. Inspect state (`uads status`, `uads inspect`, `uads resume`).
+2. Normalize the user request into `schemas/intake.schema.json`.
+3. `uads plan --intake <file>` (preferred) or `uads plan --request` as fallback.
+4. `uads dispatch` — dirty worktrees block; UADS will not reset/stash/clean.
+5. Invoke selected implementation specialist(s) from the Work Order. Edit only NECESSARY scope.
+6. `uads verify` — binds a change digest. Do not claim gates passed.
+7. Run selected gates in the host terminal. `uads evidence record` for each selected non-review gate.
+8. `uads assurance start`, then distinct reviewer session(s). `uads assurance record`.
+9. On `CORRECTION_NEEDED`, return to implementation, re-verify (new digest), and re-review.
+10. `uads finalize` is the only completion gate. Then `uads review` if a ZIP is required.
+
+The user should not pick specialists by hand. Routing controls that. Prefer native subagents for isolated reviewer context. If independence cannot be met, record BLOCKED — never self-approve.
 
 ## Fallback classifier
 
-`uads plan --request` is a conservative text heuristic for humans. It is not the authoritative semantic architecture. Prefer structured intake from this skill.
+`uads plan --request` is a conservative text heuristic. Prefer structured intake.
 
 ## References
 
@@ -38,3 +38,4 @@ Host-side semantic protocol for the deterministic UADS kernel. Do not dump the r
 - `references/RISK-AND-GATES.md`
 - `references/CONTEXT.md`
 - `references/EVIDENCE.md`
+- `references/EXECUTION.md`

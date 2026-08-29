@@ -8,6 +8,7 @@ Evidence-first delivery requires gates. Prompt 001 implements the **foundation**
 - Typecheck (`tsc --noEmit`; currently the same command as lint)
 - Unit and CLI smoke tests (`vitest`)
 - Orchestrator routing evals (`npm run eval:orchestrator`)
+- Execution lifecycle evals (`npm run eval:execution`)
 - Agent Skills compatibility preflight (`npm run validate:skills`)
 - Validation inventory + CLI smoke (`scripts/validate/validate-foundation.mjs`)
 - Dependency audit (`npm audit`) captured as sidecar evidence
@@ -21,4 +22,4 @@ The planner picks from a canonical registry: static, unit-test, integration-test
 
 Style-only frontend work does not require Web3 fuzzing. DeFi withdrawal requires web3-unit, fuzz, invariant, and security review.
 
-A change is not done if a relevant gate was skipped without an explicit waiver recorded as evidence.
+A selected Work Order gate is PASS only with current-digest evidence (or a matching current-digest assurance record for review gates). FAIL/BLOCKED evidence blocks `uads finalize`. Unknown gate IDs cannot satisfy a selected gate.

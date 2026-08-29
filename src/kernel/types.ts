@@ -155,6 +155,13 @@ export type ResumePacket = {
   blockers: string[];
   nextAction: string;
   invalidState?: string;
+  executionRunId?: string | null;
+  attempt?: number | null;
+  changeDigest?: string | null;
+  pendingGates?: string[];
+  failedGates?: string[];
+  requiredReviewers?: string[];
+  completedReviewers?: string[];
 };
 
 export type ContextPlan = {

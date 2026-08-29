@@ -1,8 +1,6 @@
-import { computeProjectFingerprint } from "../lib/fingerprint.js";
-import { readGitSummary } from "../lib/git.js";
 import { sha256Hex } from "../lib/hash.js";
 import { findPackageRoot } from "../lib/version.js";
-import { ensureWorkspace, readOrCreateProfile, type UadsPaths } from "../lib/workspace.js";
+import type { UadsPaths } from "../lib/workspace.js";
 import { inspectRepository } from "./inspector.js";
 import { newPrefixedId, titleFromObjective } from "./ids.js";
 import { intakeFromRequest, normalizeIntake } from "./intake.js";
@@ -24,6 +22,8 @@ import {
   selectSpecialists,
 } from "./routing.js";
 import { inspectCurrentState, persistPlan, readCurrentCheckpoint, readRoutingDecision, readWorkOrder } from "./persist.js";
+import { loadExecutionView } from "./execution.js";
+import { resolveProjectContext } from "./project-context.js";
 import type {
   Checkpoint,
   ContextPlan,
@@ -35,25 +35,6 @@ import type {
 } from "./types.js";
 import { IMPLEMENTER_ROLE } from "./types.js";
 
-function projectContext(cwd: string, uadsHome?: string): {
-  repoRoot: string;
-  projectId: string;
-  fingerprint: ReturnType<typeof computeProjectFingerprint>;
-  paths: UadsPaths;
-} {
-  const git = readGitSummary(cwd);
-  const repoRoot = git.repoRoot ?? cwd;
-  const fingerprint = computeProjectFingerprint({ originUrl: git.originUrl, repoRoot });
-  const paths = ensureWorkspace(fingerprint.projectId, uadsHome);
-  readOrCreateProfile(paths, {
-    projectId: fingerprint.projectId,
-    fingerprint: fingerprint.fingerprint,
-    fingerprintSource: fingerprint.source,
-    repoRoot,
-  });
-  return { repoRoot, projectId: fingerprint.projectId, fingerprint, paths };
-}
-
 export function runInspect(input: { cwd?: string; uadsHome?: string; json?: boolean }): {
   map: RepositoryMap;
   reused: boolean;
@@ -61,7 +42,7 @@ export function runInspect(input: { cwd?: string; uadsHome?: string; json?: bool
   projectId: string;
 } {
   const cwd = input.cwd ?? process.cwd();
-  const ctx = projectContext(cwd, input.uadsHome);
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
   const inspected = inspectRepository({
     repoRoot: ctx.repoRoot,
     projectId: ctx.projectId,
@@ -92,7 +73,7 @@ export function runPlan(input: {
   const intake: NormalizedIntake = input.intake
     ? normalizeIntake(input.intake, schemaRoot)
     : intakeFromRequest(input.request ?? "");
-  const ctx = projectContext(cwd, input.uadsHome);
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
   const inspected = inspectRepository({
     repoRoot: ctx.repoRoot,
     projectId: ctx.projectId,
@@ -288,7 +269,7 @@ export function planFromIntake(input: {
 
 export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePacket {
   const cwd = input.cwd ?? process.cwd();
-  const ctx = projectContext(cwd, input.uadsHome);
+  const ctx = resolveProjectContext(cwd, input.uadsHome);
   const state = inspectCurrentState(ctx.paths);
   if (!state.valid) {
     const recovered = readCurrentCheckpoint(ctx.paths);
@@ -337,11 +318,12 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
   const decision = checkpoint.routingDecisionId
     ? readRoutingDecision(ctx.paths, checkpoint.routingDecisionId)
     : null;
+  const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
     phase: checkpoint.phase,
-    status: checkpoint.status,
+    status: execution.executionRunId ? String(execution.status) : checkpoint.status,
     objective: workOrder?.objective ?? null,
     completedSteps: checkpoint.completedSteps,
     scopeClass: workOrder?.scopeClass ?? decision?.scopeClass ?? null,
@@ -351,7 +333,14 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     repositoryMapDigest: checkpoint.repositoryMapDigest,
     contextPlanRef: checkpoint.contextPlanRef,
     evidenceRefs: checkpoint.evidenceRefs,
-    blockers: checkpoint.blockers,
-    nextAction: checkpoint.nextAction,
+    blockers: execution.blockers.length > 0 ? execution.blockers : checkpoint.blockers,
+    nextAction: execution.executionRunId ? execution.nextAction : checkpoint.nextAction,
+    executionRunId: execution.executionRunId,
+    attempt: execution.attempt,
+    changeDigest: execution.changeDigest,
+    pendingGates: execution.pendingGates,
+    failedGates: execution.failedGates,
+    requiredReviewers: execution.requiredReviewers,
+    completedReviewers: execution.completedReviewers,
   };
 }

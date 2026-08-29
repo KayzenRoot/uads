@@ -29,6 +29,7 @@ describe("review evidence", () => {
     expect(names).toContain("evidence/build.txt");
     expect(names).toContain("evidence/tests.txt");
     expect(names).toContain("evidence/orchestrator-eval.txt");
+    expect(names).toContain("evidence/execution-eval.txt");
     expect(names).toContain("evidence/skills-validation.txt");
     expect(names).toContain("evidence/foundation-validation.txt");
     expect(names).toContain("evidence/npm-audit.txt");

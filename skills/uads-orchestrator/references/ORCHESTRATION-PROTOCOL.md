@@ -8,4 +8,11 @@ USER REQUEST -> SKILL / HOST LLM -> NORMALIZED INTAKE -> KERNEL -> WORK ORDER + 
 
 Do not re-scan the whole repository to resume. Use `uads resume`.
 Do not expand scope during planning without recording the expansion.
-Prompt 002 plans through the `plan` phase only; do not mark implement/verify/review completed unless they happened.
+Prompt 002 plans through the `plan` phase. Prompt 003 continues:
+
+```
+PLAN -> DISPATCH -> IMPLEMENT -> VERIFY -> INDEPENDENT REVIEW -> COMPLETE
+```
+
+`uads review` generates the review ZIP. Assurance uses `uads assurance start` / `uads assurance record`.
+

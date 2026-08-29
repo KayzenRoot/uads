@@ -4,7 +4,7 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 
 ## Non-negotiable
 
-- Do not write secrets into the sidecar, Work Orders, routing decisions, checkpoints, or review ZIP
+- Do not write secrets into the sidecar, Work Orders, routing decisions, checkpoints, execution runs, evidence, reviews, or review ZIP
 - Intake-derived free text is redacted with the shared high-confidence sanitizer before durable writes; errors must not echo raw secrets
 - Exclude `.env*`, private keys, tokens, credential filenames, and `memory-bank/`
 - Exclude `.git/` (history can contain secrets)
@@ -13,7 +13,9 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 - Do not exclude ordinary source/docs/tests just because the filename contains `secret` / `token` / `password` / `credential`
 - Do not serialize absolute host paths into the shareable review manifest or ZIP text
 - Installers must not overwrite user files without `--force` / `-Force`
-- Zero project footprint reduces accidental commit of UADS caches
+- Execution state uses relative project paths only; `../`, drive paths, and UNC paths are rejected
+- Dirty worktrees block dispatch; the engine never reset/stash/cleans user files
+- Implementer cannot self-approve; reviewer session must differ from implementer session
 
 Content scanning is **defense-in-depth**, not a claim of complete secret detection.
 

@@ -8,18 +8,15 @@ import { ensureGlobalLayout, resolveUadsHome } from "../lib/workspace.js";
 export const UADS_AGENT_PREFIX = "uads-";
 export const MANIFEST_NAME = "uads-managed-agents.json";
 
-const AGENT_FILES = [
-  "uads-repo-inspector.md",
-  "uads-implementation-agent.md",
-  "uads-independent-reviewer.md",
-  "uads-security-reviewer.md",
-  "uads-performance-reviewer.md",
-  "uads-checkpoint-manager.md",
-];
-
-export function resolveCursorAgentsDir(cursorUserHome?: string): string {
-  const home = cursorUserHome ?? process.env.CURSOR_USER_HOME ?? os.homedir();
-  return path.join(home, ".cursor", "agents");
+export function listCanonicalAgentFiles(packageRoot: string): string[] {
+  const dir = path.join(packageRoot, "agents");
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  return fs
+    .readdirSync(dir)
+    .filter((name) => name.startsWith(UADS_AGENT_PREFIX) && name.endsWith(".md"))
+    .sort();
 }
 
 export function installCursorAgents(input: {
@@ -31,9 +28,10 @@ export function installCursorAgents(input: {
   const uadsHome = ensureGlobalLayout(input.uadsHome ?? resolveUadsHome());
   const canonicalDir = path.join(uadsHome, "agents");
   fs.mkdirSync(canonicalDir, { recursive: true });
+  const agentFiles = listCanonicalAgentFiles(packageRoot);
 
   const installed: string[] = [];
-  for (const file of AGENT_FILES) {
+  for (const file of agentFiles) {
     const source = path.join(packageRoot, "agents", file);
     if (!fs.existsSync(source)) {
       continue;
@@ -52,7 +50,7 @@ export function installCursorAgents(input: {
   } catch (error) {
     return {
       installed,
-      skipped: AGENT_FILES,
+      skipped: agentFiles,
       cursorDir,
       error: `Cursor adapter skipped: cannot write ${cursorDir} (${error instanceof Error ? error.message : String(error)})`,
     };
@@ -61,13 +59,9 @@ export function installCursorAgents(input: {
   const manifestPath = path.join(cursorDir, MANIFEST_NAME);
   const copied: string[] = [];
   const skipped: string[] = [];
-  for (const file of AGENT_FILES) {
+  for (const file of agentFiles) {
     const source = path.join(canonicalDir, file);
-    if (!fs.existsSync(source)) {
-      skipped.push(file);
-      continue;
-    }
-    if (!file.startsWith(UADS_AGENT_PREFIX)) {
+    if (!fs.existsSync(source) || !file.startsWith(UADS_AGENT_PREFIX)) {
       skipped.push(file);
       continue;
     }
@@ -80,4 +74,9 @@ export function installCursorAgents(input: {
     `${JSON.stringify({ owner: "UADS", prefix: UADS_AGENT_PREFIX, files: copied, updatedAt: new Date().toISOString() }, null, 2)}\n`,
   );
   return { installed: copied, skipped, cursorDir };
+}
+
+export function resolveCursorAgentsDir(cursorUserHome?: string): string {
+  const home = cursorUserHome ?? process.env.CURSOR_USER_HOME ?? os.homedir();
+  return path.join(home, ".cursor", "agents");
 }

@@ -20,6 +20,7 @@ export type UadsPaths = {
   decisions: string;
   index: string;
   context: string;
+  executionRuns: string;
   profile: string;
   currentState: string;
   repositoryMap: string;
@@ -57,6 +58,7 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     decisions: path.join(workspace, "decisions"),
     index: path.join(workspace, "index"),
     context: path.join(workspace, "context"),
+    executionRuns: path.join(workspace, "execution-runs"),
     profile: path.join(workspace, "profile.json"),
     currentState: path.join(workspace, "state", "current.json"),
     repositoryMap: path.join(workspace, "index", "repository-map.json"),
@@ -88,6 +90,7 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.decisions,
     paths.index,
     paths.context,
+    paths.executionRuns,
   ]) {
     fs.mkdirSync(dir, { recursive: true });
   }

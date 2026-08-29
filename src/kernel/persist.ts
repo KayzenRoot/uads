@@ -6,6 +6,11 @@ import { sanitizeOperationalValue } from "../lib/safe-persist.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import type { Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "./types.js";
 
+export function readContextPlan(paths: UadsPaths): ContextPlan | null {
+  const parsed = readJsonIfValid<ContextPlan>(path.join(paths.context, "plan.json"));
+  return parsed.ok ? parsed.value : null;
+}
+
 export class InvalidOrchestrationStateError extends Error {
   constructor(message: string) {
     super(message);

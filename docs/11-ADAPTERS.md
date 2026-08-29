@@ -8,7 +8,7 @@ Canonical specialist markdown lives in the UADS package `agents/` directory and 
 
 The Cursor adapter may also install managed `uads-*` files under the **user-level** Cursor agents directory (`~/.cursor/agents/` or `$CURSOR_USER_HOME/.cursor/agents/`). It does not write project-level `.cursor/agents`. Unrelated user agent files are left untouched. Adapter install failure is reported and must not corrupt the canonical UADS copy.
 
-Invoke `skills/uads-orchestrator/SKILL.md` plus the CLI (`inspect`, `plan`, `status`, `resume`, `review`). Codex/generic adapters use the same Skill + CLI contract without Cursor-specific paths.
+Invoke `skills/uads-orchestrator/SKILL.md` plus the CLI (`inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `status`, `resume`, `review`). Codex/generic adapters use the same Skill + CLI contract without Cursor-specific paths.
 
 
 ## Codex / generic

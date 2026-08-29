@@ -5,6 +5,10 @@ import addFormatsImport from "ajv-formats";
 import { findPackageRoot } from "./version.js";
 import { sanitizeOperationalText } from "./safe-persist.js";
 
+type CompiledValidator = ((data: unknown) => boolean) & { errors?: unknown[] | null };
+
+const validators = new Map<string, CompiledValidator>();
+
 function applyAjvFormats(ajv: Ajv2020): void {
   const imported = addFormatsImport as unknown as
     | ((instance: Ajv2020) => unknown)
@@ -22,20 +26,33 @@ export function loadJsonSchema(name: string, schemaRoot?: string): Record<string
   return JSON.parse(fs.readFileSync(schemaPath, "utf8")) as Record<string, unknown>;
 }
 
+function compileSchema(schemaFile: string, schemaRoot?: string): CompiledValidator {
+  const root = schemaRoot ?? findPackageRoot();
+  const key = `${root}::${schemaFile}`;
+  const cached = validators.get(key);
+  if (cached) {
+    return cached;
+  }
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  applyAjvFormats(ajv);
+  const validate = ajv.compile(loadJsonSchema(schemaFile, root)) as CompiledValidator;
+  validators.set(key, validate);
+  return validate;
+}
+
 export function validateAgainstSchema(
   schemaFile: string,
   data: unknown,
   schemaRoot?: string,
 ): string[] {
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
-  applyAjvFormats(ajv);
-  const validate = ajv.compile(loadJsonSchema(schemaFile, schemaRoot));
+  const validate = compileSchema(schemaFile, schemaRoot);
   if (validate(data)) {
     return [];
   }
-  return (validate.errors ?? []).map((error) =>
-    sanitizeOperationalText(`schema:${error.instancePath || "/"} ${error.message ?? "invalid"}`),
-  );
+  return (validate.errors ?? []).map((error) => {
+    const item = error as { instancePath?: string; message?: string };
+    return sanitizeOperationalText(`schema:${item.instancePath || "/"} ${item.message ?? "invalid"}`);
+  });
 }
 
 export function assertSchema(schemaFile: string, data: unknown, schemaRoot?: string): void {
