@@ -104,6 +104,9 @@
           "at": { "type": "string", "format": "date-time" }
         }
       }
-    }
+    },
+    "contextPackId": { "type": ["string", "null"] },
+    "impactReportId": { "type": ["string", "null"] },
+    "indexDigest": { "type": ["string", "null"] }
   }
 }

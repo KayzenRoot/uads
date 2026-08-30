@@ -64,6 +64,9 @@ export type ExecutionRun = {
   blockers: string[];
   nextAction: string;
   expansionHistory: ContextExpansion[];
+  contextPackId?: string | null;
+  impactReportId?: string | null;
+  indexDigest?: string | null;
 };
 
 export type ExecutionPacket = {
@@ -88,6 +91,9 @@ export type ExecutionPacket = {
   stopConditions: string[];
   baselineGitHead: string | null;
   nextAction: string;
+  contextPackId?: string | null;
+  impactReportId?: string | null;
+  indexDigest?: string | null;
 };
 
 export type EvidenceRecord = {

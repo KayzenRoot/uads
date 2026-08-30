@@ -22,7 +22,7 @@ Prompt 002 drives through **plan**. Prompt 003 adds durable execution runs under
 
 Dirty pre-existing worktrees block dispatch. UADS does not reset, stash, or delete user files. Active checkpoint, Work Order, routing decision, run, and packet IDs are cross-checked. Corrupt evidence/review JSON fails closed rather than disappearing from the audit history.
 
-`uads resume` returns a compact packet (ids, phase, objective, specialists/gates, map digest, next action) without rereading the repository.
+Prompt 004 adds sidecar `index/index-state.json`, `dependency-graph.json`, `test-map.json`, `interface-map.json`, plus `context/packs/` and `context/impact-reports/`. These are lazily created on first v0.4.0 use. Existing v0.3.0 Work Orders, execution runs, evidence, and reviews are preserved. `uads resume` / `uads status` still do not walk or reparse the repository.
 
 ## Work orders
 

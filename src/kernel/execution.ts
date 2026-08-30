@@ -28,6 +28,7 @@ import {
   readRequiredExecutionPacket,
 } from "./execution-persist.js";
 import { assertActiveExecutionConsistency } from "./execution-integrity.js";
+import { buildImpactAndPack } from "./intelligence.js";
 import type {
   ChangeSet,
   EvidenceKind,
@@ -315,10 +316,13 @@ function buildPacket(run: ExecutionRun, workOrder: WorkOrder): ExecutionPacket {
     approvalGatedActions: workOrder.autonomyBoundary.requiresApproval,
     stopConditions: [
       ...workOrder.stopConditions,
-      "Begin from Work Order, checkpoint, compact repository map, and context candidates before source files.",
+      "Begin from Work Order, checkpoint, compact repository map, Context Pack, and context candidates before source files.",
     ],
     baselineGitHead: run.baseline.gitHead,
     nextAction: run.nextAction,
+    contextPackId: run.contextPackId ?? null,
+    impactReportId: run.impactReportId ?? null,
+    indexDigest: run.indexDigest ?? null,
   };
 }
 
@@ -421,6 +425,16 @@ export function runDispatch(input: {
       ? existing.executionRunId
       : newPrefixedId("er", `${workOrder.workOrderId}:${createdAt}`);
   const gitHead = readGitSummary(ctx.repoRoot).head;
+  const intel = buildImpactAndPack({
+    repoRoot: ctx.repoRoot,
+    projectId: ctx.projectId,
+    paths: ctx.paths,
+    radius: workOrder.contextRadius,
+    workOrder,
+    executionRunId,
+    expansionHistory: existing?.expansionHistory ?? [],
+    schemaRoot,
+  });
 
   const run: ExecutionRun = {
     schema: "uads.execution-run",
@@ -455,6 +469,9 @@ export function runDispatch(input: {
     nextAction:
       "Invoke selected implementation specialist(s). Edit only NECESSARY in-scope files. Then run uads verify.",
     expansionHistory: existing?.expansionHistory ?? [],
+    contextPackId: intel.pack.contextPackId,
+    impactReportId: intel.report.impactReportId,
+    indexDigest: intel.pack.indexDigest,
   };
 
   const packet = buildPacket(run, workOrder);
@@ -476,7 +493,22 @@ export function runDispatch(input: {
     nextAction: packet.nextAction,
     resumeCursor: "implement:await-edits",
   };
-  writeCheckpoint(ctx.paths, nextCheckpoint, activeWorkOrder, contextPlan, schemaRoot);
+  writeCheckpoint(
+    ctx.paths,
+    nextCheckpoint,
+    activeWorkOrder,
+    {
+      ...contextPlan,
+      contextPackId: intel.pack.contextPackId,
+      impactReportId: intel.report.impactReportId,
+      indexDigest: intel.pack.indexDigest,
+      reusableArtifacts: unique([
+        ...contextPlan.reusableArtifacts,
+        `sidecar://context/packs/${intel.pack.contextPackId}.json`,
+      ]),
+    },
+    schemaRoot,
+  );
   return { run, packet, workOrder: activeWorkOrder };
 }
 
@@ -1197,18 +1229,41 @@ export function runContextExpand(input: {
         map: mapParsed.value,
       })
     : unique([...run.contextCandidates]);
+  const expansionHistory = [
+    ...run.expansionHistory,
+    { from: run.contextRadius, to: next, reason: sanitizeOperationalText(input.reason), at: nowIso() },
+  ];
+  const intel = buildImpactAndPack({
+    repoRoot: ctx.repoRoot,
+    projectId: ctx.projectId,
+    paths: ctx.paths,
+    radius: next,
+    workOrder,
+    executionRunId: run.executionRunId,
+    expansionHistory,
+    approveC5: input.approveC5,
+    schemaRoot,
+  });
   const updated = touchRun(run, {
     contextRadius: next,
     contextCandidates: candidates,
-    expansionHistory: [
-      ...run.expansionHistory,
-      { from: run.contextRadius, to: next, reason: sanitizeOperationalText(input.reason), at: nowIso() },
-    ],
+    expansionHistory,
     nextAction: `Context expanded to ${next}. Do not treat this as permission to edit unrelated areas.`,
+    contextPackId: intel.pack.contextPackId,
+    impactReportId: intel.report.impactReportId,
+    indexDigest: intel.pack.indexDigest,
   });
   const packet = persistExecutionPacket(ctx.paths, buildPacket(updated, workOrder), schemaRoot);
   persistExecutionRun({ paths: ctx.paths, run: updated, packet, schemaRoot });
-  const nextPlan: ContextPlan = { ...contextPlan, radius: next, candidateAreas: candidates, reason: `${contextPlan.reason}; expanded: ${input.reason}` };
+  const nextPlan: ContextPlan = {
+    ...contextPlan,
+    radius: next,
+    candidateAreas: candidates,
+    reason: `${contextPlan.reason}; expanded: ${input.reason}`,
+    contextPackId: intel.pack.contextPackId,
+    impactReportId: intel.report.impactReportId,
+    indexDigest: intel.pack.indexDigest,
+  };
   writeCheckpoint(ctx.paths, { ...checkpoint, updatedAt: nowIso(), nextAction: updated.nextAction }, workOrder, nextPlan, schemaRoot);
   return { run: updated, packet };
 }
@@ -1257,6 +1312,8 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
     );
   }
   add("orchestration/context-plan.json", path.join(paths.context, "plan.json"));
+  add("intelligence/index-state.json", path.join(paths.index, "index-state.json"));
+  add("intelligence/current-pack.json", path.join(paths.context, "current-pack.json"));
   const run = (() => {
     try {
       return readCurrentExecutionRun(paths);

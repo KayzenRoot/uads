@@ -49,6 +49,9 @@
     "approvalGatedActions": { "type": "array", "items": { "type": "string" } },
     "stopConditions": { "type": "array", "items": { "type": "string" } },
     "baselineGitHead": { "type": ["string", "null"] },
-    "nextAction": { "type": "string" }
+    "nextAction": { "type": "string" },
+    "contextPackId": { "type": ["string", "null"] },
+    "impactReportId": { "type": ["string", "null"] },
+    "indexDigest": { "type": ["string", "null"] }
   }
 }

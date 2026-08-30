@@ -21,8 +21,9 @@ import {
   selectGates,
   selectSpecialists,
 } from "./routing.js";
-import { inspectCurrentState, persistPlan, readCurrentCheckpoint, readRoutingDecision, readWorkOrder } from "./persist.js";
+import { inspectCurrentState, persistPlan, readContextPlan, readCurrentCheckpoint, readRoutingDecision, readWorkOrder } from "./persist.js";
 import { loadExecutionView } from "./execution.js";
+import { buildImpactAndPack } from "./intelligence.js";
 import { resolveProjectContext } from "./project-context.js";
 import type {
   Checkpoint,
@@ -87,6 +88,7 @@ export function runPlan(input: {
     projectId: ctx.projectId,
     paths: ctx.paths,
     schemaRoot,
+    repoRoot: ctx.repoRoot,
   });
 }
 
@@ -97,6 +99,7 @@ export function planFromIntake(input: {
   projectId: string;
   paths: UadsPaths;
   schemaRoot?: string;
+  repoRoot?: string;
 }): PlanResult {
   const now = new Date().toISOString();
   const scope = classifyScopeSize(input.intake);
@@ -226,6 +229,9 @@ export function planFromIntake(input: {
       "sidecar://state/current.json",
       `sidecar://decisions/${routingDecisionId}.json`,
     ],
+    contextPackId: null,
+    impactReportId: null,
+    indexDigest: null,
   };
 
   const checkpoint: Checkpoint = {
@@ -248,7 +254,7 @@ export function planFromIntake(input: {
     resumeCursor: "plan-complete:await-implementation",
   };
 
-  const persisted = persistPlan({
+  let persisted = persistPlan({
     paths: input.paths,
     workOrder,
     decision,
@@ -256,6 +262,38 @@ export function planFromIntake(input: {
     contextPlan,
     schemaRoot: input.schemaRoot,
   });
+
+  if (input.repoRoot) {
+    try {
+      const intel = buildImpactAndPack({
+        repoRoot: input.repoRoot,
+        projectId: input.projectId,
+        paths: input.paths,
+        radius: context.radius,
+        workOrder: persisted.workOrder,
+        schemaRoot: input.schemaRoot,
+      });
+      persisted = persistPlan({
+        paths: input.paths,
+        workOrder: persisted.workOrder,
+        decision: persisted.decision,
+        checkpoint: persisted.checkpoint,
+        contextPlan: {
+          ...persisted.contextPlan,
+          contextPackId: intel.pack.contextPackId,
+          impactReportId: intel.report.impactReportId,
+          indexDigest: intel.pack.indexDigest,
+          reusableArtifacts: [
+            ...persisted.contextPlan.reusableArtifacts,
+            `sidecar://context/packs/${intel.pack.contextPackId}.json`,
+          ],
+        },
+        schemaRoot: input.schemaRoot,
+      });
+    } catch {
+      // Planning remains valid if intelligence cannot yet be built.
+    }
+  }
 
   return {
     workOrder: persisted.workOrder,
@@ -319,6 +357,7 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     ? readRoutingDecision(ctx.paths, checkpoint.routingDecisionId)
     : null;
   const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
+  const contextPlan = readContextPlan(ctx.paths);
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
@@ -342,5 +381,8 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     failedGates: execution.failedGates,
     requiredReviewers: execution.requiredReviewers,
     completedReviewers: execution.completedReviewers,
+    contextPackId: contextPlan?.contextPackId ?? null,
+    impactReportId: contextPlan?.impactReportId ?? null,
+    indexDigest: contextPlan?.indexDigest ?? null,
   };
 }

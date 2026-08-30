@@ -24,7 +24,7 @@ Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reser
 | orchestration | Work-order lifecycle through plan, then bounded execution through finalize |
 | evidence | Foundation validation evidence plus digest-bound execution evidence |
 | routing | Domain/specialist/gate routing (provider-neutral) |
-| context | Context radius C0–C5; default smallest sufficient; C5 exceptional |
+| context | Context radius C0–C5, incremental index, impact graph, metadata-first Context Packs |
 | cost | Token budget by capability class: economy / balanced / strong / critical |
 | risk | Structured-signal risk classification |
 | gates | Selected quality/security/performance gates |
@@ -49,7 +49,12 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
       work-orders/
       decisions/
       index/repository-map.json
+      index/index-state.json
+      index/dependency-graph.json
       context/
+        plan.json
+        packs/
+        impact-reports/
       evidence/
       execution-runs/
         <execution-run-id>/

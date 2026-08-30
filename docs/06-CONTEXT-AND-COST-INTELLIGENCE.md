@@ -4,26 +4,24 @@ Token cost is an architectural concern, not a prompt-tuning afterthought.
 
 ## Context routing
 
-The kernel selects the smallest sufficient radius (C0–C5). Severity is monotonic: CRITICAL or architectural → C4; HIGH or cross-cutting → C3; local → C2; trivial → C1. C5 is exceptional, not default. Candidate areas are radius-bounded from intake + the compact repository map; C1 does not append every module.
+The kernel selects the smallest sufficient radius (C0–C5). Severity is monotonic: CRITICAL or architectural → C4; HIGH or cross-cutting → C3; local → C2; trivial → C1. C5 is exceptional, not default.
 
-## Repository map
+## Incremental index
 
-`uads inspect` writes a compact map to the sidecar (`index/repository-map.json`). It walks metadata and a bounded file sample, skips secrets and heavy dirs, and reuses the cache when HEAD, dirty digest, and key manifests are unchanged.
+`uads index` builds or incrementally refreshes repository intelligence in the sidecar. Git identity (HEAD + dirty porcelain digest) enables reuse without reparsing. Changed files are re-hashed by content so same-size replacements are detected. JS/TS is the first concrete extractor; the graph core is language-extensible. v0.4.0 is not semantic omniscience.
 
-## Dependency / impact map
+## Impact and Context Packs
 
-Execution packets stay metadata-first: Work Order, checkpoint, compact map, context candidates, then source. If the planned radius is insufficient, expand one step (`uads context expand --reason ...`). Never jump C1→C5. C5 remains exceptional (`--approve-c5`). Expansion does not widen product scope.
+`uads impact` and `uads context pack` produce metadata-first artifacts: repository-relative paths, digests, relation, reason, confidence, and a byte-heuristic token estimate. They do not copy source into the sidecar. Graph traversal enforces radius. `uads context expand --reason ...` moves one level, refreshes impact/pack, and never widens product scope. C5 remains exceptional (`--approve-c5`).
 
 ## Token budget manager
 
-Each Work Order declares provider-neutral `tokenBudget` with capability class `economy | balanced | strong | critical`. Crossing the hard limit is a stop condition. Adapters may later map classes to models; the kernel does not hard-code vendor prices.
+Each Work Order declares provider-neutral `tokenBudget` with capability class `economy | balanced | strong | critical`. Crossing the hard limit is a stop condition. Pack token estimates are labeled `byte-heuristic` unless a provider tokenizer exists.
 
 ## Cache-first prompt architecture
 
-1. Prefer checkpoint, repository map, and prior decisions over re-reading the tree.
-2. Hash inputs to derived artifacts; reuse when unchanged.
-3. Never put cache files in the project by default.
+Context Packs layer static policy references, semi-stable contracts, then dynamic Work Order items so future prompt adapters can cache. Provider prompt caching is not implemented in v0.4.0.
 
 ## Model routing
 
-Capability class is selected from risk/scope. Prompt 002 does not implement a provider matrix.
+Capability class is selected from risk/scope. The kernel does not hard-code vendor prices or call model APIs.

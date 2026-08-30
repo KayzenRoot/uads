@@ -1,15 +1,19 @@
 # 14 — Backlog
 
-Ideas that must **not** land in Prompt 003.
+Prompt 004 delivered the first Context Intelligence layer. Remaining ideas that must **not** land in this increment:
 
-- Semantic dependency graph / deep impact graph
+- Advanced semantic symbol graph / cross-language AST framework
+- Persistent Failure Memory
+- Full requirement-to-code traceability
+- Ownership/risk maps beyond routing metadata
+- Rich cache analytics dashboard
+- Vector embeddings / vector database
 - Provider API clients and hard-coded model price tables
 - Full multi-provider model router
 - Complete 30+ department specialist catalog
 - Production Skill registry / marketplace
-- Dashboard, cloud control plane, enterprise server
+- Dashboard, cloud control plane, enterprise server, remote graph service
 - Deep UGAS integration (beyond `integrations/ugas/` stub)
-- Embeddings / vector database / whole-repository semantic index
 - Policy-as-code engine in `policies/`
 - Signed review bundles (beyond SHA-256)
 - Optional in-project footprint opt-in flag UX
@@ -17,4 +21,4 @@ Ideas that must **not** land in Prompt 003.
 - Production deployment automation, wallet custody, on-chain execution
 - Formal waiver UX for selected gates
 
-If a change is useful but not required for Prompt 003 DoD, add it here rather than expanding `src/`.
+If a change is useful but not required for the current DoD, add it here rather than expanding `src/`.

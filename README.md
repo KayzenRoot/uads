@@ -4,7 +4,7 @@
 
 UADS is a global-first autonomous software engineering orchestration framework. It helps agents build Web2, Web3, SaaS, AI, finance, quant, math-heavy systems and games with architecture discipline, quality gates, security and performance verification, evidence-based delivery, and review bundles for external audit.
 
-This repository is the public open-source UADS product. Prompt 001 delivered the foundation. Prompt 002 added the Orchestrator Kernel. **v0.3.0** adds a bounded, resumable, evidence-gated execution lifecycle. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs. The host agent performs edits; UADS owns lifecycle, digest, evidence, review, and finalize.
+This repository is the public open-source UADS product. Prompt 001 delivered the foundation. Prompt 002 added the Orchestrator Kernel. Prompt 003 added bounded execution. **v0.4.0** adds incremental Context Intelligence: an evidence-bearing impact graph and metadata-first Context Packs so agents inspect the smallest justified file set. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -41,6 +41,9 @@ node dist/cli.js --help
 node dist/cli.js doctor
 node dist/cli.js inspect
 node dist/cli.js plan --request "Change the primary button color."
+node dist/cli.js index --json
+node dist/cli.js impact --path src/cli.ts --json
+node dist/cli.js context pack --json
 node dist/cli.js dispatch --json
 node dist/cli.js verify --json
 node dist/cli.js status
@@ -62,10 +65,10 @@ Review bundles and validation evidence are written **outside** the project:
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator routing evals and execution lifecycle evals |
+| `evals/` | Orchestrator, execution, and context-intelligence evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Cursor / Codex / generic adapters |
-| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run |
+| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack |
 | `docs/` | Architecture Freeze v0.2 |
 | `scripts/` | Install, review, validate |
 

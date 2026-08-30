@@ -41,6 +41,9 @@ jobs:
       - name: Execution eval
         run: npm run eval:execution
 
+      - name: Context eval
+        run: npm run eval:context
+
       - name: Skills preflight
         run: npm run validate:skills
 

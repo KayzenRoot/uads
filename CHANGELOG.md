@@ -2,6 +2,24 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.4.0] - 2026-08-29
+
+### Added
+
+- Incremental repository intelligence in the sidecar: index state, evidence-bearing JS/TS dependency graph, test map, and conservative interface map
+- Impact reports and metadata-first Context Packs bound to Work Order / index identity
+- CLI: `uads index`, `uads impact`, `uads context pack`; `context expand` refreshes impact/pack one radius level
+- Dispatch consumes a current Context Pack; stale index identity refreshes before dispatch
+- Context eval suite `npm run eval:context` (CCI1–CCI10)
+
+### Notes
+
+- v0.4.0 is not semantic omniscience. JS/TS is the first concrete extractor; other languages remain extensible
+- Context Packs store repository-relative paths, digests, reasons, and confidence — not source copies
+- Token estimates use a byte/4 heuristic, not a provider tokenizer
+- C5 remains exceptional and approval-gated
+- Execution evidence integrity from v0.3.0 is unchanged
+
 ## [0.3.0] - 2026-08-29
 
 ### Added

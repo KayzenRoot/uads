@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { runAssuranceRecordCommand, runAssuranceStartCommand } from "./commands/assurance.js";
 import { runContextExpandCommand } from "./commands/context.js";
+import { runContextPackCommand, runImpactCommand, runIndexCommand } from "./commands/intelligence.js";
 import { runDispatchCommand } from "./commands/dispatch.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runEvidenceRecordCommand } from "./commands/evidence.js";
@@ -168,7 +169,42 @@ program
     process.stdout.write(runFinalizeCommand({ json: options.json }));
   });
 
-const context = program.command("context").description("Controlled execution context radius");
+program
+  .command("index")
+  .description("Build or incrementally refresh repository intelligence in the sidecar")
+  .option("--json", "JSON output")
+  .option("--force", "force a full rebuild")
+  .action((options: { json?: boolean; force?: boolean }) => {
+    process.stdout.write(runIndexCommand({ json: options.json, force: options.force }));
+  });
+
+program
+  .command("impact")
+  .description("Produce an impact report for the active Work Order or supplied relative paths")
+  .option("--json", "JSON output")
+  .option("--path <relative>", "repository-relative path (repeatable)", (value: string, previous: string[]) => {
+    previous.push(value);
+    return previous;
+  }, [])
+  .option("--radius <radius>", "C0-C5 override")
+  .action((options: { json?: boolean; path?: string[]; radius?: string }) => {
+    process.stdout.write(
+      runImpactCommand({
+        json: options.json,
+        paths: options.path,
+        radius: options.radius,
+      }),
+    );
+  });
+
+const context = program.command("context").description("Controlled execution context radius and Context Packs");
+context
+  .command("pack")
+  .description("Create or refresh the metadata-first Context Pack for the active Work Order")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => {
+    process.stdout.write(runContextPackCommand({ json: options.json }));
+  });
 context
   .command("expand")
   .description("Expand context radius by one step (C5 remains exceptional)")

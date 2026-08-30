@@ -162,6 +162,9 @@ export type ResumePacket = {
   failedGates?: string[];
   requiredReviewers?: string[];
   completedReviewers?: string[];
+  contextPackId?: string | null;
+  impactReportId?: string | null;
+  indexDigest?: string | null;
 };
 
 export type ContextPlan = {
@@ -169,6 +172,9 @@ export type ContextPlan = {
   reason: string;
   candidateAreas: string[];
   reusableArtifacts: string[];
+  contextPackId?: string | null;
+  impactReportId?: string | null;
+  indexDigest?: string | null;
 };
 
 export const IMPLEMENTER_ROLE = "implementation-agent";

@@ -13,6 +13,8 @@ When the orchestrator exists, performance gates apply when a change can affect l
 
 - Token budget adherence is a performance property of the agent loop
 - Derived maps must be incremental where possible
-- Do not re-scan the full repository on every trivial work order
+- `uads index` on an unchanged repository reports `reused` rather than reparsing source
+- A single-file modification must not unconditionally reparse the whole tree
+- Do not re-scan the full repository on `status` or `resume`
 
-Prompt 001 does not ship a benchmark harness (`evals/` is reserved).
+Prompt 004 records reuse evidence in index-state (`mode`, `filesParsed`, `filesReused`). It does not invent universal performance SLAs.

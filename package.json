@@ -1,6 +1,6 @@
 {
   "name": "uads",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "UADS - Universal Autonomous Development Studio by NexLabs. Global-first autonomous software engineering orchestration framework.",
   "license": "Apache-2.0",
   "author": "NexLabs",
@@ -48,6 +48,7 @@
     "test": "vitest run --maxWorkers=1",
     "eval:orchestrator": "node dist/eval/run.js",
     "eval:execution": "node dist/eval/execution.js",
+    "eval:context": "node dist/eval/context.js",
     "validate:skills": "node scripts/validate/validate-skills.mjs",
     "validate": "node scripts/validate/validate-foundation.mjs",
     "review": "node dist/cli.js review",

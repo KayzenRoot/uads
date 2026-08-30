@@ -55,6 +55,20 @@ Complete only when all are true:
 - Correction 02: test-runner evidence is fail-closed; Vitest process exit is never reclassified from stdout
 - Version is 0.3.0; lint/typecheck/build/tests/validate/npm audit pass
 
+## Prompt 004 increment
+
+Complete only when all are true:
+
+- Version is 0.4.0
+- Incremental index, JS/TS evidence-bearing graph, test map, and conservative interface map persist in the sidecar
+- Impact reports separate in-scope, supporting, possible, excluded, and unresolved
+- Context Packs are metadata-first and radius-bounded; C5 remains exceptional
+- `uads index`, `uads impact`, `uads context pack`, and one-level `context expand` work
+- `status` / `resume` do not trigger a full repository scan
+- Stale/corrupt index identity is not silently accepted as current
+- Context evals CCI1–CCI10 pass; orchestrator 9/9 and execution X1–X9 remain green
+- lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
+
 ## Ongoing product DoD
 
 A work order is done only with evidence for selected gates, footprint, independent review when implementation occurred, and (when requested) a review bundle.

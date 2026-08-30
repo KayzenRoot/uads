@@ -14,12 +14,16 @@ Deterministic planning kernel: intake, repository map, scope/risk/domain/special
 
 Dispatch, change digest, evidence ledger, independent assurance, correction loop, finalize guards, execution evals X1–X9. Correction 01 hardens digest, session identity, assurance ordering, gate contracts, sticky failures, and fail-closed corrupt state. Host performs edits; kernel stays provider-neutral.
 
+## Prompt 004 — Context Intelligence (complete)
+
+Incremental sidecar index, JS/TS dependency graph with evidence/confidence, test and conservative interface maps, impact reports, metadata-first Context Packs, C0–C5 graph enforcement, `uads index` / `impact` / `context pack`, context evals CCI1–CCI10.
+
 ## Next increments (planned)
 
-1. Deeper context packing and impact maps
-2. Broader specialist catalog (still not a marketplace)
-3. Provider adapters mapping capability classes to models
-4. Cursor adapter depth + generic/Codex execution
+1. Broader specialist catalog (still not a marketplace)
+2. Provider adapters mapping capability classes to models
+3. Cursor adapter depth + generic/Codex execution
+4. Fault localization / persistent failure memory
 5. UGAS integration (reserved under `integrations/ugas/`)
 
 ## Explicitly later

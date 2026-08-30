@@ -3,7 +3,7 @@ import { readGitSummary } from "../lib/git.js";
 import { readUadsVersion } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
 import { loadExecutionView } from "../kernel/execution.js";
-import { readCurrentCheckpoint, readWorkOrder } from "../kernel/persist.js";
+import { readCurrentCheckpoint, readContextPlan, readWorkOrder } from "../kernel/persist.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -22,6 +22,7 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     checkpoint?.workOrderId && fs.existsSync(paths.workOrders)
       ? readWorkOrder(paths, checkpoint.workOrderId)
       : null;
+  const contextPlan = fs.existsSync(paths.workspace) ? readContextPlan(paths) : null;
   const execution = fs.existsSync(paths.workspace)
     ? loadExecutionView({ cwd, uadsHome: options.uadsHome })
     : null;
@@ -49,6 +50,8 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         failedGates: execution?.failedGates ?? [],
         requiredReviewers: execution?.requiredReviewers ?? [],
         completedReviewers: execution?.completedReviewers ?? [],
+        contextPackId: contextPlan?.contextPackId ?? null,
+        indexDigest: contextPlan?.indexDigest ?? null,
       },
       null,
       2,

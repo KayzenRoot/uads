@@ -54,9 +54,17 @@ const requiredFiles = [
   "schemas/execution-packet.schema.json",
   "schemas/evidence-record.schema.json",
   "schemas/review-record.schema.json",
+  "schemas/index-state.schema.json",
+  "schemas/dependency-graph.schema.json",
+  "schemas/test-map.schema.json",
+  "schemas/interface-map.schema.json",
+  "schemas/impact-report.schema.json",
+  "schemas/context-pack.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
   "evals/execution/x1-frontend-happy.json",
+  "evals/context/cci1-local-frontend.json",
+  "src/eval/context.ts",
   "agents/uads-repo-inspector.md",
   "agents/uads-requirements-engineer.md",
   "agents/uads-software-architect.md",
@@ -100,6 +108,7 @@ runNpmGate(["run", "build"]);
 runNpmGate(["test"]);
 runNpmGate(["run", "eval:orchestrator"]);
 runNpmGate(["run", "eval:execution"]);
+runNpmGate(["run", "eval:context"]);
 runNpmGate(["run", "validate:skills"]);
 
 const cli = path.join(root, "dist", "cli.js");
@@ -117,7 +126,7 @@ for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) 
     process.exit(1);
   }
   if (args[0] === "--help") {
-    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "status", "resume", "review", "doctor"]) {
+    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "status", "resume", "review", "doctor"]) {
       if (!result.stdout.includes(command)) {
         process.stderr.write(`CLI help missing command: ${command}\n`);
         process.exit(1);

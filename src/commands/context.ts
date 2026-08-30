@@ -19,6 +19,7 @@ export function runContextExpandCommand(input: {
       executionRunId: result.run.executionRunId,
       contextRadius: result.run.contextRadius,
       contextCandidates: result.run.contextCandidates,
+      contextPackId: result.run.contextPackId ?? null,
       nextAction: result.run.nextAction,
     };
     if (input.json) {
@@ -28,6 +29,7 @@ export function runContextExpandCommand(input: {
       "UADS context expand",
       `executionRunId: ${payload.executionRunId}`,
       `contextRadius: ${payload.contextRadius}`,
+      `contextPackId: ${payload.contextPackId ?? "(none)"}`,
       `candidates: ${payload.contextCandidates.join(", ") || "(none)"}`,
       `nextAction: ${payload.nextAction}`,
       "",
