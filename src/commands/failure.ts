@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import { loadExecutionView } from "../kernel/execution.js";
-import { diagnoseFailure, recordFailure, assertSafeEvidenceInput } from "../kernel/fault-localization.js";
+import { assertSafeEvidenceInput, resolveFailureExecutionBinding } from "../kernel/failure-binding.js";
+import { diagnoseFailure, recordFailure } from "../kernel/fault-localization.js";
 import {
   findLatestDiagnosis,
   listFailureRecords,
@@ -13,6 +13,7 @@ import { IndexIncompleteError } from "../kernel/intelligence-types.js";
 import { resolveProjectContext } from "../kernel/project-context.js";
 import { findPackageRoot } from "../lib/version.js";
 import { safeErrorMessage } from "../lib/safe-persist.js";
+import { readCurrentExecutionRun } from "../kernel/execution-persist.js";
 
 const SOURCES: FailureSource[] = ["test", "lint", "typecheck", "build", "runtime", "gate", "manual-evidence"];
 
@@ -37,21 +38,20 @@ export function runFailureRecordCommand(input: {
   try {
     const cwd = input.cwd ?? process.cwd();
     const ctx = resolveProjectContext(cwd, input.uadsHome);
+    const schemaRoot = findPackageRoot();
     const abs = assertSafeEvidenceInput(input.inputPath, ctx.repoRoot, ctx.paths.workspace);
     const text = fs.readFileSync(abs, "utf8");
     const exitCode = input.exitCode === undefined ? null : Number(input.exitCode);
     if (input.exitCode !== undefined && !Number.isInteger(exitCode)) {
       throw new FailureStateError("exit-code must be an integer");
     }
-    let executionRunId: string | null = input.executionRun ?? null;
-    let changeDigest: string | null = null;
-    try {
-      const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
-      executionRunId = input.executionRun ?? execution.executionRunId ?? null;
-      changeDigest = execution.changeDigest ?? null;
-    } catch {
-      // Failure recording does not require a valid execution run.
-    }
+    const binding = resolveFailureExecutionBinding({
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      requestedWorkOrderId: input.workOrder,
+      requestedExecutionRunId: input.executionRun,
+      schemaRoot,
+    });
     const record = recordFailure({
       cwd,
       uadsHome: input.uadsHome,
@@ -62,10 +62,10 @@ export function runFailureRecordCommand(input: {
       command: input.command ?? null,
       exitCode,
       text,
-      workOrderId: input.workOrder ?? null,
-      executionRunId,
-      changeDigest,
-      schemaRoot: findPackageRoot(),
+      workOrderId: binding.workOrderId,
+      executionRunId: binding.executionRunId,
+      changeDigest: binding.standalone ? null : binding.changeDigest,
+      schemaRoot,
     });
     const payload = {
       failureRecordId: record.failureRecordId,
@@ -74,6 +74,8 @@ export function runFailureRecordCommand(input: {
       source: record.source,
       failureClass: record.failureClass,
       status: record.status,
+      executionRunId: record.executionRunId,
+      workOrderId: record.workOrderId,
     };
     if (input.json) return `${JSON.stringify(payload, null, 2)}\n`;
     return [
@@ -153,7 +155,7 @@ export function runFailuresCommand(input: { cwd?: string; uadsHome?: string; jso
       "UADS failures",
       ...rows.map(
         (row) =>
-          `${row.signaturePrefix}  occurrences=${row.occurrences}  outcome=${row.lastOutcome}  reusable=${row.reusable}  lastSeen=${row.lastSeenAt}`,
+          `${row.signaturePrefix}  occurrences=${row.occurrences}  outcome=${row.lastOutcome}  reusable=${row.reusable}  rootCauseVerified=${row.rootCauseVerified}  lastSeen=${row.lastSeenAt}`,
       ),
       "",
     ].join("\n");
@@ -201,19 +203,25 @@ export function runFailureResolveCommand(input: {
   try {
     const cwd = input.cwd ?? process.cwd();
     const ctx = resolveProjectContext(cwd, input.uadsHome);
-    const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
-    if (execution.status !== "completed" || !execution.changeDigest || !execution.executionRunId) {
-      throw new FailureStateError("verified resolution requires a completed execution run with a change digest");
+    const schemaRoot = findPackageRoot();
+    const run = readCurrentExecutionRun(ctx.paths, schemaRoot);
+    if (!run) {
+      throw new FailureStateError("verified resolution requires an authoritative completed execution run");
     }
     const memory = markVerifiedResolution({
       paths: ctx.paths,
       projectId: ctx.projectId,
       failureRecordId: input.failureRecordId,
-      changeDigest: execution.changeDigest,
-      evidenceRefs: [`execution:${execution.executionRunId}`, `digest:${execution.changeDigest}`],
-      schemaRoot: findPackageRoot(),
+      executionRunId: run.executionRunId,
+      repoRoot: ctx.repoRoot,
+      schemaRoot,
     });
-    const payload = { failureRecordId: input.failureRecordId, lastOutcome: "resolved", entries: compactFailureRows(memory) };
+    const payload = {
+      failureRecordId: input.failureRecordId,
+      lastOutcome: "resolved",
+      rootCauseVerified: false,
+      entries: compactFailureRows(memory),
+    };
     if (input.json) return `${JSON.stringify(payload, null, 2)}\n`;
     return ["UADS failure resolve", `failureRecordId: ${input.failureRecordId}`, "lastOutcome: resolved", ""].join("\n");
   } catch (error) {

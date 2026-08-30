@@ -3,12 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { runPlan } from "../kernel/orchestrator.js";
+import { runDispatch, runEvidenceRecord, runFinalize, runVerify, runAssuranceRecord, runAssuranceStart } from "../kernel/execution.js";
+import { isReviewGate } from "../kernel/gates.js";
 import { diagnoseFailure, recordFailure } from "../kernel/fault-localization.js";
 import { markVerifiedResolution } from "../kernel/failure-memory.js";
+import { assertSafeEvidenceInput, computeFailureAttemptDigest, resolveFailureExecutionBinding } from "../kernel/failure-binding.js";
 import { failurePaths, readFailureRecord } from "../kernel/failure-persist.js";
 import { findPackageRoot } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "../lib/secrets.js";
+import { runFailureRecordCommand } from "../commands/failure.js";
 
 type EvalCase = { id: string; name: string };
 
@@ -41,7 +45,7 @@ function gitCommit(root: string, message: string): void {
   );
 }
 
-function write(root: string, rel: string, contents: string): void {
+function write(root: string, rel: string, contents: string | Buffer): void {
   const abs = path.join(root, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, contents);
@@ -78,6 +82,103 @@ function intake() {
 
 function stackFor(repo: string, rel: string, fn = "run"): string {
   return `Error: boom\n    at ${fn} (${path.join(repo, rel)}:2:1)\n`;
+}
+
+function recordGates(repo: string, home: string, gates: string[], exitCode = 0): void {
+  for (const gate of gates) {
+    if (isReviewGate(gate)) continue;
+    const outputPath = path.join(home, `gate-${gate}.txt`);
+    fs.writeFileSync(outputPath, `${gate} captured output\n`);
+    runEvidenceRecord({
+      cwd: repo,
+      uadsHome: home,
+      gateId: gate,
+      kind: "command",
+      role: "test-engineer",
+      command: `npm run ${gate}`,
+      exitCode,
+      outputPath,
+      summary: `${gate} recorded`,
+    });
+  }
+}
+
+function approveAll(repo: string, home: string, reviewers: string[]): void {
+  runAssuranceStart({ cwd: repo, uadsHome: home });
+  for (const role of reviewers) {
+    runAssuranceRecord({
+      cwd: repo,
+      uadsHome: home,
+      role,
+      session: `rev-${role}`,
+      implementerSession: "imp-1",
+      verdict: "APPROVED",
+      summary: `${role} approved`,
+    });
+  }
+}
+
+function completeCorrectiveExecution(
+  repo: string,
+  home: string,
+  planned: { workOrder: { qualityGates: string[]; assuranceReviewers: string[] } },
+): ReturnType<typeof runFinalize> {
+  recordGates(repo, home, planned.workOrder.qualityGates);
+  approveAll(repo, home, planned.workOrder.assuranceReviewers);
+  return runFinalize({ cwd: repo, uadsHome: home });
+}
+
+function bindFailure(input: {
+  repo: string;
+  home: string;
+  planned: ReturnType<typeof runPlan>;
+  paths: ReturnType<typeof getUadsPaths>;
+  root: string;
+  text: string;
+}) {
+  const dispatched = runDispatch({ cwd: input.repo, uadsHome: input.home, session: "imp-1" });
+  write(input.repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("broken");\n`);
+  const verified = runVerify({ cwd: input.repo, uadsHome: input.home });
+  const record = recordFailure({
+    repoRoot: input.repo,
+    projectId: input.planned.workOrder.projectId,
+    paths: input.paths,
+    source: "runtime",
+    text: input.text,
+    workOrderId: dispatched.run.workOrderId,
+    executionRunId: dispatched.run.executionRunId,
+    changeDigest: verified.run.currentChangeDigest,
+    schemaRoot: input.root,
+  });
+  diagnoseFailure({
+    repoRoot: input.repo,
+    projectId: input.planned.workOrder.projectId,
+    paths: input.paths,
+    failureRecordId: record.failureRecordId,
+    schemaRoot: input.root,
+  });
+  write(input.repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("fixed");\n`);
+  runVerify({ cwd: input.repo, uadsHome: input.home });
+  const done = completeCorrectiveExecution(input.repo, input.home, input.planned);
+  assert(done.run.status === "completed", "corrective execution did not complete");
+  markVerifiedResolution({
+    paths: input.paths,
+    projectId: input.planned.workOrder.projectId,
+    failureRecordId: record.failureRecordId,
+    executionRunId: dispatched.run.executionRunId,
+    repoRoot: input.repo,
+    schemaRoot: input.root,
+  });
+  return { record, dispatched };
+}
+
+function trySymlink(_dir: string, target: string, link: string): boolean {
+  try {
+    fs.symlinkSync(target, link, "file");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assert(cond: boolean, message: string): void {
@@ -203,39 +304,32 @@ function main(): number {
       }
 
       if (item.id === "FL7") {
-        const record = recordFailure({
-          ...base,
-          source: "runtime",
-          changeDigest: "loop-digest",
-          text: stackFor(repo, "src/ui/Button.tsx"),
-        });
-        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
-        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
-        const third = diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
-        assert(third.loopState.detected, "FL7 loop not detected");
-        assert(third.loopState.recommendedAction.includes("LOOP_DETECTED"), "FL7 missing LOOP_DETECTED");
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("fail");\n`);
+        let last = null as ReturnType<typeof diagnoseFailure> | null;
+        for (let i = 0; i < 3; i += 1) {
+          const record = recordFailure({
+            ...base,
+            source: "runtime",
+            text: stackFor(repo, "src/ui/Button.tsx"),
+          });
+          last = diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
+        }
+        assert(Boolean(last?.loopState.detected), "FL7 loop not detected");
+        assert(Boolean(last?.loopState.recommendedAction.includes("LOOP_DETECTED")), "FL7 missing LOOP_DETECTED");
       }
 
       if (item.id === "FL8") {
-        const record = recordFailure({
-          ...base,
-          source: "runtime",
-          changeDigest: "before-fix",
-          text: stackFor(repo, "src/ui/Button.tsx"),
-        });
-        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
-        markVerifiedResolution({
+        const bound = bindFailure({
+          repo,
+          home,
+          planned,
           paths,
-          projectId: planned.workOrder.projectId,
-          failureRecordId: record.failureRecordId,
-          changeDigest: "after-fix",
-          evidenceRefs: ["execution:eval", "digest:after-fix"],
-          schemaRoot: root,
+          root,
+          text: stackFor(repo, "src/ui/Button.tsx"),
         });
         const again = recordFailure({
           ...base,
           source: "runtime",
-          changeDigest: "after-fix-recurrence",
           text: stackFor(repo, "src/ui/Button.tsx"),
         });
         const report = diagnoseFailure({ ...base, failureRecordId: again.failureRecordId });
@@ -243,27 +337,28 @@ function main(): number {
           report.memoryMatches.some((match) => match.kind === "reusable"),
           "FL8 expected reusable memory",
         );
+        assert(bound.record.executionRunId === bound.dispatched.run.executionRunId, "FL8 unbound failure");
       }
 
       if (item.id === "FL9") {
-        const record = recordFailure({
-          ...base,
-          source: "runtime",
-          changeDigest: "stale-a",
+        bindFailure({
+          repo,
+          home,
+          planned,
+          paths,
+          root,
           text: stackFor(repo, "src/ui/Button.tsx"),
         });
-        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
-        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("stale");\n`);
+        write(repo, "src/util/format.ts", `export const format = (v: string) => v.toUpperCase();\n`);
         const again = recordFailure({
           ...base,
           source: "runtime",
-          changeDigest: "stale-b",
           text: stackFor(repo, "src/ui/Button.tsx"),
         });
         const report = diagnoseFailure({ ...base, failureRecordId: again.failureRecordId });
         assert(
           report.memoryMatches.every((match) => match.kind !== "reusable"),
-          "FL9 treated stale memory as verified root cause",
+          "FL9 treated stale dependency memory as reusable",
         );
         assert(
           report.memoryMatches.some((match) => match.kind === "historical") || report.memoryMatches.length === 0,
@@ -292,6 +387,192 @@ function main(): number {
         assert(!containsAbsoluteHostPath(diagnosis), "FL10 host path in diagnosis");
         assert(fs.existsSync(path.join(repo, "fail.txt")), "FL10 deleted input");
         assert(!fs.existsSync(path.join(paths.workspace, "failures", "fail.txt")), "FL10 copied input into sidecar");
+      }
+
+      if (item.id === "FL11") {
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("fail");\n`);
+        const record = recordFailure({
+          ...base,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
+        diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
+        const third = diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
+        assert(!third.loopState.detected, "FL11 repeated diagnose fabricated a loop");
+        assert(third.loopState.occurrences === 1, "FL11 fabricated extra occurrences");
+      }
+
+      if (item.id === "FL12") {
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("fail");\n`);
+        let last = null as ReturnType<typeof diagnoseFailure> | null;
+        const ids = new Set<string>();
+        for (let i = 0; i < 3; i += 1) {
+          const record = recordFailure({
+            ...base,
+            source: "runtime",
+            text: stackFor(repo, "src/ui/Button.tsx"),
+          });
+          ids.add(record.failureRecordId);
+          last = diagnoseFailure({ ...base, failureRecordId: record.failureRecordId });
+        }
+        assert(ids.size === 3, "FL12 did not create distinct observations");
+        assert(Boolean(last?.loopState.detected), "FL12 loop not detected");
+      }
+
+      if (item.id === "FL13") {
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("one");\n`);
+        const first = recordFailure({
+          ...base,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("two");\n`);
+        const second = recordFailure({
+          ...base,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        assert(first.changeDigest !== second.changeDigest, "FL13 same-path different bytes collapsed");
+        const digestA = computeFailureAttemptDigest({
+          repoRoot: repo,
+          gitHead: second.repositoryHead,
+          indexDigest: second.repositoryIndexDigest,
+        });
+        write(repo, "blob.bin", Buffer.from([1, 2, 3]));
+        const digestB = computeFailureAttemptDigest({
+          repoRoot: repo,
+          gitHead: second.repositoryHead,
+          indexDigest: second.repositoryIndexDigest,
+        });
+        write(repo, "blob.bin", Buffer.from([4, 5, 6]));
+        const digestC = computeFailureAttemptDigest({
+          repoRoot: repo,
+          gitHead: second.repositoryHead,
+          indexDigest: second.repositoryIndexDigest,
+        });
+        assert(digestB !== digestA && digestC !== digestB, "FL13 untracked binary identity collapsed");
+      }
+
+      if (item.id === "FL14") {
+        const dispatchedB = runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("b");\n`);
+        runVerify({ cwd: repo, uadsHome: home });
+        const doneB = completeCorrectiveExecution(repo, home, planned);
+        assert(doneB.run.status === "completed", "FL14 execution B did not complete");
+        gitCommit(repo, "complete B");
+        const plannedA = runPlan({ cwd: repo, uadsHome: home, intake: intake() });
+        const dispatchedA = runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("a");\n`);
+        const verifiedA = runVerify({ cwd: repo, uadsHome: home });
+        const boundA = recordFailure({
+          repoRoot: repo,
+          projectId: plannedA.workOrder.projectId,
+          paths,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+          workOrderId: dispatchedA.run.workOrderId,
+          executionRunId: dispatchedA.run.executionRunId,
+          changeDigest: verifiedA.run.currentChangeDigest,
+          schemaRoot: root,
+        });
+        let rejected = false;
+        try {
+          markVerifiedResolution({
+            paths,
+            projectId: plannedA.workOrder.projectId,
+            failureRecordId: boundA.failureRecordId,
+            executionRunId: dispatchedB.run.executionRunId,
+            repoRoot: repo,
+            schemaRoot: root,
+          });
+        } catch {
+          rejected = true;
+        }
+        assert(rejected, "FL14 unrelated execution resolved failure A");
+      }
+
+      if (item.id === "FL15") {
+        bindFailure({
+          repo,
+          home,
+          planned,
+          paths,
+          root,
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        const reuse = recordFailure({
+          ...base,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        const reusable = diagnoseFailure({ ...base, failureRecordId: reuse.failureRecordId });
+        assert(
+          reusable.memoryMatches.some((match) => match.kind === "reusable"),
+          "FL15 expected post-fix reusable memory",
+        );
+        write(repo, "src/util/format.ts", `export const format = (v: string) => v + "!";\n`);
+        const dep = recordFailure({
+          ...base,
+          source: "runtime",
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        const historical = diagnoseFailure({ ...base, failureRecordId: dep.failureRecordId });
+        assert(
+          historical.memoryMatches.every((match) => match.kind !== "reusable"),
+          "FL15 dependency-only change stayed reusable",
+        );
+        assert(
+          historical.memoryMatches.some((match) => match.kind === "historical"),
+          "FL15 expected historical after dependency change",
+        );
+      }
+
+      if (item.id === "FL16") {
+        const dispatched = runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+        let mismatchRejected = false;
+        try {
+          resolveFailureExecutionBinding({
+            paths,
+            projectId: planned.workOrder.projectId,
+            requestedExecutionRunId: "er_forged",
+            schemaRoot: root,
+          });
+        } catch {
+          mismatchRejected = true;
+        }
+        assert(mismatchRejected, "FL16 accepted forged execution binding");
+        assert(Boolean(dispatched.run.executionRunId), "FL16 missing dispatch");
+        const outside = path.join(os.tmpdir(), `uads-fl16-${Date.now()}.txt`);
+        const secret = `fl16-outside-${Date.now()}`;
+        fs.writeFileSync(outside, `${secret}\n`);
+        const link = path.join(repo, "escape.txt");
+        if (trySymlink(repo, outside, link)) {
+          let escaped = false;
+          try {
+            assertSafeEvidenceInput(link, repo, paths.workspace);
+            escaped = true;
+          } catch {
+            escaped = false;
+          }
+          assert(!escaped, "FL16 followed symlink escape");
+          let commandRejected = false;
+          try {
+            runFailureRecordCommand({
+              cwd: repo,
+              uadsHome: home,
+              source: "runtime",
+              inputPath: link,
+            });
+          } catch {
+            commandRejected = true;
+          }
+          assert(commandRejected, "FL16 CLI accepted symlink escape");
+          const sidecarText = fs.existsSync(failurePaths(paths).memory)
+            ? fs.readFileSync(failurePaths(paths).memory, "utf8")
+            : "";
+          assert(!sidecarText.includes(secret), "FL16 persisted external symlink contents");
+        }
       }
     }),
   );

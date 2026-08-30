@@ -9,18 +9,30 @@ All notable changes to UADS (NexLabs) are documented here.
 - Normalized secret-safe failure records with deterministic signatures
 - Fault ranking from stack frames, failing tests, related diffs, Test Map, dependency graph, and Interface Map
 - Diagnostic Context Packs under sidecar `context/diagnostic-packs/` (metadata-first; C5 remains exceptional)
-- Compact per-project Failure Memory with validity, invalidation, and loop detection (N=3, same signature + digest)
+- Compact per-project Failure Memory with post-correction validity, invalidation, and loop detection (N=3 distinct observations, same signature + content-aware digest)
 - CLI: `uads failure record`, `uads diagnose`, `uads failures`, `uads failure show`
 - Compact `status` / `resume` failure fields without a repository scan
 - Sanitized failure/diagnosis/memory summaries in review ZIPs
-- Fault eval suite `npm run eval:fault` (FL1–FL10)
+- Fault eval suite `npm run eval:fault` (FL1–FL16)
 
 ### Notes
 
 - Ranking is heuristic, not calibrated probability. Diagnosis is not verified root cause
-- `verified-root-cause` requires a new change digest, passing gates, and independent review
-- Failure `--input` files are not copied into the sidecar or review ZIP
+- Repeated diagnosis of one Failure Record is not a repeated failure; loops require distinct observations
+- Verified correction is bound to the failure's completed execution, current digest, passing gates, and independent review
+- `verifiedRootCausePaths` is not auto-filled from ranked candidates; uncertainty stays historical when proof is missing
+- Reusable memory uses post-correction candidate/dependency validity, not pre-fix hypothesis digests
+- Failure `--input` files are not copied into the sidecar or review ZIP; symlink escape outside repo/sidecar is rejected
 - Intelligence schemas remain 0.4.0; execution schemas remain 0.3.0
+
+### Correction 01
+
+- Bound verified resolution to the corrective execution/work order; standalone records cannot inherit an unrelated completed run
+- Stopped auto-promotion of hypotheses into `verifiedRootCausePaths`
+- Refreshed Failure Memory validity from the post-fix index, including direct dependency/interface/test neighbors
+- Made loop counting idempotent for `uads diagnose`
+- Reused content-aware change identity for standalone failure attempts
+- Rejected `--input` symlinks whose real path leaves the repository or project sidecar
 
 ## [0.4.0] - 2026-08-29
 

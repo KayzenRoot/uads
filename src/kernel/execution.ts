@@ -1193,8 +1193,8 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
         paths: ctx.paths,
         projectId: ctx.projectId,
         failureRecordId: cursor.failureRecordId,
-        changeDigest: updated.currentChangeDigest,
-        evidenceRefs: [`execution:${updated.executionRunId}`, `digest:${updated.currentChangeDigest}`],
+        executionRunId: updated.executionRunId,
+        repoRoot: ctx.repoRoot,
         schemaRoot,
       });
     }

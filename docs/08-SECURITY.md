@@ -17,7 +17,7 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 - Index/graph/impact/Context Pack artifacts reject traversal, symlink escape, `.env`/credential content, and absolute host paths
 - Corrupt index/graph JSON is not treated as current; `uads index` rebuilds, impact/pack/diagnosis fail closed until a valid complete index exists
 - Failure text is sanitized before persist; signatures and Failure Memory must not store raw secrets or host paths
-- `--input` for `uads failure record` must be inside the repository or sidecar and is not copied into review ZIPs
+- `--input` for `uads failure record` must be an ordinary file inside the repository or current project sidecar; symlink targets that resolve outside those roots are rejected before read, and the input is not copied into review ZIPs
 - Dirty worktrees block dispatch; the engine never reset/stash/cleans user files
 - Implementer cannot self-approve; the implementer session is bound at dispatch and cannot be invented during review
 - Change digest hashes actual changed file bytes (including untracked binaries); Git paths are parsed with NUL-delimited porcelain

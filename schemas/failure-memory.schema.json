@@ -26,10 +26,17 @@
           "sameDigestStreak",
           "candidatePaths",
           "candidateDigests",
+          "validityBasisPaths",
+          "validityBasisDigests",
           "verifiedRootCausePaths",
+          "verifiedCorrectionPaths",
           "disprovedPaths",
           "resolutionSummary",
           "resolutionEvidenceRefs",
+          "resolutionExecutionRunId",
+          "resolutionChangeDigest",
+          "resolutionIndexDigest",
+          "lastFailureRecordId",
           "lastOutcome"
         ],
         "properties": {
@@ -45,10 +52,20 @@
             "type": "object",
             "additionalProperties": { "type": "string" }
           },
+          "validityBasisPaths": { "type": "array", "items": { "type": "string" } },
+          "validityBasisDigests": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
           "verifiedRootCausePaths": { "type": "array", "items": { "type": "string" } },
+          "verifiedCorrectionPaths": { "type": "array", "items": { "type": "string" } },
           "disprovedPaths": { "type": "array", "items": { "type": "string" } },
           "resolutionSummary": { "type": ["string", "null"] },
           "resolutionEvidenceRefs": { "type": "array", "items": { "type": "string" } },
+          "resolutionExecutionRunId": { "type": ["string", "null"] },
+          "resolutionChangeDigest": { "type": ["string", "null"] },
+          "resolutionIndexDigest": { "type": ["string", "null"] },
+          "lastFailureRecordId": { "type": ["string", "null"] },
           "lastOutcome": {
             "type": "string",
             "enum": ["open", "loop", "historical", "resolved", "disproved-candidate"]

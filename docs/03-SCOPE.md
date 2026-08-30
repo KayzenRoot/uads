@@ -7,7 +7,7 @@
 - Diagnostic Context Packs (metadata-first, radius-bound; C5 remains exceptional)
 - Compact per-project Failure Memory with validity/invalidation and loop detection
 - CLI: `failure record`, `diagnose`, `failures`, `failure show`
-- Fault evals FL1–FL10
+- Fault evals FL1–FL16
 
 ## In scope (Prompt 004, preserved)
 

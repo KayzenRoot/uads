@@ -20,7 +20,7 @@ Incremental sidecar index, JS/TS dependency graph with evidence/confidence, test
 
 ## Prompt 005 — Fault localization and Failure Memory (complete)
 
-Normalized failure records, deterministic signatures, ranked hypotheses, diagnostic Context Packs, compact Failure Memory with validity/loop detection, CLI `failure`/`diagnose`/`failures`, fault evals FL1–FL10. C5 remains exceptional. Diagnosis is not verified root cause.
+Normalized failure records, deterministic signatures, ranked hypotheses, diagnostic Context Packs, compact Failure Memory with post-correction validity/loop detection, CLI `failure`/`diagnose`/`failures`, fault evals FL1–FL16. C5 remains exceptional. Diagnosis is not verified root cause. Repeated diagnosis is not a repeated failure.
 
 ## Next increments (planned)
 

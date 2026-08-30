@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sha256Hex, isPathInside } from "../lib/hash.js";
 import { readGitSummary } from "../lib/git.js";
 import { findPackageRoot } from "../lib/version.js";
 import type { UadsPaths } from "../lib/workspace.js";
@@ -13,6 +12,7 @@ import { IndexIncompleteError } from "./intelligence-types.js";
 import type { IndexBundle } from "./intelligence-types.js";
 import { newPrefixedId } from "./ids.js";
 import { normalizeFailureText } from "./failure-normalize.js";
+import { computeFailureAttemptDigest } from "./failure-binding.js";
 import {
   persistDiagnosisReport,
   persistDiagnosticPack,
@@ -33,6 +33,8 @@ import type {
 } from "./failure-types.js";
 import { FailureStateError, LOOP_THRESHOLD } from "./failure-types.js";
 import type { ContextRadius } from "./types.js";
+
+export { assertSafeEvidenceInput } from "./failure-binding.js";
 
 const WEIGHTS = {
   stack: 0.4,
@@ -75,20 +77,6 @@ function bumpRadius(radius: ContextRadius): ContextRadius {
   const index = RADIUS_ORDER.indexOf(radius);
   const next = RADIUS_ORDER[Math.min(index + 1, 4)];
   return next ?? "C4";
-}
-
-export function assertSafeEvidenceInput(filePath: string, repoRoot: string, workspace: string): string {
-  if (filePath.split(/[\\/]/).includes("..")) {
-    throw new FailureStateError("path traversal rejected");
-  }
-  const abs = path.resolve(filePath);
-  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
-    throw new FailureStateError("failure input file not found");
-  }
-  if (!isPathInside(repoRoot, abs) && !isPathInside(workspace, abs)) {
-    throw new FailureStateError("failure input must be inside the repository or sidecar");
-  }
-  return abs;
 }
 
 function relatedToSeeds(changed: string, seeds: string[], bundle: IndexBundle): boolean {
@@ -268,9 +256,9 @@ export function recordFailure(input: {
     failingTests: normalized.failingTests,
     messageSummary: normalized.messageSummary,
   });
-  const changed = listChangedRelativePaths(input.repoRoot);
-  const changeDigest =
-    input.changeDigest ?? (changed.length > 0 ? sha256Hex(JSON.stringify(changed)) : null);
+  const changeDigest = input.executionRunId
+    ? input.changeDigest ?? computeFailureAttemptDigest({ repoRoot: input.repoRoot, gitHead, indexDigest })
+    : computeFailureAttemptDigest({ repoRoot: input.repoRoot, gitHead, indexDigest });
   const createdAt = nowIso();
   const record = persistFailureRecord(
     input.paths,
@@ -343,7 +331,7 @@ export function diagnoseFailure(input: {
   });
   const reusablePaths =
     priorMatch?.kind === "reusable"
-      ? memory.entries.find((entry) => entry.failureSignature === record.signature)?.verifiedRootCausePaths ?? []
+      ? memory.entries.find((entry) => entry.failureSignature === record.signature)?.verifiedCorrectionPaths ?? []
       : [];
   const changedFiles = listChangedRelativePaths(input.repoRoot);
   const ranked = rankFaultCandidates({
@@ -359,6 +347,7 @@ export function diagnoseFailure(input: {
     projectId: input.projectId,
     signature: record.signature,
     changeDigest: record.changeDigest,
+    memoryMatchKind: priorMatch?.kind ?? null,
     candidates: ranked,
     candidateDigests: Object.fromEntries(
       ranked

@@ -24,7 +24,7 @@ Context Packs layer static policy references, semi-stable contracts, then dynami
 
 ## Fault localization
 
-When verification fails, UADS normalizes evidence, computes a deterministic signature, ranks hypotheses, and emits the smallest sufficient diagnostic Context Pack. Ranking is heuristic, not calibrated probability. `verified-root-cause` is recorded only after a successful correction with a new change digest, passing gates, and independent review. Compact Failure Memory is advisory unless candidate paths and digests remain valid. The same signature plus the same change digest three times without new evidence is `LOOP_DETECTED`. Diagnostic expansion is one radius step and never jumps to C5.
+When verification fails, UADS normalizes evidence, computes a deterministic signature, ranks hypotheses, and emits the smallest sufficient diagnostic Context Pack. Ranking is heuristic, not calibrated probability. Diagnosis is not verified root cause; ranked candidates stay hypotheses. `verifiedRootCausePaths` stays empty unless independently proven. Verified correction is recorded only when the Failure Record is bound to the completed corrective execution, that run's current change digest, passing gates, and independent review. Compact Failure Memory is reusable only when the **post-correction** candidate/dependency validity basis still matches a complete current index; otherwise it is historical/advisory. Loop detection counts distinct failure observations with the same signature and the same content-aware change identity, not repeated `uads diagnose` on one record. Diagnostic expansion is one radius step and never jumps to C5.
 
 ## Model routing
 

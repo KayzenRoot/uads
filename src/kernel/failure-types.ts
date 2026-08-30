@@ -109,10 +109,17 @@ export type FailureMemoryEntry = {
   sameDigestStreak: number;
   candidatePaths: string[];
   candidateDigests: Record<string, string>;
+  validityBasisPaths: string[];
+  validityBasisDigests: Record<string, string>;
   verifiedRootCausePaths: string[];
+  verifiedCorrectionPaths: string[];
   disprovedPaths: string[];
   resolutionSummary: string | null;
   resolutionEvidenceRefs: string[];
+  resolutionExecutionRunId: string | null;
+  resolutionChangeDigest: string | null;
+  resolutionIndexDigest: string | null;
+  lastFailureRecordId: string | null;
   lastOutcome: MemoryOutcome;
 };
 

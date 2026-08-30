@@ -184,21 +184,21 @@ describe("fault localization", () => {
     expect(report.nextEvidence.length).toBeGreaterThan(0);
   });
 
-  it("detects loops after three same-signature same-digest diagnoses", () => {
+  it("does not treat repeated diagnosis of one record as a failure loop", () => {
     const { repo, home } = tempDirs();
     seed(repo);
     const planned = runPlan({ cwd: repo, uadsHome: home, intake: intake() });
     const paths = getUadsPaths(planned.workOrder.projectId, home);
+    write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("x");\n`);
     const record = recordFailure({
       repoRoot: repo,
       projectId: planned.workOrder.projectId,
       paths,
       source: "runtime",
-      changeDigest: "same",
       text: `at run (${path.join(repo, "src/ui/Button.tsx")}:2:1)\n`,
       schemaRoot: findPackageRoot(),
     });
-    diagnoseFailure({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, failureRecordId: record.failureRecordId });
+    const first = diagnoseFailure({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, failureRecordId: record.failureRecordId });
     diagnoseFailure({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, failureRecordId: record.failureRecordId });
     const third = diagnoseFailure({
       repoRoot: repo,
@@ -206,67 +206,42 @@ describe("fault localization", () => {
       paths,
       failureRecordId: record.failureRecordId,
     });
-    expect(third.loopState.detected).toBe(true);
-    const fields = readFailureStatusFields(paths);
-    expect(fields.loopDetected).toBe(true);
+    expect(first.loopState.detected).toBe(false);
+    expect(third.loopState.detected).toBe(false);
+    expect(third.loopState.occurrences).toBe(1);
+    expect(readFailureStatusFields(paths).loopDetected).toBe(false);
   });
 
-  it("reuses valid memory and invalidates stale candidate digests", () => {
+  it("detects loops after three distinct same-signature same-digest observations", () => {
     const { repo, home } = tempDirs();
     seed(repo);
     const planned = runPlan({ cwd: repo, uadsHome: home, intake: intake() });
     const paths = getUadsPaths(planned.workOrder.projectId, home);
-    const record = recordFailure({
-      repoRoot: repo,
-      projectId: planned.workOrder.projectId,
-      paths,
-      source: "runtime",
-      changeDigest: "before",
-      text: `at run (${path.join(repo, "src/ui/Button.tsx")}:2:1)\n`,
-      schemaRoot: findPackageRoot(),
-    });
-    diagnoseFailure({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, failureRecordId: record.failureRecordId });
-    markVerifiedResolution({
-      paths,
-      projectId: planned.workOrder.projectId,
-      failureRecordId: record.failureRecordId,
-      changeDigest: "after",
-      evidenceRefs: ["execution:test", "digest:after"],
-    });
-    const reuse = recordFailure({
-      repoRoot: repo,
-      projectId: planned.workOrder.projectId,
-      paths,
-      source: "runtime",
-      changeDigest: "recurrence",
-      text: `at run (${path.join(repo, "src/ui/Button.tsx")}:2:1)\n`,
-      schemaRoot: findPackageRoot(),
-    });
-    const reusable = diagnoseFailure({
-      repoRoot: repo,
-      projectId: planned.workOrder.projectId,
-      paths,
-      failureRecordId: reuse.failureRecordId,
-    });
-    expect(reusable.memoryMatches.some((item) => item.kind === "reusable")).toBe(true);
-    write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("stale");\n`);
-    const staleRec = recordFailure({
-      repoRoot: repo,
-      projectId: planned.workOrder.projectId,
-      paths,
-      source: "runtime",
-      changeDigest: "stale",
-      text: `at run (${path.join(repo, "src/ui/Button.tsx")}:2:1)\n`,
-      schemaRoot: findPackageRoot(),
-    });
-    const stale = diagnoseFailure({
-      repoRoot: repo,
-      projectId: planned.workOrder.projectId,
-      paths,
-      failureRecordId: staleRec.failureRecordId,
-    });
-    expect(stale.memoryMatches.some((item) => item.kind === "historical")).toBe(true);
-    expect(stale.memoryMatches.some((item) => item.kind === "reusable")).toBe(false);
+    write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("x");\n`);
+    const text = `at run (${path.join(repo, "src/ui/Button.tsx")}:2:1)\n`;
+    const ids: string[] = [];
+    let last = null as ReturnType<typeof diagnoseFailure> | null;
+    for (let i = 0; i < 3; i += 1) {
+      const record = recordFailure({
+        repoRoot: repo,
+        projectId: planned.workOrder.projectId,
+        paths,
+        source: "runtime",
+        text,
+        schemaRoot: findPackageRoot(),
+      });
+      ids.push(record.failureRecordId);
+      last = diagnoseFailure({
+        repoRoot: repo,
+        projectId: planned.workOrder.projectId,
+        paths,
+        failureRecordId: record.failureRecordId,
+      });
+    }
+    expect(new Set(ids).size).toBe(3);
+    expect(last?.loopState.detected).toBe(true);
+    expect(last?.loopState.recommendedAction.includes("LOOP_DETECTED")).toBe(true);
+    expect(readFailureStatusFields(paths).loopDetected).toBe(true);
   });
 
   it("fails closed on corrupt failure records and refuses summary-only resolution", () => {
@@ -289,10 +264,10 @@ describe("fault localization", () => {
         paths,
         projectId: planned.workOrder.projectId,
         failureRecordId: "missing",
-        changeDigest: "x",
-        evidenceRefs: [],
+        executionRunId: "er_missing",
+        repoRoot: repo,
       }),
-    ).toThrow(/evidence/);
+    ).toThrow(FailureStateError);
     expect(() => assertSafeEvidenceInput(path.join(repo, "..", "nope.txt"), repo, paths.workspace)).toThrow();
   });
 

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect } from "vitest";
-import { runAssuranceRecord, runAssuranceStart, runEvidenceRecord } from "../src/kernel/execution.js";
+import { runAssuranceRecord, runAssuranceStart, runEvidenceRecord, runFinalize, runVerify } from "../src/kernel/execution.js";
 import { isReviewGate } from "../src/kernel/gates.js";
 import { runPlan } from "../src/kernel/orchestrator.js";
 import { gitCommit, initRepo } from "./helpers.js";
@@ -67,6 +67,20 @@ export function approveAll(repo: string, home: string, reviewers: string[]): voi
       summary: `${role} approved`,
     });
   }
+}
+
+export function recordPassingGatesAndFinalize(
+  repo: string,
+  home: string,
+  planned: { workOrder: { qualityGates: string[]; assuranceReviewers: string[] } },
+): ReturnType<typeof runFinalize> {
+  recordGates(repo, home, planned.workOrder.qualityGates);
+  approveAll(repo, home, planned.workOrder.assuranceReviewers);
+  return runFinalize({ cwd: repo, uadsHome: home });
+}
+
+export function verifyCurrentChange(repo: string, home: string): ReturnType<typeof runVerify> {
+  return runVerify({ cwd: repo, uadsHome: home });
 }
 
 export function assertZpf(repo: string): void {

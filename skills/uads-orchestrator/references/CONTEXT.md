@@ -8,4 +8,4 @@ v0.4.0 Context Intelligence builds an incremental sidecar index and metadata-fir
 
 If implementation proves the planned radius insufficient, expand one step with `uads context expand --reason ...`. Never jump C1→C5. C5 remains exceptional (`--approve-c5`). Expansion does not widen product scope.
 
-On verification failure, `uads diagnose` emits a diagnostic Context Pack from stack/failing-test/graph evidence. Prefer that pack over a repository-wide reread. Diagnostic expansion is one radius step and never auto-selects C5. Failure Memory is advisory unless candidate paths and digests remain valid.
+On verification failure, `uads diagnose` emits a diagnostic Context Pack from stack/failing-test/graph evidence. Prefer that pack over a repository-wide reread. Diagnostic expansion is one radius step and never auto-selects C5. Diagnosis is not verified root cause. Failure Memory is reusable only when post-correction candidate/dependency validity still matches; otherwise it is historical/advisory.

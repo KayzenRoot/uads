@@ -69,6 +69,8 @@ const requiredFiles = [
   "evals/context/cci1-local-frontend.json",
   "src/eval/context.ts",
   "evals/fault/fl1-direct-stack.json",
+  "evals/fault/fl11-repeated-diagnose.json",
+  "evals/fault/fl16-symlink-binding.json",
   "src/eval/fault.ts",
   "src/kernel/fault-localization.ts",
   "agents/uads-repo-inspector.md",

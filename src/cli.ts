@@ -272,7 +272,7 @@ failure
   });
 failure
   .command("resolve")
-  .description("Mark verified root cause only after a completed execution with a new change digest")
+  .description("Mark verified correction only after the bound execution completes with a new change digest")
   .requiredOption("--failure <id>", "failure record id")
   .option("--json", "JSON output")
   .action((options: { failure: string; json?: boolean }) => {
