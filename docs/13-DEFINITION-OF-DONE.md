@@ -80,11 +80,12 @@ Complete only when all are true:
 - Compact Failure Memory is reusable only when post-correction candidate/dependency validity digests still match a complete current index; otherwise historical
 - Loop detection fires on three distinct failure observations with the same signature and the same content-aware change identity; re-diagnosing one record does not count
 - Verified resolution is bound to the failure's completed corrective execution (run, Work Order, digest, gates, independent review); candidates are not auto-promoted to `verifiedRootCausePaths`
+- Failure recording and verified memory require the live canonical change digest to match the cited execution digest; later unverified edits are rejected until `uads verify`
 - C5 remains exceptional; diagnostic expansion is one radius step
 - `uads failure record`, `uads diagnose`, `uads failures`, and `uads failure show` work
 - `status` / `resume` expose compact failure fields without a repository scan
 - Review ZIPs include sanitized failure/diagnosis/memory summaries and no raw `--input` copies
-- Fault evals FL1–FL16 pass; orchestrator 9/9, execution X1–X9, and context CCI1–CCI19 remain green
+- Fault evals FL1–FL18 pass; orchestrator 9/9, execution X1–X9, and context CCI1–CCI19 remain green
 - lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
 
 ## Ongoing product DoD

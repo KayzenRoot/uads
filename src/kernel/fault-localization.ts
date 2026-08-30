@@ -12,7 +12,7 @@ import { IndexIncompleteError } from "./intelligence-types.js";
 import type { IndexBundle } from "./intelligence-types.js";
 import { newPrefixedId } from "./ids.js";
 import { normalizeFailureText } from "./failure-normalize.js";
-import { computeFailureAttemptDigest } from "./failure-binding.js";
+import { computeFailureAttemptDigest, assertLiveMatchesExecutionDigest } from "./failure-binding.js";
 import {
   persistDiagnosisReport,
   persistDiagnosticPack,
@@ -256,6 +256,9 @@ export function recordFailure(input: {
     failingTests: normalized.failingTests,
     messageSummary: normalized.messageSummary,
   });
+  if (input.executionRunId && input.changeDigest) {
+    assertLiveMatchesExecutionDigest(input.repoRoot, input.changeDigest, "record");
+  }
   const changeDigest = input.executionRunId
     ? input.changeDigest ?? computeFailureAttemptDigest({ repoRoot: input.repoRoot, gitHead, indexDigest })
     : computeFailureAttemptDigest({ repoRoot: input.repoRoot, gitHead, indexDigest });

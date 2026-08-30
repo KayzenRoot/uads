@@ -13,7 +13,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - CLI: `uads failure record`, `uads diagnose`, `uads failures`, `uads failure show`
 - Compact `status` / `resume` failure fields without a repository scan
 - Sanitized failure/diagnosis/memory summaries in review ZIPs
-- Fault eval suite `npm run eval:fault` (FL1–FL16)
+- Fault eval suite `npm run eval:fault` (FL1–FL18)
 
 ### Notes
 
@@ -23,6 +23,8 @@ All notable changes to UADS (NexLabs) are documented here.
 - `verifiedRootCausePaths` is not auto-filled from ranked candidates; uncertainty stays historical when proof is missing
 - Reusable memory uses post-correction candidate/dependency validity, not pre-fix hypothesis digests
 - Failure `--input` files are not copied into the sidecar or review ZIP; symlink escape outside repo/sidecar is rejected
+- A stored execution digest is not enough if the live worktree has changed; stale binding requires `uads verify` again
+- Verified correction memory is hashed only from the code state covered by its gates/review; later unverified edits cannot be absorbed
 - Intelligence schemas remain 0.4.0; execution schemas remain 0.3.0
 
 ### Correction 01
@@ -33,6 +35,12 @@ All notable changes to UADS (NexLabs) are documented here.
 - Made loop counting idempotent for `uads diagnose`
 - Reused content-aware change identity for standalone failure attempts
 - Rejected `--input` symlinks whose real path leaves the repository or project sidecar
+
+### Correction 02
+
+- Rejected failure recording when the live canonical digest differs from the execution run's stored digest
+- Refused explicit verified resolution when the live worktree no longer matches the verified corrective digest
+- Shared `computeLiveChangeDigest` with the Execution Engine so record/resolve/verify/finalize use one content-aware identity
 
 ## [0.4.0] - 2026-08-29
 

@@ -9,7 +9,7 @@ import { sanitizeReviewText } from "../lib/secrets.js";
 import { findPackageRoot } from "../lib/version.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import {
-  computeChangeDigest,
+  computeLiveChangeDigest,
   describeSymlinkChange,
   isWorktreeDirty,
   listChangedEntries,
@@ -166,7 +166,7 @@ export function buildChangeSet(
       : [],
   );
   return {
-    digest: computeChangeDigest(repoRoot, entries),
+    digest: computeLiveChangeDigest(repoRoot, entries),
     files,
     violations,
   };

@@ -23,7 +23,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F15 | Execution eval suite (`npm run eval:execution`) covers happy path, fail verify, missing review, self-review, scope violation, correction loop, CRITICAL assurance, evidence spoof, and digest/session integrity |
 | F16 | Context Intelligence builds an incremental sidecar index, impact graph, and metadata-first Context Packs |
 | F17 | Fault localization normalizes failures, ranks hypotheses, emits a diagnostic Context Pack, and records compact Failure Memory |
-| F18 | Fault eval suite (`npm run eval:fault`) covers FL1–FL16 |
+| F18 | Fault eval suite (`npm run eval:fault`) covers FL1–FL18 |
 
 ## Non-functional
 

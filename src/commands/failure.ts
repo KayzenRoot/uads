@@ -48,6 +48,7 @@ export function runFailureRecordCommand(input: {
     const binding = resolveFailureExecutionBinding({
       paths: ctx.paths,
       projectId: ctx.projectId,
+      repoRoot: ctx.repoRoot,
       requestedWorkOrderId: input.workOrder,
       requestedExecutionRunId: input.executionRun,
       schemaRoot,

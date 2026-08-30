@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isPathInside } from "../lib/hash.js";
 import type { UadsPaths } from "../lib/workspace.js";
-import { computeChangeDigest, listChangedEntries, worktreeContentDigest } from "./change-digest.js";
+import { computeLiveChangeDigest, listChangedEntries, worktreeContentDigest } from "./change-digest.js";
 import { readCurrentExecutionRun, readExecutionRun } from "./execution-persist.js";
 import { FailureStateError } from "./failure-types.js";
 import { sha256Hex } from "../lib/hash.js";
@@ -23,7 +23,7 @@ export function computeFailureAttemptDigest(input: {
   try {
     const entries = listChangedEntries(input.repoRoot);
     if (entries.length > 0) {
-      return computeChangeDigest(input.repoRoot, entries);
+      return computeLiveChangeDigest(input.repoRoot, entries);
     }
   } catch {
     if (!input.indexDigest && !input.gitHead) {
@@ -78,9 +78,30 @@ export function assertSafeEvidenceInput(filePath: string, repoRoot: string, work
   return abs;
 }
 
+export function assertLiveMatchesExecutionDigest(repoRoot: string, expectedDigest: string, kind: "record" | "resolve"): void {
+  let live: string;
+  try {
+    live = computeLiveChangeDigest(repoRoot);
+  } catch {
+    throw new FailureStateError(
+      kind === "record"
+        ? "failure evidence rejected: live change digest differs from authoritative execution digest; run uads verify again"
+        : "verified resolution refused: repository state no longer matches the verified corrective digest",
+    );
+  }
+  if (live !== expectedDigest) {
+    throw new FailureStateError(
+      kind === "record"
+        ? "failure evidence rejected: live change digest differs from authoritative execution digest; run uads verify again"
+        : "verified resolution refused: repository state no longer matches the verified corrective digest",
+    );
+  }
+}
+
 export function resolveFailureExecutionBinding(input: {
   paths: UadsPaths;
   projectId: string;
+  repoRoot?: string;
   requestedWorkOrderId?: string | null;
   requestedExecutionRunId?: string | null;
   schemaRoot?: string;
@@ -95,6 +116,13 @@ export function resolveFailureExecutionBinding(input: {
       throw new FailureStateError("execution state missing or corrupt");
     }
     throw error;
+  }
+
+  function bind(result: FailureExecutionBinding): FailureExecutionBinding {
+    if (input.repoRoot && result.executionRunId && result.changeDigest) {
+      assertLiveMatchesExecutionDigest(input.repoRoot, result.changeDigest, "record");
+    }
+    return result;
   }
 
   if (requestedRun) {
@@ -113,12 +141,12 @@ export function resolveFailureExecutionBinding(input: {
     if (requestedOrder && requestedOrder !== run.workOrderId) {
       throw new FailureStateError("work-order does not match execution run");
     }
-    return {
+    return bind({
       workOrderId: run.workOrderId,
       executionRunId: run.executionRunId,
       changeDigest: run.currentChangeDigest,
       standalone: false,
-    };
+    });
   }
 
   if (requestedOrder) {
@@ -130,12 +158,12 @@ export function resolveFailureExecutionBinding(input: {
       throw new FailureStateError("supplied work-order does not match authoritative current run");
     }
     if (current) {
-      return {
+      return bind({
         workOrderId: current.workOrderId,
         executionRunId: current.executionRunId,
         changeDigest: current.currentChangeDigest,
         standalone: false,
-      };
+      });
     }
     return {
       workOrderId: requestedOrder,
@@ -146,12 +174,12 @@ export function resolveFailureExecutionBinding(input: {
   }
 
   if (current && current.projectId === input.projectId) {
-    return {
+    return bind({
       workOrderId: current.workOrderId,
       executionRunId: current.executionRunId,
       changeDigest: current.currentChangeDigest,
       standalone: false,
-    };
+    });
   }
 
   return { workOrderId: null, executionRunId: null, changeDigest: null, standalone: true };

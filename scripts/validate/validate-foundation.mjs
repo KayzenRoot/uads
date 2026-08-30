@@ -71,6 +71,8 @@ const requiredFiles = [
   "evals/fault/fl1-direct-stack.json",
   "evals/fault/fl11-repeated-diagnose.json",
   "evals/fault/fl16-symlink-binding.json",
+  "evals/fault/fl17-stale-active-digest.json",
+  "evals/fault/fl18-postfix-live-drift.json",
   "src/eval/fault.ts",
   "src/kernel/fault-localization.ts",
   "agents/uads-repo-inspector.md",

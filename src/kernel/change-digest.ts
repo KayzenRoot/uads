@@ -198,6 +198,10 @@ export function parseNameStatusZ(output: string): PorcelainEntry[] {
   return entries;
 }
 
+export function computeLiveChangeDigest(repoRoot: string, entries?: PorcelainEntry[]): string {
+  return computeChangeDigest(repoRoot, entries ?? listChangedEntries(repoRoot));
+}
+
 export function computeChangeDigest(repoRoot: string, entries: PorcelainEntry[]): string {
   const diff = gitDiffHead(repoRoot);
   const lines = [`diff:${sha256Hex(diff)}`];

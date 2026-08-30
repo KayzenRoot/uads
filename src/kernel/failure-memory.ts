@@ -22,6 +22,7 @@ import { listEvidenceRecords, listReviewRecords, readExecutionRun } from "./exec
 import { isReviewGate } from "./gates.js";
 import { INDEPENDENT_REVIEWER_ROLE } from "./types.js";
 import { assertSafeRelativeProjectPath } from "./safe-path.js";
+import { assertLiveMatchesExecutionDigest } from "./failure-binding.js";
 
 const CODE_DEPS = new Set(["imports", "requires", "dynamic-import"]);
 
@@ -315,6 +316,7 @@ export function markVerifiedResolution(input: {
     paths: input.paths,
     schemaRoot: input.schemaRoot,
   });
+  assertLiveMatchesExecutionDigest(input.repoRoot, corrective.changeDigest, "resolve");
   const bundle = currentOrRefreshIndex({
     repoRoot: input.repoRoot,
     projectId: input.projectId,

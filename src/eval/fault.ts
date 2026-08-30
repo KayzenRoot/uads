@@ -8,11 +8,12 @@ import { isReviewGate } from "../kernel/gates.js";
 import { diagnoseFailure, recordFailure } from "../kernel/fault-localization.js";
 import { markVerifiedResolution } from "../kernel/failure-memory.js";
 import { assertSafeEvidenceInput, computeFailureAttemptDigest, resolveFailureExecutionBinding } from "../kernel/failure-binding.js";
-import { failurePaths, readFailureRecord } from "../kernel/failure-persist.js";
+import { computeLiveChangeDigest } from "../kernel/change-digest.js";
+import { failurePaths, listFailureRecords, readFailureMemory, readFailureRecord } from "../kernel/failure-persist.js";
 import { findPackageRoot } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "../lib/secrets.js";
-import { runFailureRecordCommand } from "../commands/failure.js";
+import { runFailureRecordCommand, runFailureResolveCommand } from "../commands/failure.js";
 
 type EvalCase = { id: string; name: string };
 
@@ -573,6 +574,78 @@ function main(): number {
             : "";
           assert(!sidecarText.includes(secret), "FL16 persisted external symlink contents");
         }
+      }
+
+      if (item.id === "FL17") {
+        const dispatched = runDispatch({ cwd: repo, uadsHome: home, session: "imp-1" });
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("d1");\n`);
+        const verifiedD1 = runVerify({ cwd: repo, uadsHome: home });
+        const digestD1 = verifiedD1.run.currentChangeDigest;
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("d2");\n`);
+        const inputPath = path.join(paths.workspace, "fail-input.txt");
+        fs.writeFileSync(inputPath, stackFor(repo, "src/ui/Button.tsx"));
+        let staleRejected = false;
+        try {
+          runFailureRecordCommand({
+            cwd: repo,
+            uadsHome: home,
+            source: "runtime",
+            inputPath,
+            executionRun: dispatched.run.executionRunId,
+          });
+        } catch {
+          staleRejected = true;
+        }
+        assert(staleRejected, "FL17 accepted stale D1 label for D2 observation");
+        assert(
+          listFailureRecords(paths, root).every((item) => item.changeDigest !== digestD1),
+          "FL17 persisted a D1-labeled record for D2",
+        );
+        const verifiedD2 = runVerify({ cwd: repo, uadsHome: home });
+        const output = runFailureRecordCommand({
+          cwd: repo,
+          uadsHome: home,
+          json: true,
+          source: "runtime",
+          inputPath,
+        });
+        const created = JSON.parse(output) as { failureRecordId: string };
+        const persisted = readFailureRecord(paths, created.failureRecordId, root);
+        assert(persisted.changeDigest === verifiedD2.run.currentChangeDigest, "FL17 did not bind D2 after re-verify");
+        assert(persisted.executionRunId === dispatched.run.executionRunId, "FL17 lost execution binding after re-verify");
+      }
+
+      if (item.id === "FL18") {
+        const bound = bindFailure({
+          repo,
+          home,
+          planned,
+          paths,
+          root,
+          text: stackFor(repo, "src/ui/Button.tsx"),
+        });
+        const digestD1 = computeLiveChangeDigest(repo);
+        const memoryD1 = readFailureMemory(paths, planned.workOrder.projectId, root);
+        const entryD1 = memoryD1.entries.find((item) => item.failureSignature === bound.record.signature);
+        assert(Boolean(entryD1?.resolutionChangeDigest), "FL18 missing D1 resolution digest");
+        const basisD1 = JSON.stringify(entryD1?.validityBasisDigests ?? {});
+        write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("drift");\n`);
+        assert(computeLiveChangeDigest(repo) !== digestD1, "FL18 live digest did not drift");
+        let rejected = false;
+        try {
+          runFailureResolveCommand({
+            cwd: repo,
+            uadsHome: home,
+            failureRecordId: bound.record.failureRecordId,
+          });
+        } catch {
+          rejected = true;
+        }
+        assert(rejected, "FL18 mixed D2 live state into D1 verified memory");
+        const after = readFailureMemory(paths, planned.workOrder.projectId, root);
+        const entryAfter = after.entries.find((item) => item.failureSignature === bound.record.signature);
+        assert(JSON.stringify(entryAfter?.validityBasisDigests ?? {}) === basisD1, "FL18 mutated validity basis after stale resolve");
+        assert(entryAfter?.resolutionChangeDigest === entryD1?.resolutionChangeDigest, "FL18 changed resolution digest after stale resolve");
       }
     }),
   );
