@@ -47,6 +47,9 @@ jobs:
       - name: Fault eval
         run: npm run eval:fault
 
+      - name: Cost eval
+        run: npm run eval:cost
+
       - name: Skills preflight
         run: npm run validate:skills
 

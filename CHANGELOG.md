@@ -14,6 +14,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - Optional Context Pack layer digests (`staticLayerDigest`, `semiStableLayerDigest`, `dynamicLayerDigest`) on 0.4.0 packs
 - Review ZIP summaries `cache/cache-summary.json` and `cost/cost-summary.json`
 - Cost eval suite `npm run eval:cost` (CC1–CC14)
+- CI runs `eval:cost` before the aggregate foundation validation
 
 ### Notes
 
