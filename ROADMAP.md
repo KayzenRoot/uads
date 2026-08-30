@@ -16,7 +16,7 @@ Dispatch, change digest, evidence ledger, independent assurance, correction loop
 
 ## Prompt 004 — Context Intelligence (complete)
 
-Incremental sidecar index, JS/TS dependency graph with evidence/confidence, test and conservative interface maps, impact reports, metadata-first Context Packs, C0–C5 graph enforcement, `uads index` / `impact` / `context pack`, context evals CCI1–CCI16. Correction 01 hardens commit-to-commit freshness, dirty content identity, no-Git revalidation, unresolved reuse, truncation fail-closed, and conservative relationship classes.
+Incremental sidecar index, JS/TS dependency graph with evidence/confidence, test and conservative interface maps, impact reports, metadata-first Context Packs, C0–C5 graph enforcement, `uads index` / `impact` / `context pack`, context evals CCI1–CCI19. Correction 01 hardens commit-to-commit freshness, dirty content identity, no-Git revalidation, unresolved reuse, truncation fail-closed, and conservative relationship classes. Correction 02 hardens lexical extraction and reverse docs/config impact.
 
 ## Next increments (planned)
 

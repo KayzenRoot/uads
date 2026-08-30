@@ -11,7 +11,13 @@ import type {
 } from "./intelligence-types.js";
 import { IndexIncompleteError } from "./intelligence-types.js";
 
-const DEP_TYPES = new Set(["imports", "requires", "dynamic-import", "manifest-reference"]);
+const CODE_DEP_TYPES = new Set(["imports", "requires", "dynamic-import"]);
+const STRUCTURAL_TYPES = new Set(["documents", "configures", "manifest-reference"]);
+
+function reverseStructuralRelation(type: string): ImpactRelation {
+  if (type === "documents") return "documentation";
+  return "config";
+}
 
 export function hopsForRadius(radius: ContextRadius): { depHops: number; includeLocal: boolean; includeAll: boolean } {
   switch (radius) {
@@ -155,6 +161,15 @@ export function analyzeImpact(input: {
             hops: 0,
           });
         }
+        if (STRUCTURAL_TYPES.has(edge.type) && edge.target === seed) {
+          add({
+            path: edge.source,
+            relation: reverseStructuralRelation(edge.type),
+            reason: `reverse ${edge.type} from ${edge.source} (${edge.method})`,
+            confidence: edge.confidence,
+            hops: 0,
+          });
+        }
       }
       for (const node of input.bundle.graph.nodes) {
         if (node.path === seed) continue;
@@ -190,12 +205,16 @@ export function analyzeImpact(input: {
       if (!current) break;
       if (current.hops >= limits.depHops) continue;
       for (const edge of neighbors(input.bundle.graph.edges, current.path, "out")) {
-        if (!DEP_TYPES.has(edge.type) && edge.type !== "configures" && edge.type !== "documents") continue;
+        if (!CODE_DEP_TYPES.has(edge.type) && !STRUCTURAL_TYPES.has(edge.type)) continue;
         if (visited.has(edge.target)) continue;
         visited.add(edge.target);
         const hops = current.hops + 1;
         const relation: ImpactRelation =
-          edge.type === "documents" ? "documentation" : edge.type === "configures" ? "config" : "dependency";
+          edge.type === "documents"
+            ? "documentation"
+            : edge.type === "configures" || edge.type === "manifest-reference"
+              ? "config"
+              : "dependency";
         add({
           path: edge.target,
           relation,
@@ -206,14 +225,17 @@ export function analyzeImpact(input: {
         queue.push({ path: edge.target, hops });
       }
       for (const edge of neighbors(input.bundle.graph.edges, current.path, "in")) {
-        if (!DEP_TYPES.has(edge.type)) continue;
+        if (!CODE_DEP_TYPES.has(edge.type) && !STRUCTURAL_TYPES.has(edge.type)) continue;
         if (visited.has(edge.source)) continue;
         visited.add(edge.source);
         const hops = current.hops + 1;
+        const relation: ImpactRelation = STRUCTURAL_TYPES.has(edge.type)
+          ? reverseStructuralRelation(edge.type)
+          : "dependent";
         add({
           path: edge.source,
-          relation: "dependent",
-          reason: `reverse ${edge.type} from ${edge.source}`,
+          relation,
+          reason: `reverse ${edge.type} from ${edge.source} (${edge.method})`,
           confidence: edge.confidence,
           hops,
         });

@@ -449,6 +449,85 @@ function main(): number {
         return;
       }
 
+      if (item.id === "CCI17") {
+        write(
+          repo,
+          "src/ui/examples.ts",
+          [
+            `const example = 'import "./Button"';`,
+            `const snippet = 'require("./Button")';`,
+            "const template = `import \"./Button\"`;",
+            "// import \"./Button\"",
+            "const other = 1;",
+            "",
+          ].join("\n"),
+        );
+        gitCommit(repo, "lexical-false");
+        const bundle = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, forceFull: true });
+        if (bundle.graph.edges.some((edge) => edge.source === "src/ui/examples.ts")) {
+          throw new Error("string/template/comment syntax created a graph edge");
+        }
+        if (bundle.interfaces.contracts.some((item) => item.path === "src/ui/examples.ts" && item.kind === "export")) {
+          throw new Error("string-only file treated as export boundary");
+        }
+        if (!bundle.graph.edges.some((edge) => edge.source === "src/ui/Button.tsx" && edge.target === "src/ui/button.css")) {
+          throw new Error("real executable import was lost");
+        }
+        return;
+      }
+
+      if (item.id === "CCI18") {
+        write(repo, "src/dyn-a.ts", `export const loadA = (name: string) => import(name);\n`);
+        write(repo, "src/dyn-b.ts", `export const loadB = (mod: string) => import(mod);\n`);
+        gitCommit(repo, "computed");
+        const bundle = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, forceFull: true });
+        const unresolved = bundle.graph.unresolved.filter((item) => item.specifier === "(computed)");
+        if (!unresolved.some((item) => item.source === "src/dyn-a.ts")) throw new Error("missing computed unresolved for dyn-a");
+        if (!unresolved.some((item) => item.source === "src/dyn-b.ts")) throw new Error("missing computed unresolved for dyn-b");
+        if (unresolved.filter((item) => item.source === "src/dyn-a.ts").length !== 1) throw new Error("duplicate computed record for dyn-a");
+        const again = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+        const left = JSON.stringify(bundle.graph.unresolved.map((item) => `${item.source}:${item.specifier}`).sort());
+        const right = JSON.stringify(again.graph.unresolved.map((item) => `${item.source}:${item.specifier}`).sort());
+        if (left !== right) throw new Error("computed unresolved result is not deterministic");
+        return;
+      }
+
+      if (item.id === "CCI19") {
+        write(repo, "docs/button.md", "[button](../src/ui/Button.tsx)\n");
+        write(repo, "docs/unrelated.md", "no link to the button\n");
+        write(repo, "package.json", `${JSON.stringify({ name: "ctx-eval", version: "1.0.0", main: "./src/ui/Button.tsx" }, null, 2)}\n`);
+        write(repo, "tsconfig.json", `${JSON.stringify({ files: ["src/ui/Button.tsx"] }, null, 2)}\n`);
+        gitCommit(repo, "reverse-docs");
+        const c2 = buildImpactAndPack({
+          repoRoot: repo,
+          projectId: planned.workOrder.projectId,
+          paths,
+          radius: "C2",
+          requestedPaths: ["src/ui/Button.tsx"],
+          workOrder: planned.workOrder,
+        });
+        const selected = impactPaths(c2.report);
+        if (!selected.includes("docs/button.md")) throw new Error("related doc missing at C2");
+        if (selected.includes("docs/unrelated.md")) throw new Error("unrelated doc selected");
+        if (!selected.includes("tsconfig.json")) throw new Error("related config missing at C2");
+        if (!c2.pack.docs.includes("docs/button.md")) throw new Error("Context Pack docs missing related markdown");
+        if (!c2.pack.items.some((item) => item.path === "package.json" && item.role === "config" && /manifest-reference/.test(item.reason))) {
+          throw new Error("manifest reverse relation not classified as config");
+        }
+        const c1 = buildImpactAndPack({
+          repoRoot: repo,
+          projectId: planned.workOrder.projectId,
+          paths,
+          radius: "C1",
+          requestedPaths: ["src/ui/Button.tsx"],
+          workOrder: planned.workOrder,
+        });
+        if (packPaths(c1.pack).some((rel) => rel.startsWith("docs/") || rel === "tsconfig.json" || rel === "package.json")) {
+          throw new Error("C1 widened because reverse docs/config edges exist");
+        }
+        return;
+      }
+
       throw new Error(`unhandled eval ${item.id}`);
     }),
   );

@@ -1,7 +1,7 @@
 export const INTELLIGENCE_SCHEMA_VERSION = "0.4.0";
 export const INDEX_ENGINE_VERSION = "0.4.1";
 export const JS_TS_EXTRACTOR_ID = "js-ts";
-export const JS_TS_EXTRACTOR_VERSION = "0.4.0";
+export const JS_TS_EXTRACTOR_VERSION = "0.4.1";
 
 export type IndexMode = "fullBuild" | "incrementalUpdate" | "reused";
 

@@ -30,6 +30,14 @@ All notable changes to UADS (NexLabs) are documented here.
 - Graph emits conservative `interface-reference`, `manifest-reference`, `configures`, `documents`, and JS/TS export boundaries
 - Context eval suite `npm run eval:context` now covers CCI1–CCI16
 
+### Fixed (Correction 02)
+
+- JS/TS extraction masks comments, strings, and template text so fake import/require syntax cannot create graph edges
+- Computed `import(expr)` detection is stateless per file and no longer depends on regex `lastIndex`
+- Export-boundary detection uses the same lexical mask; template/comment/string `export` text is ignored
+- Impact traversal includes reverse `documents` / `configures` / `manifest-reference` from C2 upward without widening C1
+- Context eval suite `npm run eval:context` now covers CCI1–CCI19
+
 ## [0.3.0] - 2026-08-29
 
 ### Added

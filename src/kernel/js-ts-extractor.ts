@@ -3,6 +3,7 @@ import type { ExtractedReference, LanguageExtractor } from "./intelligence-types
 import { JS_TS_EXTRACTOR_ID, JS_TS_EXTRACTOR_VERSION } from "./intelligence-types.js";
 import { toPosix } from "../lib/hash.js";
 import { isRelativeProjectPath } from "./safe-path.js";
+import { maskNonCodeJsTs } from "./js-ts-lex.js";
 
 const SOURCE_EXT = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
 const RESOLVE_EXT = [...SOURCE_EXT, ".json", ".d.ts"];
@@ -12,11 +13,7 @@ const SIDE_EFFECT_IMPORT = /\bimport\s+["']([^"']+)["']/g;
 const EXPORT_FROM = /\bexport\s+(?:\*|\{[\s\S]*?\})\s+from\s+["']([^"']+)["']/g;
 const CJS_REQUIRE = /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g;
 const DYNAMIC_IMPORT = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
-const DYNAMIC_IMPORT_NONLITERAL = /\bimport\s*\(\s*(?!["'])/g;
-
-function stripComments(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, " ")).replace(/(^|[^:])\/\/.*$/gm, "$1");
-}
+const DYNAMIC_IMPORT_NONLITERAL = /\bimport\s*\(\s*(?!["'`])/;
 
 function lineOf(text: string, index: number): number {
   return text.slice(0, index).split("\n").length;
@@ -32,12 +29,25 @@ function pushUnique(
   out.push(item);
 }
 
+function originalCapture(original: string, match: RegExpMatchArray, group = 1): string | null {
+  const grouped = match[group];
+  if (grouped === undefined || match.index === undefined) return null;
+  const startInMatch = match[0].indexOf(grouped);
+  if (startInMatch < 0) return null;
+  const captured = original.slice(match.index + startInMatch, match.index + startInMatch + grouped.length).trim();
+  return captured || null;
+}
+
+function matchesOf(pattern: RegExp, text: string) {
+  return text.matchAll(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`));
+}
+
 export function extractJsTsReferences(relativePath: string, text: string): ExtractedReference[] {
-  const cleaned = stripComments(text);
+  const cleaned = maskNonCodeJsTs(text);
   const out: ExtractedReference[] = [];
 
-  for (const match of cleaned.matchAll(EXPORT_FROM)) {
-    const specifier = match[1];
+  for (const match of matchesOf(EXPORT_FROM, cleaned)) {
+    const specifier = originalCapture(text, match);
     if (!specifier) continue;
     pushUnique(out, {
       specifier,
@@ -48,8 +58,8 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       line: lineOf(cleaned, match.index ?? 0),
     });
   }
-  for (const match of cleaned.matchAll(SIDE_EFFECT_IMPORT)) {
-    const specifier = match[1];
+  for (const match of matchesOf(SIDE_EFFECT_IMPORT, cleaned)) {
+    const specifier = originalCapture(text, match);
     if (!specifier) continue;
     pushUnique(out, {
       specifier,
@@ -60,8 +70,8 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       line: lineOf(cleaned, match.index ?? 0),
     });
   }
-  for (const match of cleaned.matchAll(IMPORT_FROM)) {
-    const specifier = match[1];
+  for (const match of matchesOf(IMPORT_FROM, cleaned)) {
+    const specifier = originalCapture(text, match);
     if (!specifier) continue;
     pushUnique(out, {
       specifier,
@@ -72,8 +82,8 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       line: lineOf(cleaned, match.index ?? 0),
     });
   }
-  for (const match of cleaned.matchAll(CJS_REQUIRE)) {
-    const specifier = match[1];
+  for (const match of matchesOf(CJS_REQUIRE, cleaned)) {
+    const specifier = originalCapture(text, match);
     if (!specifier) continue;
     pushUnique(out, {
       specifier,
@@ -84,8 +94,8 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       line: lineOf(cleaned, match.index ?? 0),
     });
   }
-  for (const match of cleaned.matchAll(DYNAMIC_IMPORT)) {
-    const specifier = match[1];
+  for (const match of matchesOf(DYNAMIC_IMPORT, cleaned)) {
+    const specifier = originalCapture(text, match);
     if (!specifier) continue;
     pushUnique(out, {
       specifier,
@@ -96,7 +106,7 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       line: lineOf(cleaned, match.index ?? 0),
     });
   }
-  if (DYNAMIC_IMPORT_NONLITERAL.test(cleaned)) {
+  for (const match of matchesOf(DYNAMIC_IMPORT_NONLITERAL, cleaned)) {
     pushUnique(out, {
       specifier: "(computed)",
       type: "dynamic-import",
@@ -104,6 +114,7 @@ export function extractJsTsReferences(relativePath: string, text: string): Extra
       confidence: 0.2,
       evidence: "non-literal import() is not statically resolved",
       resolved: false,
+      line: lineOf(cleaned, match.index ?? 0),
     });
   }
 

@@ -66,8 +66,9 @@ Complete only when all are true:
 - `uads index`, `uads impact`, `uads context pack`, and one-level `context expand` work
 - `status` / `resume` do not trigger a full repository scan
 - Stale/corrupt index identity is not silently accepted as current
-- Context evals CCI1–CCI16 pass; orchestrator 9/9 and execution X1–X9 remain green
+- Context evals CCI1–CCI19 pass; orchestrator 9/9 and execution X1–X9 remain green
 - Correction 01: clean commit-to-commit index refresh, content-aware dirty identity, no-Git revalidation, unresolved carry-forward, no silent truncation, conservative relationship classes
+- Correction 02: lexically conservative JS/TS extraction, stateless computed-import evidence, reverse docs/config impact
 - lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
 
 ## Ongoing product DoD

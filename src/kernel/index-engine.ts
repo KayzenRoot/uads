@@ -12,6 +12,7 @@ import {
   worktreeContentDigest,
   type PorcelainEntry,
 } from "./change-digest.js";
+import { hasJsTsExportBoundary } from "./js-ts-lex.js";
 import { extractorFor, isRelativeSpecifier, resolveRelativeModule } from "./js-ts-extractor.js";
 import { persistIndexBundle, readIndexBundle } from "./intelligence-persist.js";
 import { assertSafeRelativeProjectPath, isRelativeProjectPath } from "./safe-path.js";
@@ -352,8 +353,7 @@ function isGlobPath(value: string): boolean {
 
 function detectExportBoundary(relativePath: string, text: string | null): boolean {
   if (!text || !languageOf(relativePath)) return false;
-  const cleaned = text.replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, " ")).replace(/(^|[^:])\/\/.*$/gm, "$1");
-  return /^\s*export(\s|{|\*|=)/m.test(cleaned);
+  return hasJsTsExportBoundary(text);
 }
 
 function resolveExplicitRepoPath(fromFile: string, specifier: string, existing: Set<string>): string | null {
