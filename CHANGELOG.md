@@ -20,6 +20,16 @@ All notable changes to UADS (NexLabs) are documented here.
 - C5 remains exceptional and approval-gated
 - Execution evidence integrity from v0.3.0 is unchanged
 
+### Fixed (Correction 01)
+
+- Incremental index refresh includes clean commit-to-commit name-status, not only dirty porcelain
+- Dirty identity hashes changed file bytes so same-status rewrites are not treated as current
+- No-Git indexes are revalidated against content digests instead of reused indefinitely
+- Unresolved references are carried for unchanged sources and bound to `sourceDigest`
+- Discovery truncation is explicit (`complete`/`truncated`) and blocks impact, Context Packs, and dispatch
+- Graph emits conservative `interface-reference`, `manifest-reference`, `configures`, `documents`, and JS/TS export boundaries
+- Context eval suite `npm run eval:context` now covers CCI1–CCI16
+
 ## [0.3.0] - 2026-08-29
 
 ### Added

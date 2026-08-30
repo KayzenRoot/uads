@@ -27,6 +27,9 @@ export function runIndexCommand(input: { cwd?: string; uadsHome?: string; json?:
       filesConsidered: bundle.state.filesConsidered,
       nodeCount: bundle.state.nodeCount,
       edgeCount: bundle.state.edgeCount,
+      complete: bundle.state.complete,
+      truncated: bundle.state.truncated,
+      truncationReason: bundle.state.truncationReason,
       unresolvedCount: bundle.state.unresolvedCount,
       confidence: bundle.state.confidence,
     };
@@ -41,6 +44,8 @@ export function runIndexCommand(input: { cwd?: string; uadsHome?: string; json?:
       `filesRemoved: ${payload.filesRemoved}`,
       `nodes: ${payload.nodeCount}`,
       `edges: ${payload.edgeCount}`,
+      `complete: ${payload.complete}`,
+      `truncated: ${payload.truncated}`,
       `unresolved: ${payload.unresolvedCount}`,
       "",
     ].join("\n");

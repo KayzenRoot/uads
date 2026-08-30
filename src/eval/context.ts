@@ -4,10 +4,11 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { runDispatch, runContextExpand, ExecutionBlockedError } from "../kernel/execution.js";
 import { runPlan, runResume } from "../kernel/orchestrator.js";
-import { buildImpactAndPack, refreshIndex } from "../kernel/intelligence.js";
-import { lastIndexScan } from "../kernel/index-engine.js";
+import { buildImpactAndPack, currentOrRefreshIndex, refreshIndex } from "../kernel/intelligence.js";
+import { lastIndexScan, setDiscoveryLimitsForTests, setRepoIdentityProviderForTests } from "../kernel/index-engine.js";
 import { analyzeImpact } from "../kernel/impact.js";
 import { readIndexBundle } from "../kernel/intelligence-persist.js";
+import { IndexIncompleteError } from "../kernel/intelligence-types.js";
 import { runStatus } from "../commands/status.js";
 import { findPackageRoot } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
@@ -298,6 +299,153 @@ function main(): number {
         runStatus(repo, { uadsHome: home, json: true });
         runResume({ cwd: repo, uadsHome: home });
         if (lastIndexScan.filesParsed !== parsed) throw new Error("status/resume triggered an index scan");
+        return;
+      }
+
+      if (item.id === "CCI11") {
+        const first = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+        const headA = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim();
+        write(repo, "src/ui/Button.tsx", `import "./button.css";\nexport const Button = () => "commit-b";\n`);
+        gitCommit(repo, "commit-b");
+        const pack = buildImpactAndPack({
+          repoRoot: repo,
+          projectId: planned.workOrder.projectId,
+          paths,
+          radius: "C1",
+          requestedPaths: ["src/ui/Button.tsx"],
+          workOrder: planned.workOrder,
+        });
+        const headB = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim();
+        if (headA === headB) throw new Error("expected a new commit");
+        if (pack.bundle.state.gitHead !== headB) throw new Error("clean HEAD B was not the current index identity");
+        const before = first.state.files.find((file) => file.path === "src/ui/Button.tsx")?.contentDigest;
+        const after = pack.bundle.state.files.find((file) => file.path === "src/ui/Button.tsx")?.contentDigest;
+        if (!after || after === before) throw new Error("commit B reused stale Button digest");
+        if (pack.bundle.state.filesReused < 1) throw new Error("unrelated files were not reused");
+        return;
+      }
+
+      if (item.id === "CCI12") {
+        write(repo, "src/ui/Button.tsx", `import "./button.css";\nexport const Button = () => "dirty-x";\n`);
+        const first = buildImpactAndPack({
+          repoRoot: repo,
+          projectId: planned.workOrder.projectId,
+          paths,
+          radius: "C1",
+          requestedPaths: ["src/ui/Button.tsx"],
+          workOrder: planned.workOrder,
+        });
+        write(repo, "src/ui/Button.tsx", `import "./button.css";\nexport const Button = () => "dirty-y";\n`);
+        if (`import "./button.css";\nexport const Button = () => "dirty-x";\n`.length !== `import "./button.css";\nexport const Button = () => "dirty-y";\n`.length) {
+          throw new Error("fixture lengths diverged");
+        }
+        const second = buildImpactAndPack({
+          repoRoot: repo,
+          projectId: planned.workOrder.projectId,
+          paths,
+          radius: "C1",
+          requestedPaths: ["src/ui/Button.tsx"],
+          workOrder: planned.workOrder,
+        });
+        if (first.pack.indexDigest === second.pack.indexDigest) throw new Error("same-status dirty rewrite reused X as Y");
+        return;
+      }
+
+      if (item.id === "CCI13") {
+        setRepoIdentityProviderForTests(() => ({ gitAvailable: false, gitHead: null, dirtyDigest: "git-unavailable" }));
+        try {
+          const first = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+          write(repo, "src/ui/Button.tsx", `import "./button.css";\nexport const Button = () => "nogit";\n`);
+          const second = currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+          const before = first.state.files.find((file) => file.path === "src/ui/Button.tsx")?.contentDigest;
+          const after = second.state.files.find((file) => file.path === "src/ui/Button.tsx")?.contentDigest;
+          if (!after || after === before) throw new Error("no-git path reused a stale digest");
+        } finally {
+          setRepoIdentityProviderForTests(null);
+        }
+        return;
+      }
+
+      if (item.id === "CCI14") {
+        write(repo, "src/ui/orphan.ts", `import { missing } from "./missing-mod";\nexport const o = missing;\n`);
+        gitCommit(repo, "unresolved");
+        const first = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, forceFull: true });
+        if (!first.graph.unresolved.some((item) => item.source === "src/ui/orphan.ts" && item.specifier === "./missing-mod")) {
+          throw new Error("expected unresolved ref on orphan.ts");
+        }
+        write(repo, "src/util/format.ts", `export const format = (v: string) => v + "y";\n`);
+        const second = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+        if (!second.graph.unresolved.some((item) => item.source === "src/ui/orphan.ts" && item.specifier === "./missing-mod")) {
+          throw new Error("unrelated incremental update dropped unresolved refs");
+        }
+        write(repo, "src/ui/orphan.ts", `export const o = 1;\n`);
+        const third = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+        if (third.graph.unresolved.some((item) => item.source === "src/ui/orphan.ts" && item.specifier === "./missing-mod")) {
+          throw new Error("obsolete unresolved ref survived source change");
+        }
+        return;
+      }
+
+      if (item.id === "CCI15") {
+        setDiscoveryLimitsForTests({ maxFiles: 2 });
+        try {
+          refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, forceFull: true });
+          let blocked = false;
+          try {
+            buildImpactAndPack({
+              repoRoot: repo,
+              projectId: planned.workOrder.projectId,
+              paths,
+              radius: "C1",
+              requestedPaths: ["src/ui/Button.tsx"],
+              workOrder: planned.workOrder,
+            });
+          } catch (error) {
+            blocked = error instanceof IndexIncompleteError || /incomplete|truncated/i.test(error instanceof Error ? error.message : String(error));
+          }
+          if (!blocked) throw new Error("truncated index was accepted as current");
+        } finally {
+          setDiscoveryLimitsForTests(null);
+        }
+        return;
+      }
+
+      if (item.id === "CCI16") {
+        write(repo, "src/ui/contract.d.ts", "export type Label = string;\n");
+        write(repo, "src/ui/uses-contract.ts", `import type { Label } from "./contract";\nexport const label: Label = "x";\n`);
+        write(repo, "src/ui/string-only.ts", `const word = "export";\nconst other = 1;\n`);
+        write(repo, "package.json", `${JSON.stringify({ name: "ctx-eval", version: "1.0.0", main: "./src/ui/Button.tsx", dependencies: { leftpad: "1.0.0" } }, null, 2)}\n`);
+        write(repo, "tsconfig.json", `${JSON.stringify({ files: ["src/ui/Button.tsx"], include: ["src/**/*.ts"] }, null, 2)}\n`);
+        write(repo, "docs/button.md", "[button](../src/ui/Button.tsx)\n[remote](https://example.com/Button.tsx)\n");
+        gitCommit(repo, "relations");
+        const bundle = refreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths, forceFull: true });
+        if (!bundle.graph.edges.some((edge) => edge.type === "interface-reference" && edge.target === "src/ui/contract.d.ts")) {
+          throw new Error("missing interface-reference");
+        }
+        if (!bundle.graph.edges.some((edge) => edge.type === "manifest-reference" && edge.target === "src/ui/Button.tsx")) {
+          throw new Error("missing manifest-reference");
+        }
+        if (bundle.graph.edges.some((edge) => edge.type === "manifest-reference" && edge.target.includes("leftpad"))) {
+          throw new Error("npm package name entered the graph");
+        }
+        if (!bundle.graph.edges.some((edge) => edge.type === "configures" && edge.target === "src/ui/Button.tsx")) {
+          throw new Error("missing configures");
+        }
+        if (bundle.graph.edges.some((edge) => edge.type === "configures" && edge.target.includes("*"))) {
+          throw new Error("glob configures entered the graph");
+        }
+        if (!bundle.graph.edges.some((edge) => edge.type === "documents" && edge.target === "src/ui/Button.tsx")) {
+          throw new Error("missing documents");
+        }
+        if (bundle.graph.edges.some((edge) => edge.type === "documents" && /example\.com/.test(edge.target))) {
+          throw new Error("http document link entered the graph");
+        }
+        if (!bundle.interfaces.contracts.some((item) => item.path === "src/ui/Button.tsx" && item.kind === "export")) {
+          throw new Error("missing export boundary");
+        }
+        if (bundle.interfaces.contracts.some((item) => item.path === "src/ui/string-only.ts" && item.kind === "export")) {
+          throw new Error("string mention treated as export boundary");
+        }
         return;
       }
 

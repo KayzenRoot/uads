@@ -59,14 +59,15 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["source", "specifier", "reason", "method", "confidence"],
+        "required": ["source", "specifier", "reason", "method", "confidence", "sourceDigest"],
         "properties": {
           "source": { "type": "string" },
           "specifier": { "type": "string" },
           "reason": { "type": "string" },
           "method": { "type": "string" },
           "confidence": { "type": "number" },
-          "line": { "type": "integer" }
+          "line": { "type": "integer" },
+          "sourceDigest": { "type": "string", "minLength": 1 }
         }
       }
     },

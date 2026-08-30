@@ -5,7 +5,7 @@ import { toPosix } from "../lib/hash.js";
 import { isRelativeProjectPath } from "./safe-path.js";
 
 const SOURCE_EXT = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
-const RESOLVE_EXT = [...SOURCE_EXT, ".json"];
+const RESOLVE_EXT = [...SOURCE_EXT, ".json", ".d.ts"];
 
 const IMPORT_FROM = /\b(?:import|export)\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
 const SIDE_EFFECT_IMPORT = /\bimport\s+["']([^"']+)["']/g;

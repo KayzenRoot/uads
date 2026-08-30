@@ -1,5 +1,5 @@
 export const INTELLIGENCE_SCHEMA_VERSION = "0.4.0";
-export const INDEX_ENGINE_VERSION = "0.4.0";
+export const INDEX_ENGINE_VERSION = "0.4.1";
 export const JS_TS_EXTRACTOR_ID = "js-ts";
 export const JS_TS_EXTRACTOR_VERSION = "0.4.0";
 
@@ -38,6 +38,7 @@ export type IndexedFileRecord = {
   kind: FileKind;
   language: string | null;
   bytes: number;
+  hasExportBoundary: boolean;
 };
 
 export type GraphNode = {
@@ -64,6 +65,7 @@ export type UnresolvedReference = {
   method: string;
   confidence: number;
   line?: number;
+  sourceDigest: string;
 };
 
 export type IndexState = {
@@ -90,6 +92,9 @@ export type IndexState = {
   unresolvedCount: number;
   nodeCount: number;
   edgeCount: number;
+  complete: boolean;
+  truncated: boolean;
+  truncationReason: string | null;
   files: IndexedFileRecord[];
 };
 
@@ -239,5 +244,12 @@ export class IntelligenceStateError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "IntelligenceStateError";
+  }
+}
+
+export class IndexIncompleteError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IndexIncompleteError";
   }
 }

@@ -5,7 +5,7 @@ import { assertSchema } from "../lib/json-schema.js";
 import { sanitizeOperationalValue } from "../lib/safe-persist.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import type { ContextPack, ImpactReport, IndexBundle, RepoIdentity } from "./intelligence-types.js";
-import { IntelligenceStateError, StaleIndexError } from "./intelligence-types.js";
+import { IndexIncompleteError, IntelligenceStateError, StaleIndexError } from "./intelligence-types.js";
 
 export function intelligencePaths(paths: UadsPaths): {
   indexState: string;
@@ -84,13 +84,17 @@ export function assertIndexMatchesProject(bundle: IndexBundle, projectId: string
 }
 
 export function assertIndexCurrent(bundle: IndexBundle, identity: RepoIdentity): void {
+  if (bundle.state.complete === false || bundle.state.truncated) {
+    throw new IndexIncompleteError(bundle.state.staleReason ?? bundle.state.truncationReason ?? "index is incomplete");
+  }
   if (bundle.state.stale) {
     throw new StaleIndexError(bundle.state.staleReason ?? "index is marked stale");
   }
-  if (identity.gitAvailable && bundle.state.gitAvailable) {
-    if (bundle.state.gitHead !== identity.gitHead || bundle.state.dirtyDigest !== identity.dirtyDigest) {
-      throw new StaleIndexError("index identity does not match current repository state");
-    }
+  if (!identity.gitAvailable || !bundle.state.gitAvailable) {
+    throw new StaleIndexError("no-git index requires revalidation against current file contents");
+  }
+  if (bundle.state.gitHead !== identity.gitHead || bundle.state.dirtyDigest !== identity.dirtyDigest) {
+    throw new StaleIndexError("index identity does not match current repository state");
   }
 }
 

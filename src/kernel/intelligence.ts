@@ -12,7 +12,7 @@ import {
 import { analyzeImpact } from "./impact.js";
 import { buildContextPack } from "./context-pack.js";
 import type { ContextPack, ImpactReport, IndexBundle } from "./intelligence-types.js";
-import { StaleIndexError } from "./intelligence-types.js";
+import { IndexIncompleteError, StaleIndexError } from "./intelligence-types.js";
 
 export function refreshIndex(input: {
   repoRoot: string;
@@ -45,6 +45,9 @@ export function currentOrRefreshIndex(input: {
       assertIndexCurrent(existing, identity);
       return existing;
     } catch (error) {
+      if (error instanceof IndexIncompleteError) {
+        return refreshIndex({ ...input, schemaRoot, forceFull: true });
+      }
       if (!(error instanceof StaleIndexError)) {
         return refreshIndex({ ...input, schemaRoot, forceFull: true });
       }
@@ -73,6 +76,11 @@ export function buildImpactAndPack(input: {
     schemaRoot,
   });
   assertIndexMatchesProject(bundle, input.projectId);
+  if (bundle.state.complete === false || bundle.state.truncated) {
+    throw new IndexIncompleteError(
+      bundle.state.truncationReason ?? bundle.state.staleReason ?? "index is incomplete and cannot drive impact or Context Packs",
+    );
+  }
   const workOrderId = input.workOrder?.workOrderId ?? null;
   const explicit = (input.requestedPaths ?? []).length > 0;
   const report = analyzeImpact({

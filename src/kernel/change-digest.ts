@@ -145,6 +145,59 @@ export function hashUntrackedFile(repoRoot: string, relativePath: string): strin
   return fileContentIdentity(repoRoot, relativePath);
 }
 
+export function worktreeContentDigest(repoRoot: string): string {
+  const entries = listChangedEntries(repoRoot);
+  if (entries.length === 0) {
+    return sha256Hex("worktree:empty");
+  }
+  const lines = [...entries]
+    .sort((a, b) => `${a.origPath ?? ""}:${a.path}`.localeCompare(`${b.origPath ?? ""}:${b.path}`))
+    .map((entry) => {
+      const identity = fileContentIdentity(repoRoot, entry.path);
+      const origIdentity = entry.origPath ? fileContentIdentity(repoRoot, entry.origPath) : "";
+      return `${entry.code}\0${entry.path}\0${entry.origPath ?? ""}\0${identity}\0${origIdentity}`;
+    });
+  return sha256Hex(lines.join("\n"));
+}
+
+export function listNameStatusBetween(repoRoot: string, fromHead: string, toHead: string): PorcelainEntry[] | null {
+  const result = runProcess("git", ["diff", "--name-status", "-z", fromHead, toHead], { cwd: repoRoot });
+  if (result.error || (result.status ?? 1) !== 0) {
+    return null;
+  }
+  return parseNameStatusZ(result.stdout ?? "");
+}
+
+export function parseNameStatusZ(output: string): PorcelainEntry[] {
+  const entries: PorcelainEntry[] = [];
+  const parts = output.split("\0");
+  let index = 0;
+  while (index < parts.length) {
+    const status = (parts[index] ?? "").trim();
+    index += 1;
+    if (!status) {
+      continue;
+    }
+    const code = status.slice(0, 1);
+    if (code === "R" || code === "C") {
+      const origPath = toPosix(parts[index] ?? "").replace(/\\/g, "/");
+      index += 1;
+      const pathName = toPosix(parts[index] ?? "").replace(/\\/g, "/");
+      index += 1;
+      if (origPath && pathName) {
+        entries.push({ code: status.slice(0, 2) || code, path: pathName, origPath });
+      }
+      continue;
+    }
+    const pathName = toPosix(parts[index] ?? "").replace(/\\/g, "/");
+    index += 1;
+    if (pathName) {
+      entries.push({ code, path: pathName });
+    }
+  }
+  return entries;
+}
+
 export function computeChangeDigest(repoRoot: string, entries: PorcelainEntry[]): string {
   const diff = gitDiffHead(repoRoot);
   const lines = [`diff:${sha256Hex(diff)}`];

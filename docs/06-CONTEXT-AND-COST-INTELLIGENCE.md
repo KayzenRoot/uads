@@ -8,7 +8,7 @@ The kernel selects the smallest sufficient radius (C0–C5). Severity is monoton
 
 ## Incremental index
 
-`uads index` builds or incrementally refreshes repository intelligence in the sidecar. Git identity (HEAD + dirty porcelain digest) enables reuse without reparsing. Changed files are re-hashed by content so same-size replacements are detected. JS/TS is the first concrete extractor; the graph core is language-extensible. v0.4.0 is not semantic omniscience.
+`uads index` builds or incrementally refreshes repository intelligence in the sidecar. Reuse requires matching Git HEAD **and** a content-aware dirty digest (porcelain plus file bytes), not porcelain text alone. Clean checkouts that move HEAD still merge `git diff --name-status` between the persisted and current commits; unreachable previous HEAD fails closed into a full rebuild. No-Git indexes are never treated as current without revalidation. Discovery is not silently truncated: hitting an injectable file/depth bound marks `complete: false` and blocks impact, Context Packs, and dispatch. JS/TS is the first concrete extractor; conservative `configures`, `documents`, `interface-reference`, and `manifest-reference` edges are emitted from explicit paths only. v0.4.0 is not semantic omniscience.
 
 ## Impact and Context Packs
 

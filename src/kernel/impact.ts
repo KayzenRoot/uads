@@ -9,6 +9,7 @@ import type {
   IndexBundle,
   UnresolvedReference,
 } from "./intelligence-types.js";
+import { IndexIncompleteError } from "./intelligence-types.js";
 
 const DEP_TYPES = new Set(["imports", "requires", "dynamic-import", "manifest-reference"]);
 
@@ -101,6 +102,11 @@ export function analyzeImpact(input: {
 }): ImpactReport {
   if (input.bundle.state.projectId !== input.projectId) {
     throw new Error("cross-project index artifact rejected");
+  }
+  if (input.bundle.state.complete === false || input.bundle.state.truncated) {
+    throw new IndexIncompleteError(
+      input.bundle.state.truncationReason ?? "index is incomplete and cannot drive impact analysis",
+    );
   }
   if (input.radius === "C5" && !input.approveC5) {
     throw new Error("C5 is exceptional and blocked by default");

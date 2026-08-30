@@ -29,6 +29,9 @@
     "unresolvedCount",
     "nodeCount",
     "edgeCount",
+    "complete",
+    "truncated",
+    "truncationReason",
     "files"
   ],
   "properties": {
@@ -55,18 +58,22 @@
     "unresolvedCount": { "type": "integer", "minimum": 0 },
     "nodeCount": { "type": "integer", "minimum": 0 },
     "edgeCount": { "type": "integer", "minimum": 0 },
+    "complete": { "type": "boolean" },
+    "truncated": { "type": "boolean" },
+    "truncationReason": { "type": ["string", "null"] },
     "files": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "contentDigest", "kind", "language", "bytes"],
+        "required": ["path", "contentDigest", "kind", "language", "bytes", "hasExportBoundary"],
         "properties": {
           "path": { "type": "string", "minLength": 1 },
           "contentDigest": { "type": "string", "minLength": 1 },
           "kind": { "type": "string", "enum": ["source", "test", "schema", "config", "docs", "manifest", "binary"] },
           "language": { "type": ["string", "null"] },
-          "bytes": { "type": "integer", "minimum": 0 }
+          "bytes": { "type": "integer", "minimum": 0 },
+          "hasExportBoundary": { "type": "boolean" }
         }
       }
     }
