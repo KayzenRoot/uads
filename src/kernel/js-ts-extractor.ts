@@ -137,6 +137,9 @@ export function resolveRelativeModule(
   for (const ext of RESOLVE_EXT) {
     candidates.push(`${joined}/index${ext}`);
   }
+  if (/\.(js|mjs|cjs)$/i.test(joined)) {
+    candidates.push(joined.replace(/\.jsx?$/i, ".ts"), joined.replace(/\.jsx?$/i, ".tsx"), joined.replace(/\.mjs$/i, ".mts"), joined.replace(/\.cjs$/i, ".cts"));
+  }
   for (const candidate of candidates) {
     const posix = toPosix(candidate).replace(/^\.\//, "");
     if (existing.has(posix)) {

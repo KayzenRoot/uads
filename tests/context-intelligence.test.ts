@@ -32,6 +32,7 @@ describe("context intelligence", () => {
     expect(refs.some((item) => item.specifier === "(computed)" && item.confidence <= 0.2)).toBe(true);
     const existing = new Set(["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts", "src/e.ts"]);
     expect(resolveRelativeModule("src/mod.ts", "./a", existing)).toBe("src/a.ts");
+    expect(resolveRelativeModule("src/mod.ts", "./a.js", existing)).toBe("src/a.ts");
     expect(resolveRelativeModule("src/mod.ts", "../../../etc/passwd", existing)).toBeNull();
   });
 
