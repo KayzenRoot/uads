@@ -52,6 +52,7 @@ Complete only when all are true:
 - Every currently selectable core role has a canonical `agents/uads-*.md` definition
 - Execution evals X1–X9 pass; orchestrator evals remain 9/9
 - Correction 01: content-hashed change digest, authoritative implementer session, assurance ordering, gate evidence contracts, sticky FAIL/BLOCKED, referential/corrupt-state fail-closed
+- Correction 02: test-runner evidence is fail-closed; Vitest process exit is never reclassified from stdout
 - Version is 0.3.0; lint/typecheck/build/tests/validate/npm audit pass
 
 ## Ongoing product DoD

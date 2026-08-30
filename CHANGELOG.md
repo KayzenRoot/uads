@@ -35,7 +35,12 @@ All notable changes to UADS (NexLabs) are documented here.
 - Gate evidence contracts reject summary-only or wrong-kind PASS records
 - Current-digest FAIL/BLOCKED remains blocking until a new digest
 - Active execution artifacts are cross-checked; corrupt evidence/review JSON fails closed
-- Windows Vitest worker RPC teardown timeout after a fully green suite is not treated as a test failure
+
+### Fixed (Correction 02)
+
+- Removed the Vitest wrapper that reclassified a non-zero runner exit as PASS
+- Test status is fail-closed: Vitest process exit code is the only PASS/FAIL authority
+- Upgraded the test runner to stable Vitest 4.1.x so the `onTaskUpdate` RPC timeout no longer occurs
 
 ## [0.2.0] - 2026-08-29
 
