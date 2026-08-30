@@ -23,6 +23,7 @@ import {
 } from "./routing.js";
 import { inspectCurrentState, persistPlan, readContextPlan, readCurrentCheckpoint, readRoutingDecision, readWorkOrder } from "./persist.js";
 import { loadExecutionView } from "./execution.js";
+import { readFailureStatusFields } from "./failure-persist.js";
 import { buildImpactAndPack } from "./intelligence.js";
 import { resolveProjectContext } from "./project-context.js";
 import type {
@@ -358,6 +359,7 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     : null;
   const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
   const contextPlan = readContextPlan(ctx.paths);
+  const failure = readFailureStatusFields(ctx.paths);
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
@@ -384,5 +386,10 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     contextPackId: contextPlan?.contextPackId ?? null,
     impactReportId: contextPlan?.impactReportId ?? null,
     indexDigest: contextPlan?.indexDigest ?? null,
+    activeFailureId: failure.activeFailureId,
+    failureSignaturePrefix: failure.failureSignaturePrefix,
+    diagnosisStatus: failure.diagnosisStatus,
+    loopDetected: failure.loopDetected,
+    recommendedDiagnosticRadius: failure.recommendedDiagnosticRadius,
   };
 }

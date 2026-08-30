@@ -2,6 +2,26 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.5.0] - 2026-08-30
+
+### Added
+
+- Normalized secret-safe failure records with deterministic signatures
+- Fault ranking from stack frames, failing tests, related diffs, Test Map, dependency graph, and Interface Map
+- Diagnostic Context Packs under sidecar `context/diagnostic-packs/` (metadata-first; C5 remains exceptional)
+- Compact per-project Failure Memory with validity, invalidation, and loop detection (N=3, same signature + digest)
+- CLI: `uads failure record`, `uads diagnose`, `uads failures`, `uads failure show`
+- Compact `status` / `resume` failure fields without a repository scan
+- Sanitized failure/diagnosis/memory summaries in review ZIPs
+- Fault eval suite `npm run eval:fault` (FL1–FL10)
+
+### Notes
+
+- Ranking is heuristic, not calibrated probability. Diagnosis is not verified root cause
+- `verified-root-cause` requires a new change digest, passing gates, and independent review
+- Failure `--input` files are not copied into the sidecar or review ZIP
+- Intelligence schemas remain 0.4.0; execution schemas remain 0.3.0
+
 ## [0.4.0] - 2026-08-29
 
 ### Added

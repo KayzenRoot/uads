@@ -1,9 +1,8 @@
 # 14 — Backlog
 
-Prompt 004 delivered the first Context Intelligence layer. Remaining ideas that must **not** land in this increment:
+Prompt 005 delivered fault localization and compact Failure Memory. Remaining ideas that must **not** land in this increment:
 
 - Advanced semantic symbol graph / cross-language AST framework
-- Persistent Failure Memory
 - Full requirement-to-code traceability
 - Ownership/risk maps beyond routing metadata
 - Rich cache analytics dashboard

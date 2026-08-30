@@ -3,6 +3,7 @@ import { readGitSummary } from "../lib/git.js";
 import { readUadsVersion } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
 import { loadExecutionView } from "../kernel/execution.js";
+import { readFailureStatusFields } from "../kernel/failure-persist.js";
 import { readCurrentCheckpoint, readContextPlan, readWorkOrder } from "../kernel/persist.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -26,6 +27,20 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
   const execution = fs.existsSync(paths.workspace)
     ? loadExecutionView({ cwd, uadsHome: options.uadsHome })
     : null;
+  let failure = {
+    activeFailureId: null as string | null,
+    failureSignaturePrefix: null as string | null,
+    diagnosisStatus: null as string | null,
+    loopDetected: false,
+    recommendedDiagnosticRadius: null as string | null,
+  };
+  if (fs.existsSync(paths.workspace)) {
+    try {
+      failure = readFailureStatusFields(paths);
+    } catch {
+      failure = { ...failure, diagnosisStatus: "blocked" };
+    }
+  }
 
   if (options.json) {
     return `${JSON.stringify(
@@ -52,6 +67,11 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         completedReviewers: execution?.completedReviewers ?? [],
         contextPackId: contextPlan?.contextPackId ?? null,
         indexDigest: contextPlan?.indexDigest ?? null,
+        activeFailureId: failure?.activeFailureId ?? null,
+        failureSignaturePrefix: failure?.failureSignaturePrefix ?? null,
+        diagnosisStatus: failure?.diagnosisStatus ?? null,
+        loopDetected: failure?.loopDetected ?? false,
+        recommendedDiagnosticRadius: failure?.recommendedDiagnosticRadius ?? null,
       },
       null,
       2,
@@ -81,6 +101,11 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     `gates: ${workOrder?.qualityGates.join(", ") || "(none)"}`,
     `pendingGates: ${execution?.pendingGates.join(", ") || "(none)"}`,
     `nextAction: ${execution?.executionRunId ? execution.nextAction : checkpoint?.nextAction ?? "(none)"}`,
+    `activeFailureId: ${failure?.activeFailureId ?? "(none)"}`,
+    `failureSignaturePrefix: ${failure?.failureSignaturePrefix ?? "(none)"}`,
+    `diagnosisStatus: ${failure?.diagnosisStatus ?? "(none)"}`,
+    `loopDetected: ${failure?.loopDetected ?? false}`,
+    `recommendedDiagnosticRadius: ${failure?.recommendedDiagnosticRadius ?? "(none)"}`,
     "",
   ].join("\n");
 }

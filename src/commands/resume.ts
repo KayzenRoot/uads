@@ -24,6 +24,13 @@ export function runResumeCommand(input: { cwd?: string; uadsHome?: string; json?
     packet.failedGates?.length ? `failedGates: ${packet.failedGates.join(", ")}` : "",
     packet.requiredReviewers?.length ? `requiredReviewers: ${packet.requiredReviewers.join(", ")}` : "",
     packet.completedReviewers?.length ? `completedReviewers: ${packet.completedReviewers.join(", ")}` : "",
+    packet.activeFailureId ? `activeFailureId: ${packet.activeFailureId}` : "",
+    packet.failureSignaturePrefix ? `failureSignaturePrefix: ${packet.failureSignaturePrefix}` : "",
+    packet.diagnosisStatus ? `diagnosisStatus: ${packet.diagnosisStatus}` : "",
+    packet.loopDetected ? `loopDetected: ${packet.loopDetected}` : "",
+    packet.recommendedDiagnosticRadius
+      ? `recommendedDiagnosticRadius: ${packet.recommendedDiagnosticRadius}`
+      : "",
     `nextAction: ${packet.nextAction}`,
     packet.invalidState ? `invalidState: ${packet.invalidState}` : "",
     "",

@@ -165,6 +165,11 @@ export type ResumePacket = {
   contextPackId?: string | null;
   impactReportId?: string | null;
   indexDigest?: string | null;
+  activeFailureId?: string | null;
+  failureSignaturePrefix?: string | null;
+  diagnosisStatus?: string | null;
+  loopDetected?: boolean;
+  recommendedDiagnosticRadius?: string | null;
 };
 
 export type ContextPlan = {

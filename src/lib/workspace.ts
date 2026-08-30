@@ -93,6 +93,10 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.executionRuns,
     path.join(paths.context, "impact-reports"),
     path.join(paths.context, "packs"),
+    path.join(paths.context, "diagnostic-packs"),
+    path.join(paths.workspace, "failures"),
+    path.join(paths.workspace, "failures", "records"),
+    path.join(paths.workspace, "failures", "diagnoses"),
   ]) {
     fs.mkdirSync(dir, { recursive: true });
   }

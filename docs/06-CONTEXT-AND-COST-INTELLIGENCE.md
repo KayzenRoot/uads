@@ -20,7 +20,11 @@ Each Work Order declares provider-neutral `tokenBudget` with capability class `e
 
 ## Cache-first prompt architecture
 
-Context Packs layer static policy references, semi-stable contracts, then dynamic Work Order items so future prompt adapters can cache. Provider prompt caching is not implemented in v0.4.0.
+Context Packs layer static policy references, semi-stable contracts, then dynamic Work Order items so future prompt adapters can cache. Provider prompt caching is not implemented in v0.5.0.
+
+## Fault localization
+
+When verification fails, UADS normalizes evidence, computes a deterministic signature, ranks hypotheses, and emits the smallest sufficient diagnostic Context Pack. Ranking is heuristic, not calibrated probability. `verified-root-cause` is recorded only after a successful correction with a new change digest, passing gates, and independent review. Compact Failure Memory is advisory unless candidate paths and digests remain valid. The same signature plus the same change digest three times without new evidence is `LOOP_DETECTED`. Diagnostic expansion is one radius step and never jumps to C5.
 
 ## Model routing
 

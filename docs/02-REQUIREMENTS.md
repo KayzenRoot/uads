@@ -10,7 +10,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F2 | Compute a stable project fingerprint and project-id |
 | F3 | Create/read a global sidecar under `~/.uads/workspaces/<project-id>/` |
 | F4 | Default to zero project footprint |
-| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `status`, `resume`, `review` |
+| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `index`, `impact`, `context`, `failure`, `diagnose`, `failures`, `status`, `resume`, `review` |
 | F6 | Generate a review ZIP outside the project with SHA-256 checksum |
 | F7 | Exclude secrets and heavy/generated directories from review ZIPs |
 | F8 | Global install skeleton populates `~/.uads/{core,skills,agents,adapters,cache,workspaces}` without silent overwrites |
@@ -21,6 +21,9 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F13 | Orchestrator eval suite (`npm run eval:orchestrator`) covers mandatory routing cases including non-selections |
 | F14 | Execution engine dispatches a planned Work Order, binds a change digest, records evidence/reviews, and refuses unsupported completion |
 | F15 | Execution eval suite (`npm run eval:execution`) covers happy path, fail verify, missing review, self-review, scope violation, correction loop, CRITICAL assurance, evidence spoof, and digest/session integrity |
+| F16 | Context Intelligence builds an incremental sidecar index, impact graph, and metadata-first Context Packs |
+| F17 | Fault localization normalizes failures, ranks hypotheses, emits a diagnostic Context Pack, and records compact Failure Memory |
+| F18 | Fault eval suite (`npm run eval:fault`) covers FL1–FL10 |
 
 ## Non-functional
 
@@ -32,6 +35,6 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | NF4 | Token-aware architecture documented even before the orchestrator exists |
 | NF5 | Foundation is tested; CI must pass |
 
-## Future (not Prompt 003)
+## Future (not this increment)
 
-Provider API clients, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings.
+Provider API clients, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis.

@@ -22,7 +22,7 @@ Prompt 002 drives through **plan**. Prompt 003 adds durable execution runs under
 
 Dirty pre-existing worktrees block dispatch. UADS does not reset, stash, or delete user files. Active checkpoint, Work Order, routing decision, run, and packet IDs are cross-checked. Corrupt evidence/review JSON fails closed rather than disappearing from the audit history.
 
-Prompt 004 adds sidecar `index/index-state.json`, `dependency-graph.json`, `test-map.json`, `interface-map.json`, plus `context/packs/` and `context/impact-reports/`. These are lazily created on first v0.4.0 use. Engine 0.4.1 index state records completeness; a truncated index is stale and cannot drive impact, Context Packs, or dispatch. Existing v0.3.0 Work Orders, execution runs, evidence, and reviews are preserved. `uads resume` / `uads status` still do not walk or reparse the repository.
+Prompt 004 adds sidecar `index/index-state.json`, `dependency-graph.json`, `test-map.json`, `interface-map.json`, plus `context/packs/` and `context/impact-reports/`. Prompt 005 adds `failures/records/`, `failures/diagnoses/`, `failures/memory.json`, and `context/diagnostic-packs/`. These are lazily created on first use. Engine 0.4.1 index state records completeness; a truncated index is stale and cannot drive impact, Context Packs, dispatch, or diagnosis. Existing v0.3.0 Work Orders, execution runs, evidence, and reviews are preserved. `uads resume` / `uads status` still do not walk or reparse the repository; they may read compact failure cursor fields from the sidecar.
 
 ## Work orders
 

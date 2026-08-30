@@ -28,6 +28,8 @@ import {
   readRequiredExecutionPacket,
 } from "./execution-persist.js";
 import { assertActiveExecutionConsistency } from "./execution-integrity.js";
+import { collectFailureSnapshot, readFailureCursor } from "./failure-persist.js";
+import { markVerifiedResolution } from "./failure-memory.js";
 import { buildImpactAndPack } from "./intelligence.js";
 import type {
   ChangeSet,
@@ -1184,6 +1186,21 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     contextPlan,
     schemaRoot,
   );
+  try {
+    const cursor = readFailureCursor(ctx.paths);
+    if (cursor?.failureRecordId && updated.currentChangeDigest) {
+      markVerifiedResolution({
+        paths: ctx.paths,
+        projectId: ctx.projectId,
+        failureRecordId: cursor.failureRecordId,
+        changeDigest: updated.currentChangeDigest,
+        evidenceRefs: [`execution:${updated.executionRunId}`, `digest:${updated.currentChangeDigest}`],
+        schemaRoot,
+      });
+    }
+  } catch {
+    // Finalize remains valid when no reusable failure memory exists.
+  }
   return { run: updated };
 }
 
@@ -1337,5 +1354,6 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
       }
     }
   }
+  files.push(...collectFailureSnapshot(paths));
   return files;
 }

@@ -71,6 +71,21 @@ Complete only when all are true:
 - Correction 02: lexically conservative JS/TS extraction, stateless computed-import evidence, reverse docs/config impact
 - lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
 
+## Prompt 005 increment
+
+Complete only when all are true:
+
+- Version is 0.5.0
+- Normalized failure records, deterministic signatures, ranked hypotheses, and diagnostic Context Packs persist in the sidecar
+- Compact Failure Memory is valid only when candidate paths and digests still match; otherwise historical
+- Loop detection fires on the same signature plus the same change digest three times without new evidence
+- C5 remains exceptional; diagnostic expansion is one radius step
+- `uads failure record`, `uads diagnose`, `uads failures`, and `uads failure show` work
+- `status` / `resume` expose compact failure fields without a repository scan
+- Review ZIPs include sanitized failure/diagnosis/memory summaries and no raw `--input` copies
+- Fault evals FL1–FL10 pass; orchestrator 9/9, execution X1–X9, and context CCI1–CCI19 remain green
+- lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
+
 ## Ongoing product DoD
 
 A work order is done only with evidence for selected gates, footprint, independent review when implementation occurred, and (when requested) a review bundle.

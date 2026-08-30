@@ -1,5 +1,19 @@
 # 03 — Scope
 
+## In scope (Prompt 005)
+
+- Normalized failure records, deterministic signatures, and secret-safe persist
+- Fault ranking from stack, failing tests, related diffs, Test Map, dependency graph, and Interface Map
+- Diagnostic Context Packs (metadata-first, radius-bound; C5 remains exceptional)
+- Compact per-project Failure Memory with validity/invalidation and loop detection
+- CLI: `failure record`, `diagnose`, `failures`, `failure show`
+- Fault evals FL1–FL10
+
+## In scope (Prompt 004, preserved)
+
+- Incremental sidecar index, JS/TS graph, test/interface maps, impact reports, Context Packs
+- CLI: `index`, `impact`, `context pack`, one-level `context expand`
+
 ## In scope (Prompt 003)
 
 - Bounded execution lifecycle: dispatch, implement, verify, independent review, finalize
@@ -14,6 +28,13 @@
 - Sidecar Work Orders, routing decisions, checkpoints, repository-map cache
 - CLI: `inspect`, `plan --request` (fallback), `plan --intake`, `status`, `resume`
 - Cursor user-level `uads-*` adapter (isolated HOME in tests)
+
+## Out of scope (Prompt 005)
+
+- Provider/model diagnosis, embeddings, vector DB
+- Rich failure analytics dashboards
+- 30+ specialist catalog, marketplace, deep UGAS integration
+- AST-for-all languages, network calls from the kernel
 
 ## Out of scope (Prompt 003)
 

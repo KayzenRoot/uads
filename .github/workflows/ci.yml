@@ -44,6 +44,9 @@ jobs:
       - name: Context eval
         run: npm run eval:context
 
+      - name: Fault eval
+        run: npm run eval:fault
+
       - name: Skills preflight
         run: npm run validate:skills
 

@@ -20,9 +20,10 @@ Host-side semantic protocol for the deterministic UADS kernel. Do not dump the r
 5. Invoke selected implementation specialist(s) from the Work Order. Edit only NECESSARY scope.
 6. `uads verify` — binds a change digest. Do not claim gates passed.
 7. Run selected gates in the host terminal. `uads evidence record` for each selected non-review gate.
-8. `uads assurance start`, then distinct reviewer session(s). `uads assurance record`.
-9. On `CORRECTION_NEEDED`, return to implementation, re-verify (new digest), and re-review.
-10. `uads finalize` is the only completion gate. Then `uads review` if a ZIP is required.
+8. On FAIL/BLOCKED: `uads failure record` then `uads diagnose`. Treat ranked paths as hypotheses, not verified root cause.
+9. `uads assurance start`, then distinct reviewer session(s). `uads assurance record`.
+10. On `CORRECTION_NEEDED`, return to implementation, re-verify (new digest), and re-review.
+11. `uads finalize` is the only completion gate. Then `uads review` if a ZIP is required.
 
 The user should not pick specialists by hand. Routing controls that. Prefer native subagents for isolated reviewer context. If independence cannot be met, record BLOCKED — never self-approve.
 

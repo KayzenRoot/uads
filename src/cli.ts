@@ -13,6 +13,13 @@ import { runResumeCommand } from "./commands/resume.js";
 import { runReview } from "./commands/review.js";
 import { runStatus } from "./commands/status.js";
 import { runVerifyCommand } from "./commands/verify.js";
+import {
+  runDiagnoseCommand,
+  runFailureRecordCommand,
+  runFailureResolveCommand,
+  runFailureShowCommand,
+  runFailuresCommand,
+} from "./commands/failure.js";
 import { readUadsVersion } from "./lib/version.js";
 
 const program = new Command();
@@ -219,6 +226,74 @@ context
         approveC5: options.approveC5,
       }),
     );
+  });
+
+const failure = program.command("failure").description("Normalized failure records, diagnosis, and Failure Memory");
+failure
+  .command("record")
+  .description("Normalize and persist a secret-safe failure record (does not copy the input file)")
+  .requiredOption("--source <source>", "test | lint | typecheck | build | runtime | gate | manual-evidence")
+  .option("--command <text>", "failing command identity")
+  .option("--exit-code <n>", "process exit code")
+  .requiredOption("--input <file>", "repo- or sidecar-safe file containing failure text")
+  .option("--work-order <id>", "bound Work Order id")
+  .option("--execution-run <id>", "bound execution run id")
+  .option("--json", "JSON output")
+  .action(
+    (options: {
+      source: string;
+      command?: string;
+      exitCode?: string;
+      input: string;
+      workOrder?: string;
+      executionRun?: string;
+      json?: boolean;
+    }) => {
+      process.stdout.write(
+        runFailureRecordCommand({
+          json: options.json,
+          source: options.source,
+          command: options.command,
+          exitCode: options.exitCode,
+          inputPath: options.input,
+          workOrder: options.workOrder,
+          executionRun: options.executionRun,
+        }),
+      );
+    },
+  );
+failure
+  .command("show")
+  .description("Show a persisted failure record and latest diagnosis")
+  .argument("<id>", "failure record id")
+  .option("--json", "JSON output")
+  .action((id: string, options: { json?: boolean }) => {
+    process.stdout.write(runFailureShowCommand({ json: options.json, failureRecordId: id }));
+  });
+failure
+  .command("resolve")
+  .description("Mark verified root cause only after a completed execution with a new change digest")
+  .requiredOption("--failure <id>", "failure record id")
+  .option("--json", "JSON output")
+  .action((options: { failure: string; json?: boolean }) => {
+    process.stdout.write(runFailureResolveCommand({ json: options.json, failureRecordId: options.failure }));
+  });
+
+program
+  .command("diagnose")
+  .description("Rank fault hypotheses and emit a diagnostic Context Pack for a failure record")
+  .requiredOption("--failure <id>", "failure record id")
+  .option("--json", "JSON output")
+  .action((options: { failure: string; json?: boolean }) => {
+    process.stdout.write(runDiagnoseCommand({ json: options.json, failureRecordId: options.failure }));
+  });
+
+program
+  .command("failures")
+  .description("List compact Failure Memory entries for this project")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => {
+    process.stdout.write(runFailuresCommand({ json: options.json }));
   });
 
 program
