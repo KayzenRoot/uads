@@ -16,11 +16,29 @@ The kernel selects the smallest sufficient radius (C0–C5). Severity is monoton
 
 ## Token budget manager
 
-Each Work Order declares provider-neutral `tokenBudget` with capability class `economy | balanced | strong | critical`. Crossing the hard limit is a stop condition. Pack token estimates are labeled `byte-heuristic` unless a provider tokenizer exists.
+Each Work Order declares provider-neutral `tokenBudget` with capability class `economy | balanced | strong | critical`. Soft overflow warns and recommends reuse or a narrower radius. Hard overflow is fail-closed: dispatch or context expansion that would exceed the hard limit is blocked. Pack token estimates are labeled `byte-heuristic`; they are not provider tokenizer counts.
+
+## Evidence Cache
+
+`uads verify` evaluates eligible gates against sidecar cache records. A HIT requires matching project, gate contract, tool identity, and the proven validity basis (candidate/source, dependency/interface/test neighbors, manifests/lock/config). Unrelated files outside that basis do not globally invalidate eligible evidence. Incomplete, truncated, corrupt, or cross-project cache/index state fails closed (MISS/STALE/NOT_REUSABLE/BLOCKED), never PASS.
+
+Population happens only from authoritative PASS evidence. A HIT writes a **new** current-digest evidence record with `source=cache-reuse` and pointers to the cache record and decision. The originating record is not mutated. Current-digest FAIL/BLOCKED stays sticky.
+
+Eligible in v0.6.0: `static`, `unit-test`, `contract-test`, `build`, `web3-unit`, and `integration-test` when environment identity is present. Not reusable across a changed digest: independent review, `security-review`, `performance-check`, architecture/migration/rollback, Web3 fuzz/invariant, financial/simulation invariants, `release-check`, and any gate whose validity cannot be proven.
+
+`uads cache status` is a cheap sidecar read. `uads cache explain --gate` returns the decision, reason codes, and changed validity inputs.
+
+## Cost Governor
+
+The governor records allow/warn/block/reuse outcomes with reason codes. It avoids recommending a redundant eligible gate rerun when a valid HIT exists, and can reuse an unchanged Context Pack identity without rereading source. It must not skip required non-reusable gates, uncertain validity, or user-requested fresh evidence recording.
+
+QPT is `verifiedQualityCoverage / max(1, estimatedContextTokens/1000)`. It is not dollars, latency, or observed provider tokens. `agentCallsReported` stays null unless the host reports calls.
+
+`uads cost status` / `uads cost explain` read ledger/QPT without a repository scan.
 
 ## Cache-first prompt architecture
 
-Context Packs layer static policy references, semi-stable contracts, then dynamic Work Order items so future prompt adapters can cache. Provider prompt caching is not implemented in v0.5.0.
+Context Packs expose optional `staticLayerDigest`, `semiStableLayerDigest`, and `dynamicLayerDigest` for provider-neutral cacheability. Provider prompt-caching APIs are not implemented.
 
 ## Fault localization
 

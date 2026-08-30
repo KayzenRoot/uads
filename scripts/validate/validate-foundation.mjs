@@ -120,6 +120,7 @@ runNpmGate(["run", "eval:orchestrator"]);
 runNpmGate(["run", "eval:execution"]);
 runNpmGate(["run", "eval:context"]);
 runNpmGate(["run", "eval:fault"]);
+runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "validate:skills"]);
 
 const cli = path.join(root, "dist", "cli.js");
@@ -137,7 +138,7 @@ for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) 
     process.exit(1);
   }
   if (args[0] === "--help") {
-    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "status", "resume", "review", "doctor"]) {
+    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "status", "resume", "review", "doctor"]) {
       if (!result.stdout.includes(command)) {
         process.stderr.write(`CLI help missing command: ${command}\n`);
         process.exit(1);

@@ -170,6 +170,9 @@ export type ResumePacket = {
   diagnosisStatus?: string | null;
   loopDetected?: boolean;
   recommendedDiagnosticRadius?: string | null;
+  cacheReusableRecords?: number;
+  costBudgetStatus?: string;
+  qptRatio?: number | null;
 };
 
 export type ContextPlan = {

@@ -101,6 +101,9 @@
         }
       }
     },
+    "staticLayerDigest": { "type": "string" },
+    "semiStableLayerDigest": { "type": "string" },
+    "dynamicLayerDigest": { "type": "string" },
     "expansionHistory": {
       "type": "array",
       "items": {

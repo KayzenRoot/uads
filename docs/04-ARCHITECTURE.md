@@ -26,7 +26,8 @@ Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reser
 | routing | Domain/specialist/gate routing (provider-neutral) |
 | context | Context radius C0–C5, incremental index, impact graph, metadata-first Context Packs, diagnostic packs |
 | failure | Normalized failure records, fault ranking, Failure Memory, loop/escalation |
-| cost | Token budget by capability class: economy / balanced / strong / critical |
+| cost | Token budget by capability class plus Cost Governor, ledger, and QPT snapshot |
+| cache | Evidence Cache validity, reuse policy, and derived current-digest evidence |
 | risk | Structured-signal risk classification |
 | gates | Selected quality/security/performance gates |
 | state | Atomic sidecar checkpoints, execution runs, and resume packets |

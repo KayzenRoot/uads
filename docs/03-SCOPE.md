@@ -1,5 +1,14 @@
 # 03 — Scope
 
+## In scope (Prompt 006)
+
+- Evidence Cache with deterministic validity basis, conservative gate reuse policy, and explainable decisions
+- Cache population from authoritative PASS only; derived cache-reuse evidence on the current digest
+- Cost Governor allow/warn/block/reuse decisions and operational soft/hard token budgets
+- Provider-neutral QPT snapshot with a documented heuristic formula
+- CLI: `cache status`, `cache explain`, `cost status`, `cost explain`
+- Cost evals CC1–CC14
+
 ## In scope (Prompt 005)
 
 - Normalized failure records, deterministic signatures, and secret-safe persist

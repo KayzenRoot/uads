@@ -120,6 +120,14 @@ export function persistContextPack(paths: UadsPaths, pack: ContextPack, schemaRo
   return sanitized;
 }
 
+export function readCurrentContextPack(paths: UadsPaths, schemaRoot?: string): ContextPack | null {
+  const parsed = readJsonIfValid<{ contextPackId?: string }>(intelligencePaths(paths).currentPack);
+  if (!parsed.ok || !parsed.value.contextPackId) {
+    return null;
+  }
+  return readContextPack(paths, parsed.value.contextPackId, schemaRoot);
+}
+
 export function readContextPack(paths: UadsPaths, contextPackId: string, schemaRoot?: string): ContextPack | null {
   const parsed = readJsonIfValid<ContextPack>(sidecarJsonPath(intelligencePaths(paths).contextPacks, contextPackId));
   if (!parsed.ok) return null;

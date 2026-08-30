@@ -29,8 +29,11 @@ import {
 } from "./execution-persist.js";
 import { assertActiveExecutionConsistency } from "./execution-integrity.js";
 import { collectFailureSnapshot, readFailureCursor } from "./failure-persist.js";
+import { applyEligibleCacheHits, populateCacheFromEvidence } from "./cache-engine.js";
+import { collectCacheCostSnapshot } from "./cache-cost-snapshot.js";
+import { CostBudgetError, enforceTokenBudget, noteGovernorEvent, refreshQptSnapshot } from "./cost-governor.js";
 import { markVerifiedResolution } from "./failure-memory.js";
-import { buildImpactAndPack } from "./intelligence.js";
+import { buildImpactAndPack, currentOrRefreshIndex } from "./intelligence.js";
 import type {
   ChangeSet,
   EvidenceKind,
@@ -427,16 +430,32 @@ export function runDispatch(input: {
       ? existing.executionRunId
       : newPrefixedId("er", `${workOrder.workOrderId}:${createdAt}`);
   const gitHead = readGitSummary(ctx.repoRoot).head;
-  const intel = buildImpactAndPack({
-    repoRoot: ctx.repoRoot,
-    projectId: ctx.projectId,
-    paths: ctx.paths,
-    radius: workOrder.contextRadius,
-    workOrder,
-    executionRunId,
-    expansionHistory: existing?.expansionHistory ?? [],
-    schemaRoot,
-  });
+  let intel: ReturnType<typeof buildImpactAndPack>;
+  try {
+    intel = buildImpactAndPack({
+      repoRoot: ctx.repoRoot,
+      projectId: ctx.projectId,
+      paths: ctx.paths,
+      radius: workOrder.contextRadius,
+      workOrder,
+      executionRunId,
+      expansionHistory: existing?.expansionHistory ?? [],
+      schemaRoot,
+    });
+    enforceTokenBudget({
+      paths: ctx.paths,
+      workOrder,
+      estimatedTokens: intel.pack.estimatedTokens,
+      subject: "dispatch",
+      executionRunId,
+      schemaRoot,
+    });
+  } catch (error) {
+    if (error instanceof CostBudgetError) {
+      throw new ExecutionBlockedError(error.message, ["hard token budget exceeded"]);
+    }
+    throw error;
+  }
 
   const run: ExecutionRun = {
     schema: "uads.execution-run",
@@ -622,11 +641,83 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
   persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
   const evidence = listEvidenceRecords(ctx.paths, updated.executionRunId, schemaRoot);
   const reviews = listReviewRecords(ctx.paths, updated.executionRunId, schemaRoot);
-  const gates = deriveGateStates({
+  let gates = deriveGateStates({
     selectedGates: updated.selectedGates,
     digest: updated.currentChangeDigest,
     evidence,
     reviews,
+  });
+  let bundle = null;
+  try {
+    bundle = currentOrRefreshIndex({
+      repoRoot: ctx.repoRoot,
+      projectId: ctx.projectId,
+      paths: ctx.paths,
+      schemaRoot,
+    });
+  } catch {
+    bundle = null;
+  }
+  const reused = applyEligibleCacheHits({
+    paths: ctx.paths,
+    run: updated,
+    bundle,
+    gateStates: gates,
+    schemaRoot,
+  });
+  if (reused.applied.length > 0) {
+    const nextRefs = unique([
+      ...updated.evidenceRefs,
+      ...reused.applied.map((item) => `sidecar://execution-runs/${updated.executionRunId}/evidence/${item.evidenceId}.json`),
+    ]);
+    const withReuse = touchRun(updated, { evidenceRefs: nextRefs });
+    persistExecutionRun({ paths: ctx.paths, run: withReuse, schemaRoot });
+    Object.assign(updated, withReuse);
+    noteGovernorEvent({
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      outcome: "reuse",
+      reasonCodes: ["CACHE_HIT", "AVOIDED_ELIGIBLE_GATE_RERUN"],
+      subject: "verify-cache-hit",
+      patch: {
+        gateCacheHits: reused.applied.length,
+        evidenceReuseCount: reused.applied.length,
+        avoidedToolExecutions: reused.applied.length,
+      },
+      schemaRoot,
+    });
+  }
+  const misses = reused.decisions.filter((item) => item.decision !== "HIT" && item.executionRequired).length;
+  if (misses > 0) {
+    noteGovernorEvent({
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      outcome: "allow",
+      reasonCodes: ["CACHE_MISS_OR_STALE"],
+      subject: "verify-cache-miss",
+      patch: { gateCacheMisses: misses },
+      schemaRoot,
+    });
+  }
+  const evidenceAfter = listEvidenceRecords(ctx.paths, updated.executionRunId, schemaRoot);
+  gates = deriveGateStates({
+    selectedGates: updated.selectedGates,
+    digest: updated.currentChangeDigest,
+    evidence: evidenceAfter,
+    reviews,
+  });
+  refreshQptSnapshot({
+    paths: ctx.paths,
+    projectId: ctx.projectId,
+    requiredGatesTotal: updated.selectedGates.length,
+    requiredGatesSatisfiedCurrent: gates.filter((gate) => gate.status === "PASS").length,
+    requiredIndependentReview: updated.requiredReviewers.length > 0 ? "pending" : "not-required",
+    contextRadius: updated.contextRadius,
+    schemaRoot,
   });
   const nextCheckpoint: Checkpoint = {
     ...checkpoint,
@@ -827,8 +918,33 @@ export function runEvidenceRecord(input: {
     outputDigest: copied.outputDigest,
     fileRef: fileProof.fileRef,
     fileDigest: fileProof.fileDigest,
+    source: "executed",
   };
   persistEvidenceRecord({ paths: ctx.paths, record, schemaRoot });
+  if (status === "PASS") {
+    try {
+      const bundle = currentOrRefreshIndex({
+        repoRoot: ctx.repoRoot,
+        projectId: ctx.projectId,
+        paths: ctx.paths,
+        schemaRoot,
+      });
+      populateCacheFromEvidence({ paths: ctx.paths, run, record, bundle, schemaRoot });
+    } catch {
+      // Cache population is best-effort and must not reject accepted evidence.
+    }
+  }
+  noteGovernorEvent({
+    paths: ctx.paths,
+    projectId: ctx.projectId,
+    workOrderId: run.workOrderId,
+    executionRunId: run.executionRunId,
+    outcome: "allow",
+    reasonCodes: status === "PASS" ? ["GATE_EXECUTED"] : ["GATE_EXECUTED_NON_PASS"],
+    subject: `evidence-record:${sanitizeOperationalText(input.gateId)}`,
+    patch: { gateExecutions: 1, toolExecutions: 1 },
+    schemaRoot,
+  });
 
   const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
   const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
@@ -1158,10 +1274,19 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
   }
 
   const completedAt = nowIso();
+  const reusedCount = evidence.filter(
+    (item) => item.changeDigest === run.currentChangeDigest && item.source === "cache-reuse" && item.status === "PASS",
+  ).length;
+  const executedCount = evidence.filter(
+    (item) => item.changeDigest === run.currentChangeDigest && item.source !== "cache-reuse" && item.status === "PASS",
+  ).length;
   const updated = touchRun(run, {
     phase: "stopped",
     status: "completed",
-    nextAction: "Generate a review ZIP if required. Do not deploy or transfer funds.",
+    nextAction:
+      reusedCount > 0
+        ? `Completed with ${executedCount} executed PASS and ${reusedCount} cache-reuse PASS. Generate a review ZIP if required. Do not deploy or transfer funds.`
+        : "Generate a review ZIP if required. Do not deploy or transfer funds.",
   });
   persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
   const completedWorkOrder: WorkOrder = {
@@ -1250,15 +1375,42 @@ export function runContextExpand(input: {
     ...run.expansionHistory,
     { from: run.contextRadius, to: next, reason: sanitizeOperationalText(input.reason), at: nowIso() },
   ];
-  const intel = buildImpactAndPack({
-    repoRoot: ctx.repoRoot,
-    projectId: ctx.projectId,
+  let intel: ReturnType<typeof buildImpactAndPack>;
+  try {
+    intel = buildImpactAndPack({
+      repoRoot: ctx.repoRoot,
+      projectId: ctx.projectId,
+      paths: ctx.paths,
+      radius: next,
+      workOrder,
+      executionRunId: run.executionRunId,
+      expansionHistory,
+      approveC5: input.approveC5,
+      schemaRoot,
+    });
+    enforceTokenBudget({
+      paths: ctx.paths,
+      workOrder,
+      estimatedTokens: intel.pack.estimatedTokens,
+      subject: `context-expand:${next}`,
+      executionRunId: run.executionRunId,
+      schemaRoot,
+    });
+  } catch (error) {
+    if (error instanceof CostBudgetError) {
+      throw new ExecutionBlockedError(error.message, ["hard token budget exceeded"]);
+    }
+    throw error;
+  }
+  noteGovernorEvent({
     paths: ctx.paths,
-    radius: next,
-    workOrder,
+    projectId: ctx.projectId,
+    workOrderId: run.workOrderId,
     executionRunId: run.executionRunId,
-    expansionHistory,
-    approveC5: input.approveC5,
+    outcome: next === "C5" ? "warn" : "allow",
+    reasonCodes: next === "C5" ? ["CONTEXT_EXPANDED", "C5_EXCEPTIONAL"] : ["CONTEXT_EXPANDED"],
+    subject: `context-expand:${next}`,
+    patch: { contextExpansions: 1, c5Uses: next === "C5" ? 1 : 0 },
     schemaRoot,
   });
   const updated = touchRun(run, {
@@ -1355,5 +1507,6 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
     }
   }
   files.push(...collectFailureSnapshot(paths));
+  files.push(...collectCacheCostSnapshot(paths));
   return files;
 }

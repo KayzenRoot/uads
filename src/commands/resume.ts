@@ -31,6 +31,9 @@ export function runResumeCommand(input: { cwd?: string; uadsHome?: string; json?
     packet.recommendedDiagnosticRadius
       ? `recommendedDiagnosticRadius: ${packet.recommendedDiagnosticRadius}`
       : "",
+    packet.cacheReusableRecords != null ? `cacheReusableRecords: ${packet.cacheReusableRecords}` : "",
+    packet.costBudgetStatus ? `costBudgetStatus: ${packet.costBudgetStatus}` : "",
+    packet.qptRatio != null ? `qptRatio: ${packet.qptRatio}` : "",
     `nextAction: ${packet.nextAction}`,
     packet.invalidState ? `invalidState: ${packet.invalidState}` : "",
     "",

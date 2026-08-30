@@ -2,6 +2,28 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.6.0] - 2026-08-30
+
+### Added
+
+- Deterministic Evidence Cache with sidecar `cache/evidence-index.json`, per-record validity basis, and explainable HIT/MISS/STALE/NOT_REUSABLE/BLOCKED decisions
+- Conservative gate reuse policy: eligible command gates (static, unit-test, contract-test, build, web3-unit, integration-test with env identity) only; reviews/security/migration/Web3 fuzz/invariants stay fresh-required
+- Cost Governor with provider-neutral ledger, hard/soft token-budget enforcement, and documented QPT snapshot (`verifiedQualityCoverage / max(1, estimatedContextTokens/1000)`)
+- CLI: `uads cache status|explain`, `uads cost status|explain`
+- Optional evidence provenance fields (`source`, `sourceCacheRecordId`, `sourceEvidenceId`, `cacheDecisionId`) on existing 0.3.0 evidence records
+- Optional Context Pack layer digests (`staticLayerDigest`, `semiStableLayerDigest`, `dynamicLayerDigest`) on 0.4.0 packs
+- Review ZIP summaries `cache/cache-summary.json` and `cost/cost-summary.json`
+- Cost eval suite `npm run eval:cost` (CC1–CC14)
+
+### Notes
+
+- Cache HIT creates a derived current-digest evidence record; it does not mutate the originating PASS
+- Current-digest FAIL/BLOCKED cannot be hidden by an older cached PASS
+- Unrelated files outside the proven validity basis do not globally invalidate eligible cache
+- Token estimates remain `byte-heuristic`; QPT is not financial cost or a provider tokenizer count
+- `status` / `resume` read compact cache/cost fields without a repository scan
+- Intelligence schemas remain 0.4.0; execution schemas remain 0.3.0; failure schemas remain 0.5.0
+
 ## [0.5.0] - 2026-08-30
 
 ### Added

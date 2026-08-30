@@ -2,6 +2,8 @@ import { computeProjectFingerprint } from "../lib/fingerprint.js";
 import { readGitSummary } from "../lib/git.js";
 import { readUadsVersion } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
+import { readCacheStatusCompact } from "../kernel/cache-engine.js";
+import { readCostStatusCompact } from "../kernel/cost-persist.js";
 import { loadExecutionView } from "../kernel/execution.js";
 import { readFailureStatusFields } from "../kernel/failure-persist.js";
 import { readCurrentCheckpoint, readContextPlan, readWorkOrder } from "../kernel/persist.js";
@@ -41,6 +43,12 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
       failure = { ...failure, diagnosisStatus: "blocked" };
     }
   }
+  const cache = fs.existsSync(paths.workspace)
+    ? readCacheStatusCompact(paths, fingerprint.projectId)
+    : { reusableRecords: 0, staleRecords: 0, notReusableRecords: 0, indexedRecords: 0, indexCorrupt: false };
+  const cost = fs.existsSync(paths.workspace)
+    ? readCostStatusCompact(paths, fingerprint.projectId)
+    : { budgetStatus: "unavailable" as const, qptRatio: null };
 
   if (options.json) {
     return `${JSON.stringify(
@@ -72,6 +80,9 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         diagnosisStatus: failure?.diagnosisStatus ?? null,
         loopDetected: failure?.loopDetected ?? false,
         recommendedDiagnosticRadius: failure?.recommendedDiagnosticRadius ?? null,
+        cacheReusableRecords: cache.reusableRecords,
+        costBudgetStatus: cost.budgetStatus,
+        qptRatio: cost.qptRatio,
       },
       null,
       2,

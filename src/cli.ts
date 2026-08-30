@@ -12,6 +12,8 @@ import { runPlanCommand } from "./commands/plan.js";
 import { runResumeCommand } from "./commands/resume.js";
 import { runReview } from "./commands/review.js";
 import { runStatus } from "./commands/status.js";
+import { runCacheExplainCommand, runCacheStatusCommand } from "./commands/cache.js";
+import { runCostExplainCommand, runCostStatusCommand } from "./commands/cost.js";
 import { runVerifyCommand } from "./commands/verify.js";
 import {
   runDiagnoseCommand,
@@ -294,6 +296,39 @@ program
   .option("--json", "JSON output")
   .action((options: { json?: boolean }) => {
     process.stdout.write(runFailuresCommand({ json: options.json }));
+  });
+
+const cache = program.command("cache").description("Evidence cache status and explainable reuse decisions");
+cache
+  .command("status")
+  .description("Show compact evidence-cache health without rescanning the repository")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => {
+    process.stdout.write(runCacheStatusCommand({ json: options.json }));
+  });
+cache
+  .command("explain")
+  .description("Explain the current cache decision for a gate")
+  .requiredOption("--gate <gate-id>", "gate id")
+  .option("--json", "JSON output")
+  .action((options: { gate: string; json?: boolean }) => {
+    process.stdout.write(runCacheExplainCommand({ json: options.json, gateId: options.gate }));
+  });
+
+const cost = program.command("cost").description("Cost Governor and provider-neutral token economics");
+cost
+  .command("status")
+  .description("Show compact token-budget and QPT status without rescanning the repository")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => {
+    process.stdout.write(runCostStatusCommand({ json: options.json }));
+  });
+cost
+  .command("explain")
+  .description("Explain the current Cost Governor decision")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => {
+    process.stdout.write(runCostExplainCommand({ json: options.json }));
   });
 
 program

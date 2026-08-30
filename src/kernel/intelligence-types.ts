@@ -207,6 +207,9 @@ export type ContextPack = {
   unresolved: UnresolvedReference[];
   excludedSummary: Array<{ path: string; reason: string }>;
   expansionHistory: Array<{ from: string; to: string; reason: string; at: string }>;
+  staticLayerDigest?: string;
+  semiStableLayerDigest?: string;
+  dynamicLayerDigest?: string;
 };
 
 export type IndexBundle = {

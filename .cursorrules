@@ -12,7 +12,7 @@ UADS (Universal Autonomous Development Studio) is a NexLabs project.
 
 ## CLI
 
-Foundation commands: `uads --help`, `uads doctor`, `uads status`, `uads review`.
+Foundation commands: `uads --help`, `uads doctor`, `uads status`, `uads review`. Cache/cost visibility: `uads cache status`, `uads cost status`.
 
 ## Docs
 

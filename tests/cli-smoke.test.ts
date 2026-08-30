@@ -47,6 +47,8 @@ describe("CLI smoke", () => {
     expect(help.stdout).toContain("resume");
     expect(help.stdout).toContain("failure");
     expect(help.stdout).toContain("diagnose");
+    expect(help.stdout).toContain("cache");
+    expect(help.stdout).toContain("cost");
 
     const doctor = runCli(["doctor"]);
     expect(doctor.status).toBe(0);

@@ -88,6 +88,23 @@ Complete only when all are true:
 - Fault evals FL1–FL18 pass; orchestrator 9/9, execution X1–X9, and context CCI1–CCI19 remain green
 - lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
 
+## Prompt 006 increment
+
+Complete only when all are true:
+
+- Version is 0.6.0
+- Evidence Cache schemas and sidecar state exist; HIT requires a proven validity basis
+- Relevant source/dependency/manifest/tool changes invalidate eligible cache; unrelated proven-outside-basis files do not
+- Non-reusable assurance gates remain fresh-required; cache-reuse PASS is auditable and cannot impersonate executed PASS
+- Current-digest FAIL/BLOCKED cannot be hidden by an older cached PASS
+- Cost Governor avoids redundant eligible work and never skips required verification
+- Soft token budget warns; hard token budget is fail-closed
+- QPT snapshot is provider-neutral and documented; no invented prices or agent calls
+- `uads cache status|explain` and `uads cost status|explain` work
+- `status` / `resume` stay cheap and do not rescan the repository
+- Cost evals CC1–CC14 pass; orchestrator 9/9, execution X1–X9, context CCI1–CCI19, and fault FL1–FL18 remain green
+- lint, typecheck, build, tests, skills validation, aggregate validation, and npm audit pass
+
 ## Ongoing product DoD
 
 A work order is done only with evidence for selected gates, footprint, independent review when implementation occurred, and (when requested) a review bundle.

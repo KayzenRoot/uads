@@ -1,3 +1,4 @@
+import { sha256Hex } from "../lib/hash.js";
 import type { ContextRadius } from "./types.js";
 import { newPrefixedId } from "./ids.js";
 import type {
@@ -32,6 +33,14 @@ function layerFor(item: ImpactItem, pathName: string): ContextLayer {
 }
 
 const LAYER_ORDER: Record<ContextLayer, number> = { static: 0, "semi-stable": 1, dynamic: 2 };
+
+export function computeLayerDigest(items: ContextPackItem[], layer: ContextLayer): string {
+  const parts = items
+    .filter((item) => item.layer === layer)
+    .map((item) => `${item.path}:${item.contentDigest}`)
+    .sort((a, b) => a.localeCompare(b));
+  return sha256Hex(parts.join("|") || layer);
+}
 
 export function itemsForRole(pack: ContextPack, role: ContextRole): ContextPackItem[] {
   return pack.items.filter((item) => item.role === role);
@@ -116,5 +125,8 @@ export function buildContextPack(input: {
     unresolved: input.report.unresolved,
     excludedSummary: input.report.excluded,
     expansionHistory: input.expansionHistory,
+    staticLayerDigest: computeLayerDigest(items, "static"),
+    semiStableLayerDigest: computeLayerDigest(items, "semi-stable"),
+    dynamicLayerDigest: computeLayerDigest(items, "dynamic"),
   };
 }

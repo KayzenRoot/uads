@@ -116,6 +116,10 @@ export type EvidenceRecord = {
   outputDigest?: string | null;
   fileRef?: string | null;
   fileDigest?: string | null;
+  source?: "executed" | "cache-reuse";
+  sourceCacheRecordId?: string;
+  sourceEvidenceId?: string;
+  cacheDecisionId?: string;
 };
 
 export type ReviewFinding = {

@@ -22,6 +22,8 @@ import {
   selectSpecialists,
 } from "./routing.js";
 import { inspectCurrentState, persistPlan, readContextPlan, readCurrentCheckpoint, readRoutingDecision, readWorkOrder } from "./persist.js";
+import { readCacheStatusCompact } from "./cache-engine.js";
+import { readCostStatusCompact } from "./cost-persist.js";
 import { loadExecutionView } from "./execution.js";
 import { readFailureStatusFields } from "./failure-persist.js";
 import { buildImpactAndPack } from "./intelligence.js";
@@ -360,6 +362,8 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
   const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
   const contextPlan = readContextPlan(ctx.paths);
   const failure = readFailureStatusFields(ctx.paths);
+  const cache = readCacheStatusCompact(ctx.paths, ctx.projectId);
+  const cost = readCostStatusCompact(ctx.paths, ctx.projectId);
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
@@ -391,5 +395,8 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     diagnosisStatus: failure.diagnosisStatus,
     loopDetected: failure.loopDetected,
     recommendedDiagnosticRadius: failure.recommendedDiagnosticRadius,
+    cacheReusableRecords: cache.reusableRecords,
+    costBudgetStatus: cost.budgetStatus,
+    qptRatio: cost.qptRatio,
   };
 }

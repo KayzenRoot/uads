@@ -9,6 +9,7 @@ Evidence-first delivery requires gates. Prompt 001 implements the **foundation**
 - Unit and CLI smoke tests (`vitest`)
 - Orchestrator routing evals (`npm run eval:orchestrator`)
 - Execution lifecycle evals (`npm run eval:execution`)
+- Context, fault, and cost evals (`npm run eval:context`, `eval:fault`, `eval:cost`)
 - Agent Skills compatibility preflight (`npm run validate:skills`)
 - Validation inventory + CLI smoke (`scripts/validate/validate-foundation.mjs`)
 - Dependency audit (`npm audit`) captured as sidecar evidence
@@ -22,4 +23,4 @@ The planner picks from a canonical registry: static, unit-test, integration-test
 
 Style-only frontend work does not require Web3 fuzzing. DeFi withdrawal requires web3-unit, fuzz, invariant, and security review.
 
-A selected Work Order gate is PASS only with current-digest evidence that matches the gate contract (command gates: command + exit 0 + output digest; review gates: mapped reviewer APPROVED). FAIL/BLOCKED evidence on the current digest stays blocking even if a later PASS is recorded. Unknown or unselected gate IDs cannot satisfy a selected gate. Corrupt evidence JSON fails closed.
+A selected Work Order gate is PASS only with current-digest evidence that matches the gate contract (command gates: command + exit 0 + output digest; review gates: mapped reviewer APPROVED). FAIL/BLOCKED evidence on the current digest stays blocking even if a later PASS is recorded. Cache-reuse PASS is explicit (`source=cache-reuse`) and only allowed for eligible gates whose validity basis still matches. Unknown or unselected gate IDs cannot satisfy a selected gate. Corrupt evidence JSON fails closed.

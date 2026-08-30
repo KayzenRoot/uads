@@ -39,6 +39,10 @@
     "outputRef": { "type": ["string", "null"] },
     "outputDigest": { "type": ["string", "null"] },
     "fileRef": { "type": ["string", "null"] },
-    "fileDigest": { "type": ["string", "null"] }
+    "fileDigest": { "type": ["string", "null"] },
+    "source": { "type": "string", "enum": ["executed", "cache-reuse"] },
+    "sourceCacheRecordId": { "type": "string" },
+    "sourceEvidenceId": { "type": "string" },
+    "cacheDecisionId": { "type": "string" }
   }
 }

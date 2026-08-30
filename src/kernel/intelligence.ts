@@ -1,12 +1,16 @@
 import { findPackageRoot } from "../lib/version.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import type { ContextRadius, WorkOrder } from "./types.js";
+import { applyLedgerPatch } from "./cost-governor.js";
+import { readCostLedger } from "./cost-persist.js";
 import { buildOrRefreshIndex, readRepoIdentity } from "./index-engine.js";
 import {
   assertIndexCurrent,
   assertIndexMatchesProject,
   persistContextPack,
   persistImpactReport,
+  readCurrentContextPack,
+  readImpactReport,
   readIndexBundle,
 } from "./intelligence-persist.js";
 import { analyzeImpact } from "./impact.js";
@@ -21,13 +25,24 @@ export function refreshIndex(input: {
   schemaRoot?: string;
   forceFull?: boolean;
 }): IndexBundle {
-  return buildOrRefreshIndex({
+  const bundle = buildOrRefreshIndex({
     repoRoot: input.repoRoot,
     projectId: input.projectId,
     paths: input.paths,
     schemaRoot: input.schemaRoot ?? findPackageRoot(),
     forceFull: input.forceFull,
   });
+  if (bundle.state.mode === "fullBuild") {
+    try {
+      const current = readCostLedger(input.paths, input.projectId);
+      applyLedgerPatch(input.paths, input.projectId, {
+        fullRepositoryScans: (current?.fullRepositoryScans ?? 0) + 1,
+      });
+    } catch {
+      // Scan accounting must not fail the index build.
+    }
+  }
+  return bundle;
 }
 
 export function currentOrRefreshIndex(input: {
@@ -82,6 +97,22 @@ export function buildImpactAndPack(input: {
     );
   }
   const workOrderId = input.workOrder?.workOrderId ?? null;
+  const executionRunId = input.executionRunId ?? null;
+  const existingPack = readCurrentContextPack(input.paths, schemaRoot);
+  if (
+    existingPack &&
+    existingPack.projectId === input.projectId &&
+    existingPack.workOrderId === workOrderId &&
+    existingPack.executionRunId === executionRunId &&
+    existingPack.contextRadius === input.radius &&
+    existingPack.indexDigest === bundle.state.indexDigest &&
+    !input.requestedPaths?.length
+  ) {
+    const existingReport = readImpactReport(input.paths, existingPack.impactReportId, schemaRoot);
+    if (existingReport && existingReport.indexDigest === bundle.state.indexDigest) {
+      return { bundle, report: existingReport, pack: existingPack };
+    }
+  }
   const explicit = (input.requestedPaths ?? []).length > 0;
   const report = analyzeImpact({
     bundle,

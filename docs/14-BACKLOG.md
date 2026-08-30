@@ -1,11 +1,11 @@
 # 14 — Backlog
 
-Prompt 005 delivered fault localization and compact Failure Memory. Remaining ideas that must **not** land in this increment:
+Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that must **not** land in this increment:
 
 - Advanced semantic symbol graph / cross-language AST framework
 - Full requirement-to-code traceability
 - Ownership/risk maps beyond routing metadata
-- Rich cache analytics dashboard
+- Richer cache analytics / adaptive TTL / shared static metadata cache
 - Vector embeddings / vector database
 - Provider API clients and hard-coded model price tables
 - Full multi-provider model router

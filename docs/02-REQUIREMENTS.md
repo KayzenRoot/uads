@@ -10,7 +10,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F2 | Compute a stable project fingerprint and project-id |
 | F3 | Create/read a global sidecar under `~/.uads/workspaces/<project-id>/` |
 | F4 | Default to zero project footprint |
-| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `index`, `impact`, `context`, `failure`, `diagnose`, `failures`, `status`, `resume`, `review` |
+| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `index`, `impact`, `context`, `failure`, `diagnose`, `failures`, `cache`, `cost`, `status`, `resume`, `review` |
 | F6 | Generate a review ZIP outside the project with SHA-256 checksum |
 | F7 | Exclude secrets and heavy/generated directories from review ZIPs |
 | F8 | Global install skeleton populates `~/.uads/{core,skills,agents,adapters,cache,workspaces}` without silent overwrites |
@@ -24,6 +24,8 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F16 | Context Intelligence builds an incremental sidecar index, impact graph, and metadata-first Context Packs |
 | F17 | Fault localization normalizes failures, ranks hypotheses, emits a diagnostic Context Pack, and records compact Failure Memory |
 | F18 | Fault eval suite (`npm run eval:fault`) covers FL1–FL18 |
+| F19 | Evidence Cache reuses only proven-valid PASS for eligible gates; Cost Governor enforces token budgets and records QPT |
+| F20 | Cost eval suite (`npm run eval:cost`) covers CC1–CC14 |
 
 ## Non-functional
 

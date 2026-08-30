@@ -22,6 +22,10 @@ Incremental sidecar index, JS/TS dependency graph with evidence/confidence, test
 
 Normalized failure records, deterministic signatures, ranked hypotheses, diagnostic Context Packs, compact Failure Memory with post-correction validity/loop detection, CLI `failure`/`diagnose`/`failures`, fault evals FL1–FL18. C5 remains exceptional. Diagnosis is not verified root cause. Repeated diagnosis is not a repeated failure. Failure evidence and verified memory cannot cross code-state boundaries.
 
+## Prompt 006 — Evidence Cache, Cost Governor & Token Economics (complete)
+
+Deterministic evidence reuse with content-aware validity, conservative gate policy, operational soft/hard token budgets, provider-neutral QPT snapshot, CLI `cache`/`cost`, and cost evals CC1–CC14. Reuse never skips a required non-reusable gate. Architecture Freeze v0.2 NECESSARY subsystem; precedes provider/model routing.
+
 ## Next increments (planned)
 
 1. Broader specialist catalog (still not a marketplace)

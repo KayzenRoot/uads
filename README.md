@@ -4,7 +4,7 @@
 
 UADS is a global-first autonomous software engineering orchestration framework. It helps agents build Web2, Web3, SaaS, AI, finance, quant, math-heavy systems and games with architecture discipline, quality gates, security and performance verification, evidence-based delivery, and review bundles for external audit.
 
-This repository is the public open-source UADS product. Prompt 001 delivered the foundation. Prompt 002 added the Orchestrator Kernel. Prompt 003 added bounded execution. Prompt 004 added Context Intelligence. **v0.5.0** adds fault localization and compact Failure Memory: when verification fails, UADS ranks the smallest justified diagnostic set instead of rereading the repository. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+This repository is the public open-source UADS product. Prompt 001 delivered the foundation. Prompt 002 added the Orchestrator Kernel. Prompt 003 added bounded execution. Prompt 004 added Context Intelligence. Prompt 005 added fault localization. **v0.6.0** adds an Evidence Cache and Cost Governor: eligible PASS can be reused only when its validity basis is still proven, and token budgets are enforced without skipping required gates. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -50,6 +50,8 @@ node dist/cli.js status
 node dist/cli.js resume
 node dist/cli.js failure record --source test --input ./fail.txt --json
 node dist/cli.js diagnose --failure <id> --json
+node dist/cli.js cache status --json
+node dist/cli.js cost status --json
 node dist/cli.js review
 ```
 
@@ -67,7 +69,7 @@ Review bundles and validation evidence are written **outside** the project:
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator, execution, context-intelligence, and fault-localization evals |
+| `evals/` | Orchestrator, execution, context, fault, and cost evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Cursor / Codex / generic adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory |
