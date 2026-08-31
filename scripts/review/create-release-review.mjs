@@ -80,7 +80,7 @@ writeJson(path.join(releaseDir, "verification-summary.json"), {
     tag: "v0.7.0",
     targetSha: v070TargetSha,
     expectedSha: "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
-    unchanged: v070Tag?.object?.sha === "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
+    unchanged: v070TargetSha === "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
   },
   validation: {
     version: validation.version,
