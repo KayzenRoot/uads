@@ -120,6 +120,8 @@ export type EvidenceRecord = {
   sourceCacheRecordId?: string;
   sourceEvidenceId?: string;
   cacheDecisionId?: string;
+  reuseProofDigest?: string;
+  gateReuseContractIdentity?: string;
 };
 
 export type ReviewFinding = {

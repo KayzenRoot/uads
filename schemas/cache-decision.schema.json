@@ -39,6 +39,8 @@
     "maySatisfyGate": { "type": "boolean" },
     "liveChangeDigest": { "type": ["string", "null"] },
     "indexDigest": { "type": ["string", "null"] },
+    "gateReuseContractIdentity": { "type": ["string", "null"] },
+    "reuseProofDigest": { "type": ["string", "null"] },
     "createdAt": { "type": "string", "format": "date-time" }
   }
 }

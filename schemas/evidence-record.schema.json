@@ -43,6 +43,8 @@
     "source": { "type": "string", "enum": ["executed", "cache-reuse"] },
     "sourceCacheRecordId": { "type": "string" },
     "sourceEvidenceId": { "type": "string" },
-    "cacheDecisionId": { "type": "string" }
+    "cacheDecisionId": { "type": "string" },
+    "reuseProofDigest": { "type": "string" },
+    "gateReuseContractIdentity": { "type": "string" }
   }
 }

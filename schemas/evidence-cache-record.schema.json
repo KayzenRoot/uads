@@ -18,6 +18,8 @@
     "evidenceKind",
     "originatingChangeDigest",
     "command",
+    "gateReuseContractIdentity",
+    "reuseProofDigest",
     "toolIdentity",
     "environmentIdentity",
     "validityBasisPaths",
@@ -46,6 +48,8 @@
     "evidenceKind": { "type": "string", "enum": ["command", "file", "invariant"] },
     "originatingChangeDigest": { "type": "string", "minLength": 1 },
     "command": { "type": ["string", "null"] },
+    "gateReuseContractIdentity": { "type": "string", "minLength": 1 },
+    "reuseProofDigest": { "type": "string", "minLength": 1 },
     "toolIdentity": {
       "type": "object",
       "additionalProperties": { "type": "string" }

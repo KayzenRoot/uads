@@ -83,6 +83,7 @@ export function runCacheExplainCommand(input: {
       executionRunId: run?.executionRunId ?? null,
       liveChangeDigest: run?.currentChangeDigest ?? null,
       bundle,
+      repoRoot: ctx.repoRoot,
     });
     const payload = {
       gateId: input.gateId,

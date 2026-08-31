@@ -21,8 +21,32 @@ export function seedFrontend(repo: string): void {
   initRepo(repo, "https://github.com/example/uads-exec.git");
   fs.mkdirSync(path.join(repo, "src"), { recursive: true });
   fs.writeFileSync(path.join(repo, "src", "button.css"), "button { color: blue; }\n");
-  fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify({ name: "exec-fixture", version: "1.0.0" }, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(repo, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "exec-fixture",
+        version: "1.0.0",
+        scripts: {
+          test: "vitest run",
+          "unit-test": "vitest run",
+          lint: "echo lint ok",
+          build: "echo build ok",
+        },
+        devDependencies: { vitest: "1.6.0" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   gitCommit(repo, "init");
+}
+
+function recordableGateCommand(gate: string): string {
+  if (gate === "unit-test") return "npm test :: vitest run";
+  if (gate === "static") return "npm run lint :: echo lint ok";
+  if (gate === "build") return "npm run build :: echo build ok";
+  return `npm run ${gate}`;
 }
 
 export function planFrontend(repo: string, home: string) {
@@ -46,7 +70,7 @@ export function recordGates(repo: string, home: string, gates: string[], exitCod
       gateId: gate,
       kind: "command",
       role: "test-engineer",
-      command: `npm run ${gate}`,
+      command: recordableGateCommand(gate),
       exitCode,
       outputPath,
       summary: `${gate} recorded`,

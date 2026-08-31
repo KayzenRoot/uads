@@ -17,10 +17,12 @@ import {
   persistDiagnosisReport,
   persistDiagnosticPack,
   persistFailureRecord,
+  findLatestDiagnosis,
   readFailureMemory,
   readFailureRecord,
 } from "./failure-persist.js";
 import { evaluateMemoryMatch, noteDiagnosisAttempt, upsertFailureOccurrence } from "./failure-memory.js";
+import { incrementCostCounters, noteGovernorEvent } from "./cost-governor.js";
 import { computeFailureSignature } from "./failure-signature.js";
 import type {
   DiagnosisReport,
@@ -325,6 +327,26 @@ export function diagnoseFailure(input: {
     );
   }
 
+  const latestDiagnosis = findLatestDiagnosis(input.paths, record.failureRecordId, schemaRoot);
+  if (
+    latestDiagnosis &&
+    latestDiagnosis.indexDigest === bundle.state.indexDigest &&
+    latestDiagnosis.changeDigest === record.changeDigest
+  ) {
+    noteGovernorEvent({
+      paths: input.paths,
+      projectId: input.projectId,
+      workOrderId: record.workOrderId,
+      executionRunId: record.executionRunId,
+      outcome: "reuse",
+      reasonCodes: ["DIAGNOSIS_REUSED", "IDENTICAL_FAILURE_INDEX_IDENTITY"],
+      subject: "failure-diagnosis",
+      patch: { avoidedToolExecutions: 1 },
+      schemaRoot,
+    });
+    return latestDiagnosis;
+  }
+
   const memory = readFailureMemory(input.paths, input.projectId, schemaRoot);
   const priorMatch = evaluateMemoryMatch({
     projectId: input.projectId,
@@ -412,6 +434,16 @@ export function diagnoseFailure(input: {
     });
     persistDiagnosticPack(input.paths, pack, schemaRoot);
     contextPackRef = pack.contextPackId;
+    incrementCostCounters(
+      input.paths,
+      input.projectId,
+      { estimatedDiagnosticTokens: pack.estimatedTokens },
+      {
+        workOrderId: record.workOrderId,
+        executionRunId: record.executionRunId,
+      },
+      schemaRoot,
+    );
     const extraFolders = new Set(pack.items.map((item) => topFolder(item.path)));
     const seedFolders = new Set(seeds.map(topFolder));
     if ([...extraFolders].some((folder) => !seedFolders.has(folder)) && recommendedRadius === "C4") {

@@ -82,6 +82,7 @@ export function buildImpactAndPack(input: {
   expansionHistory?: Array<{ from: string; to: string; reason: string; at: string }>;
   approveC5?: boolean;
   schemaRoot?: string;
+  persist?: boolean;
 }): { bundle: IndexBundle; report: ImpactReport; pack: ContextPack } {
   const schemaRoot = input.schemaRoot ?? findPackageRoot();
   const bundle = currentOrRefreshIndex({
@@ -135,6 +136,19 @@ export function buildImpactAndPack(input: {
     objective: input.workOrder?.objective ?? null,
     expansionHistory: input.expansionHistory ?? [],
   });
-  persistContextPack(input.paths, pack, schemaRoot);
+  if (input.persist !== false) {
+    persistContextPack(input.paths, pack, schemaRoot);
+  }
   return { bundle, report, pack };
+}
+
+export function publishImpactAndPack(input: {
+  paths: UadsPaths;
+  report: ImpactReport;
+  pack: ContextPack;
+  schemaRoot?: string;
+}): void {
+  const schemaRoot = input.schemaRoot ?? findPackageRoot();
+  persistImpactReport(input.paths, input.report, schemaRoot);
+  persistContextPack(input.paths, input.pack, schemaRoot);
 }

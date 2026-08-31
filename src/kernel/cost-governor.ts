@@ -16,6 +16,7 @@ export const QPT_LIMITATIONS = [
   "byte-heuristic estimates only; not provider tokenizer counts",
   "not a financial cost, latency, or billing score",
   "agentCallsReported stays null unless the host reports them",
+  "estimatedDiagnosticTokens is tracked separately and is not part of the QPT denominator",
 ];
 
 export class CostBudgetError extends Error {
@@ -250,6 +251,7 @@ export function buildQptSnapshot(input: {
     qptRatio: coverage / denom,
     qptFormula: QPT_FORMULA,
     limitations: [...QPT_LIMITATIONS],
+    estimatedDiagnosticTokens: input.ledger.estimatedDiagnosticTokens,
     updatedAt: nowIso(),
   };
 }

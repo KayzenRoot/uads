@@ -62,5 +62,6 @@ export type QptSnapshot = {
   qptRatio: number;
   qptFormula: string;
   limitations: string[];
+  estimatedDiagnosticTokens?: number;
   updatedAt: string;
 };

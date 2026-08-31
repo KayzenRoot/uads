@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { readJsonIfValid } from "../lib/atomic-write.js";
 import { sha256Hex } from "../lib/hash.js";
 import type { UadsPaths } from "../lib/workspace.js";
 import { cachePaths } from "./cache-persist.js";
@@ -8,11 +9,9 @@ import { CACHE_SCHEMA_VERSION } from "./cache-types.js";
 import {
   CACHE_POLICY_IDENTITY,
   collectEnvironmentIdentity,
-  collectToolIdentity,
   isCacheEligibleGate,
   MANIFEST_BASIS_PATHS,
   normalizeCommandIdentity,
-  requiresEnvironmentIdentity,
   reuseClassForGate,
 } from "./cache-policy.js";
 import {
@@ -26,8 +25,34 @@ import {
 import type { EvidenceRecord, ExecutionRun, GateStateSnapshot } from "./execution-types.js";
 import { persistEvidenceRecord } from "./execution-persist.js";
 import { gateDef } from "./gates.js";
+import {
+  buildGateReuseContract,
+  collectToolchainIdentity,
+  computeReuseProofDigest,
+  deriveNormalizedCommandFromMap,
+} from "./gate-reuse-contract.js";
 import { newPrefixedId } from "./ids.js";
 import type { IndexBundle } from "./intelligence-types.js";
+import type { RepositoryMap } from "./types.js";
+
+const CONFIGURE_EDGE_TYPES = new Set(["configures", "manifest-reference"]);
+const CONFIG_FILE_NAMES = [
+  "vitest.config.ts",
+  "vitest.config.js",
+  "vitest.config.mts",
+  "jest.config.js",
+  "jest.config.ts",
+  "jest.config.mjs",
+  "vite.config.ts",
+  "vite.config.js",
+  "webpack.config.js",
+  "babel.config.js",
+  "eslint.config.js",
+  ".eslintrc.json",
+  "foundry.toml",
+  "hardhat.config.ts",
+  "hardhat.config.js",
+] as const;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -43,6 +68,12 @@ function toolIdentityMatches(stored: Record<string, string>, live: Record<string
   return keys.size > 0;
 }
 
+function configPathsFromBundle(bundle: IndexBundle): string[] {
+  return bundle.state.files
+    .map((file) => file.path)
+    .filter((pathName) => CONFIG_FILE_NAMES.some((name) => pathName === name || pathName.endsWith(`/${name}`)));
+}
+
 function compareDigestMap(
   stored: Record<string, string>,
   live: Record<string, string>,
@@ -56,6 +87,34 @@ function compareDigestMap(
     }
   }
   return changed.sort((a, b) => a.localeCompare(b));
+}
+
+function compareCandidateValidity(
+  record: EvidenceCacheRecord,
+  bundle: IndexBundle,
+): { changed: string[]; liveBasisDigests: Record<string, string> } {
+  const changed: string[] = [];
+  const configPaths = configPathsFromBundle(bundle);
+  const unionPaths = new Set([...record.validityBasisPaths, ...configPaths]);
+  const liveBasisDigests: Record<string, string> = {};
+  for (const relative of unionPaths) {
+    const current = bundle.state.files.find((file) => file.path === relative)?.contentDigest;
+    if (!current) {
+      if (record.validityBasisDigests[relative]) {
+        changed.push(`basis:${relative}`);
+      }
+      continue;
+    }
+    liveBasisDigests[relative] = current;
+    const stored = record.validityBasisDigests[relative];
+    if (stored && stored !== current) {
+      changed.push(`basis:${relative}`);
+    }
+    if (!stored && configPaths.includes(relative)) {
+      changed.push(`basis:${relative}`);
+    }
+  }
+  return { changed, liveBasisDigests };
 }
 
 export function manifestDigestsFromBundle(bundle: IndexBundle): Record<string, string> {
@@ -75,9 +134,40 @@ export function buildCacheValidityBasis(
 ): { paths: string[]; digests: Record<string, string>; manifests: Record<string, string> } {
   const seeds = [...seedPaths, ...MANIFEST_BASIS_PATHS];
   const basis = buildValidityBasis(bundle, seeds);
+  const extraPaths = new Set<string>();
+
+  for (const seed of basis.paths) {
+    for (const edge of bundle.graph.edges) {
+      if (!CONFIGURE_EDGE_TYPES.has(edge.type)) {
+        continue;
+      }
+      if (edge.source === seed) {
+        extraPaths.add(edge.target);
+      }
+      if (edge.target === seed) {
+        extraPaths.add(edge.source);
+      }
+    }
+  }
+
+  for (const file of bundle.state.files) {
+    if (CONFIG_FILE_NAMES.some((name) => file.path === name || file.path.endsWith(`/${name}`))) {
+      extraPaths.add(file.path);
+    }
+  }
+
+  const mergedPaths = [...new Set([...basis.paths, ...extraPaths])].sort((a, b) => a.localeCompare(b));
+  const digests: Record<string, string> = {};
+  for (const filePath of mergedPaths) {
+    const digest = bundle.state.files.find((file) => file.path === filePath)?.contentDigest;
+    if (digest) {
+      digests[filePath] = digest;
+    }
+  }
+
   return {
-    paths: basis.paths,
-    digests: basis.digests,
+    paths: Object.keys(digests),
+    digests,
     manifests: manifestDigestsFromBundle(bundle),
   };
 }
@@ -86,17 +176,129 @@ export function indexIsReusable(bundle: IndexBundle): boolean {
   return bundle.state.complete && !bundle.state.truncated && !bundle.state.stale;
 }
 
+function isCacheRecordSemanticallyValid(record: EvidenceCacheRecord): boolean {
+  if (record.evidenceKind === "command" && !record.command) {
+    return false;
+  }
+  if (record.status !== "reusable" || !record.reusable) {
+    return false;
+  }
+  if (!record.gateReuseContractIdentity || !record.reuseProofDigest) {
+    return false;
+  }
+  if (record.reuseClass !== "eligible" || record.evidenceStatus !== "PASS") {
+    return false;
+  }
+  return true;
+}
+
+function listCandidatesForGate(
+  paths: UadsPaths,
+  projectId: string,
+  gateId: string,
+  schemaRoot?: string,
+): EvidenceCacheRecord[] {
+  const ids = listCacheRecordIdsForGate(paths, projectId, gateId);
+  const records: EvidenceCacheRecord[] = [];
+  for (const id of ids) {
+    const record = readEvidenceCacheRecord(paths, id, schemaRoot);
+    if (record) {
+      records.push(record);
+    }
+  }
+  return records.sort((a, b) => {
+    const timeCmp = b.createdAt.localeCompare(a.createdAt);
+    if (timeCmp !== 0) {
+      return timeCmp;
+    }
+    return b.cacheRecordId.localeCompare(a.cacheRecordId);
+  });
+}
+
 function decideKind(input: {
   eligible: boolean;
   blocked: boolean;
   candidate: EvidenceCacheRecord | null;
   changed: string[];
+  contractUnprovable: boolean;
+  allCandidatesStale: boolean;
 }): CacheDecisionKind {
   if (input.blocked) return "BLOCKED";
   if (!input.eligible) return "NOT_REUSABLE";
+  if (input.contractUnprovable) return "NOT_REUSABLE";
+  if (input.allCandidatesStale && input.changed.length > 0) return "STALE";
   if (!input.candidate) return "MISS";
   if (input.changed.length > 0) return "STALE";
   return "HIT";
+}
+
+function readRepositoryMap(paths: UadsPaths): RepositoryMap | null {
+  const parsed = readJsonIfValid<RepositoryMap>(paths.repositoryMap);
+  return parsed.ok ? parsed.value : null;
+}
+
+function evaluateCandidate(input: {
+  record: EvidenceCacheRecord;
+  projectId: string;
+  gateId: string;
+  bundle: IndexBundle;
+  contract: ReturnType<typeof buildGateReuseContract>;
+  liveToolchain: Record<string, string>;
+  liveEnv: string | null;
+  liveManifests: Record<string, string>;
+}): { changed: string[]; semanticallyValid: boolean; reuseProofDigest: string | null } {
+  const changed: string[] = [];
+  if (!isCacheRecordSemanticallyValid(input.record)) {
+    return { changed: ["semantic-invalid"], semanticallyValid: false, reuseProofDigest: null };
+  }
+  if (input.record.projectId !== input.projectId) {
+    return { changed: ["cross-project"], semanticallyValid: false, reuseProofDigest: null };
+  }
+  if (input.record.gateId !== input.gateId) {
+    return { changed: ["gateId"], semanticallyValid: false, reuseProofDigest: null };
+  }
+
+  if (input.contract.contractKind === "command" && !input.contract.derivable) {
+    return { changed: ["gateContractUnprovable"], semanticallyValid: false, reuseProofDigest: null };
+  }
+
+  if (input.record.gateReuseContractIdentity !== input.contract.gateReuseContractIdentity) {
+    changed.push("gateReuseContractIdentity");
+  }
+  if (input.record.policyIdentity !== CACHE_POLICY_IDENTITY) {
+    changed.push("policyIdentity");
+  }
+  if (!toolIdentityMatches(input.record.toolIdentity, input.liveToolchain)) {
+    changed.push("toolIdentity");
+  }
+  if (input.record.environmentIdentity !== input.liveEnv) {
+    changed.push("environmentIdentity");
+  }
+
+  const validity = compareCandidateValidity(input.record, input.bundle);
+  changed.push(...validity.changed);
+  changed.push(...compareDigestMap(input.record.manifestDigests, input.liveManifests, "manifest"));
+
+  const liveProof = computeReuseProofDigest({
+    projectId: input.projectId,
+    gateReuseContractIdentity: input.contract.gateReuseContractIdentity,
+    normalizedCommandIdentity: input.contract.normalizedCommandIdentity,
+    validityBasisDigests: validity.liveBasisDigests,
+    manifestDigests: input.liveManifests,
+    toolIdentity: input.liveToolchain,
+    environmentIdentity: input.liveEnv,
+    policyIdentity: CACHE_POLICY_IDENTITY,
+  });
+
+  if (input.record.reuseProofDigest !== liveProof) {
+    changed.push("reuseProofDigest");
+  }
+
+  return {
+    changed: [...new Set(changed)],
+    semanticallyValid: true,
+    reuseProofDigest: liveProof,
+  };
 }
 
 export function evaluateCache(input: {
@@ -107,16 +309,19 @@ export function evaluateCache(input: {
   executionRunId?: string | null;
   liveChangeDigest?: string | null;
   bundle: IndexBundle | null;
-  liveToolIdentity?: Record<string, string>;
+  repoRoot?: string | null;
+  repositoryMap?: RepositoryMap | null;
   persistDecision?: boolean;
   schemaRoot?: string;
 }): CacheDecision {
   const createdAt = nowIso();
   const eligible = isCacheEligibleGate(input.gateId);
   const reasonCodes: string[] = [];
-  const changed: string[] = [];
+  let changed: string[] = [];
   let candidate: EvidenceCacheRecord | null = null;
   let blocked = false;
+  let contractUnprovable = false;
+  let reuseProofDigest: string | null = null;
 
   if (!eligible) {
     reasonCodes.push("GATE_NOT_REUSABLE");
@@ -135,71 +340,102 @@ export function evaluateCache(input: {
     reasonCodes.push("CACHE_INDEX_CORRUPT");
   }
 
-  const liveTool = collectToolIdentity(input.liveToolIdentity);
+  const map = input.repositoryMap ?? readRepositoryMap(input.paths);
+  const contract = buildGateReuseContract(input.gateId, map);
+  if (eligible && contract.contractKind === "command" && !contract.derivable) {
+    contractUnprovable = true;
+    reasonCodes.push("GATE_CONTRACT_UNPROVABLE");
+  }
+
+  const repoRoot = input.repoRoot ?? process.cwd();
+  const liveToolchain = collectToolchainIdentity(repoRoot, contract.normalizedCommandIdentity, input.bundle);
   const liveEnv = collectEnvironmentIdentity(input.gateId);
   const liveManifests = input.bundle ? manifestDigestsFromBundle(input.bundle) : {};
-
   const bundle = input.bundle;
-  if (eligible && !blocked && index && bundle) {
-    const ids = listCacheRecordIdsForGate(input.paths, input.projectId, input.gateId);
+
+  if (eligible && !blocked && !contractUnprovable && index && bundle) {
+    const candidates = listCandidatesForGate(input.paths, input.projectId, input.gateId, input.schemaRoot);
     let sawCorrupt = false;
-    for (const id of [...ids].reverse()) {
-      const record = readEvidenceCacheRecord(input.paths, id, input.schemaRoot);
-      if (!record) {
-        sawCorrupt = true;
-        continue;
-      }
+    let sawStale = false;
+    let lastStaleChanged: string[] = [];
+
+    for (const record of candidates) {
       if (record.projectId !== input.projectId) {
-        reasonCodes.push("CROSS_PROJECT");
         blocked = true;
+        reasonCodes.push("CROSS_PROJECT");
         candidate = record;
         break;
       }
-      if (record.gateId !== input.gateId || record.evidenceStatus !== "PASS" || record.reuseClass !== "eligible") {
+
+      const evaluation = evaluateCandidate({
+        record,
+        projectId: input.projectId,
+        gateId: input.gateId,
+        bundle,
+        contract,
+        liveToolchain,
+        liveEnv,
+        liveManifests,
+      });
+
+      if (!evaluation.semanticallyValid) {
+        if (evaluation.changed.includes("cross-project")) {
+          blocked = true;
+          candidate = record;
+          break;
+        }
         continue;
       }
-      candidate = record;
-      if (record.policyIdentity !== CACHE_POLICY_IDENTITY) {
-        changed.push("policyIdentity");
+
+      if (evaluation.changed.length === 0 && evaluation.reuseProofDigest) {
+        candidate = record;
+        changed = [];
+        reuseProofDigest = evaluation.reuseProofDigest;
+        break;
       }
-      if (!toolIdentityMatches(record.toolIdentity, liveTool)) {
-        changed.push("toolIdentity");
-      }
-      if (requiresEnvironmentIdentity(input.gateId)) {
-        if (!record.environmentIdentity || record.environmentIdentity !== liveEnv) {
-          changed.push("environmentIdentity");
-        }
-      }
-      const liveBasisDigests: Record<string, string> = {};
-      for (const relative of record.validityBasisPaths) {
-        const current = bundle.state.files.find((file) => file.path === relative)?.contentDigest;
-        if (!current) {
-          changed.push(`basis:${relative}`);
-          continue;
-        }
-        liveBasisDigests[relative] = current;
-      }
-      changed.push(...compareDigestMap(record.validityBasisDigests, liveBasisDigests, "basis"));
-      changed.push(...compareDigestMap(record.manifestDigests, liveManifests, "manifest"));
-      if (record.indexDigest && input.bundle && record.indexDigest !== input.bundle.state.indexDigest) {
-        // Index digest churn alone does not invalidate when the proven basis still matches.
-      }
-      if (changed.length > 0) {
-        markCacheRecordStatus(input.paths, record.cacheRecordId, "stale", changed.join(","), input.schemaRoot);
-      }
-      break;
+
+      sawStale = true;
+      lastStaleChanged = evaluation.changed;
+      markCacheRecordStatus(
+        input.paths,
+        record.cacheRecordId,
+        "stale",
+        evaluation.changed.join(","),
+        input.schemaRoot,
+      );
     }
+
+    if (!candidate && sawStale) {
+      changed = lastStaleChanged;
+    }
+
+    if (!candidate && candidates.length > 0 && !blocked) {
+      if (sawStale) {
+        reasonCodes.push("ALL_CANDIDATES_STALE");
+      } else {
+        reasonCodes.push("NO_VALID_CANDIDATE");
+      }
+    } else if (!candidate && candidates.length === 0) {
+      reasonCodes.push("NO_CANDIDATE");
+    }
+
     if (!candidate && sawCorrupt) {
       blocked = true;
       reasonCodes.push("CACHE_RECORD_CORRUPT");
-    } else if (!candidate) {
-      reasonCodes.push("NO_CANDIDATE");
     }
   }
 
-  const decision = decideKind({ eligible, blocked, candidate, changed: [...new Set(changed)] });
+  const decision = decideKind({
+    eligible,
+    blocked,
+    candidate,
+    changed,
+    contractUnprovable,
+    allCandidatesStale: !candidate && changed.length > 0,
+  });
   if (decision === "HIT") {
     reasonCodes.push("VALIDITY_BASIS_MATCH");
+    reasonCodes.push("GATE_CONTRACT_MATCH");
   } else if (decision === "STALE") {
     reasonCodes.push("VALIDITY_BASIS_CHANGED");
   }
@@ -225,6 +461,8 @@ export function evaluateCache(input: {
     maySatisfyGate: decision === "HIT",
     liveChangeDigest: input.liveChangeDigest ?? null,
     indexDigest: input.bundle?.state.indexDigest ?? null,
+    gateReuseContractIdentity: contract.gateReuseContractIdentity,
+    reuseProofDigest: decision === "HIT" ? reuseProofDigest : null,
     createdAt,
   };
   if (input.persistDecision !== false) {
@@ -239,9 +477,11 @@ export function evaluateCache(input: {
 
 export function populateCacheFromEvidence(input: {
   paths: UadsPaths;
+  repoRoot: string;
   run: ExecutionRun;
   record: EvidenceRecord;
   bundle: IndexBundle;
+  repositoryMap?: RepositoryMap | null;
   schemaRoot?: string;
 }): EvidenceCacheRecord | null {
   if (input.record.status !== "PASS" || input.record.projectId !== input.run.projectId) {
@@ -261,12 +501,42 @@ export function populateCacheFromEvidence(input: {
   if (!indexIsReusable(input.bundle) || input.bundle.state.projectId !== input.run.projectId) {
     return null;
   }
+
+  const map = input.repositoryMap ?? readRepositoryMap(input.paths);
+  const contract = buildGateReuseContract(input.record.gateId, map);
+  const normalizedCommand = normalizeCommandIdentity(input.record.command);
+  if (contract.contractKind === "command") {
+    if (!normalizedCommand || !contract.derivable) {
+      return null;
+    }
+    if (normalizedCommand !== contract.normalizedCommandIdentity) {
+      return null;
+    }
+  }
+
   const basis = buildCacheValidityBasis(input.bundle, input.run.changedFiles);
+  const toolchain = collectToolchainIdentity(input.repoRoot, normalizedCommand, input.bundle);
+  const environmentIdentity = collectEnvironmentIdentity(input.record.gateId);
+  const gateReuseContractIdentity = contract.gateReuseContractIdentity;
+  const reuseProofDigest = computeReuseProofDigest({
+    projectId: input.run.projectId,
+    gateReuseContractIdentity,
+    normalizedCommandIdentity: contract.normalizedCommandIdentity,
+    validityBasisDigests: basis.digests,
+    manifestDigests: basis.manifests,
+    toolIdentity: toolchain,
+    environmentIdentity,
+    policyIdentity: CACHE_POLICY_IDENTITY,
+  });
+
   const createdAt = nowIso();
   const cacheRecord: EvidenceCacheRecord = {
     schema: "uads.evidence-cache-record",
     schemaVersion: CACHE_SCHEMA_VERSION,
-    cacheRecordId: newPrefixedId("ecr", `${input.run.projectId}:${input.record.gateId}:${input.record.outputDigest ?? input.record.fileDigest ?? createdAt}`),
+    cacheRecordId: newPrefixedId(
+      "ecr",
+      `${input.run.projectId}:${input.record.gateId}:${input.record.outputDigest ?? input.record.fileDigest ?? createdAt}`,
+    ),
     projectId: input.run.projectId,
     originatingWorkOrderId: input.record.workOrderId,
     originatingExecutionRunId: input.record.executionRunId,
@@ -275,9 +545,11 @@ export function populateCacheFromEvidence(input: {
     evidenceStatus: "PASS",
     evidenceKind: input.record.kind === "review" ? "command" : input.record.kind,
     originatingChangeDigest: input.record.changeDigest,
-    command: normalizeCommandIdentity(input.record.command),
-    toolIdentity: collectToolIdentity(),
-    environmentIdentity: collectEnvironmentIdentity(input.record.gateId),
+    command: normalizedCommand,
+    gateReuseContractIdentity,
+    reuseProofDigest,
+    toolIdentity: toolchain,
+    environmentIdentity,
     validityBasisPaths: basis.paths,
     validityBasisDigests: basis.digests,
     manifestDigests: basis.manifests,
@@ -296,13 +568,17 @@ export function populateCacheFromEvidence(input: {
 
 export function applyEligibleCacheHits(input: {
   paths: UadsPaths;
+  repoRoot: string;
   run: ExecutionRun;
   bundle: IndexBundle | null;
   gateStates: GateStateSnapshot[];
+  repositoryMap?: RepositoryMap | null;
   schemaRoot?: string;
 }): { applied: EvidenceRecord[]; decisions: CacheDecision[] } {
   const applied: EvidenceRecord[] = [];
   const decisions: CacheDecision[] = [];
+  const map = input.repositoryMap ?? readRepositoryMap(input.paths);
+
   for (const gate of input.run.selectedGates) {
     if (!isCacheEligibleGate(gate)) {
       const decision = evaluateCache({
@@ -313,6 +589,8 @@ export function applyEligibleCacheHits(input: {
         executionRunId: input.run.executionRunId,
         liveChangeDigest: input.run.currentChangeDigest,
         bundle: input.bundle,
+        repoRoot: input.repoRoot,
+        repositoryMap: map,
         schemaRoot: input.schemaRoot,
       });
       decisions.push(decision);
@@ -330,14 +608,22 @@ export function applyEligibleCacheHits(input: {
       executionRunId: input.run.executionRunId,
       liveChangeDigest: input.run.currentChangeDigest,
       bundle: input.bundle,
+      repoRoot: input.repoRoot,
+      repositoryMap: map,
       schemaRoot: input.schemaRoot,
     });
     decisions.push(decision);
     if (decision.decision !== "HIT" || !decision.candidateCacheRecordId || !input.run.currentChangeDigest) {
       continue;
     }
+    if (!decision.reuseProofDigest || !decision.gateReuseContractIdentity) {
+      continue;
+    }
     const cacheRecord = readEvidenceCacheRecord(input.paths, decision.candidateCacheRecordId, input.schemaRoot);
-    if (!cacheRecord || cacheRecord.projectId !== input.run.projectId || !cacheRecord.reusable) {
+    if (!cacheRecord || cacheRecord.projectId !== input.run.projectId || !isCacheRecordSemanticallyValid(cacheRecord)) {
+      continue;
+    }
+    if (cacheRecord.reuseProofDigest !== decision.reuseProofDigest) {
       continue;
     }
     const createdAt = nowIso();
@@ -365,6 +651,8 @@ export function applyEligibleCacheHits(input: {
       sourceCacheRecordId: cacheRecord.cacheRecordId,
       sourceEvidenceId: cacheRecord.evidenceId,
       cacheDecisionId: decision.cacheDecisionId,
+      reuseProofDigest: decision.reuseProofDigest,
+      gateReuseContractIdentity: decision.gateReuseContractIdentity,
     };
     persistEvidenceRecord({ paths: input.paths, record: derived, schemaRoot: input.schemaRoot });
     applied.push(derived);
@@ -405,3 +693,6 @@ export function layerDigestForItems(items: Array<{ layer: string; path: string; 
     .sort((a, b) => a.localeCompare(b));
   return sha256Hex(parts.join("|") || layer);
 }
+
+// re-export for tests that need command derivation
+export { deriveNormalizedCommandFromMap };

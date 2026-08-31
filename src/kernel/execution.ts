@@ -33,7 +33,7 @@ import { applyEligibleCacheHits, populateCacheFromEvidence } from "./cache-engin
 import { collectCacheCostSnapshot } from "./cache-cost-snapshot.js";
 import { CostBudgetError, enforceTokenBudget, noteGovernorEvent, refreshQptSnapshot } from "./cost-governor.js";
 import { markVerifiedResolution } from "./failure-memory.js";
-import { buildImpactAndPack, currentOrRefreshIndex } from "./intelligence.js";
+import { buildImpactAndPack, currentOrRefreshIndex, publishImpactAndPack } from "./intelligence.js";
 import type {
   ChangeSet,
   EvidenceKind,
@@ -441,6 +441,7 @@ export function runDispatch(input: {
       executionRunId,
       expansionHistory: existing?.expansionHistory ?? [],
       schemaRoot,
+      persist: false,
     });
     enforceTokenBudget({
       paths: ctx.paths,
@@ -450,6 +451,7 @@ export function runDispatch(input: {
       executionRunId,
       schemaRoot,
     });
+    publishImpactAndPack({ paths: ctx.paths, report: intel.report, pack: intel.pack, schemaRoot });
   } catch (error) {
     if (error instanceof CostBudgetError) {
       throw new ExecutionBlockedError(error.message, ["hard token budget exceeded"]);
@@ -660,6 +662,7 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
   }
   const reused = applyEligibleCacheHits({
     paths: ctx.paths,
+    repoRoot: ctx.repoRoot,
     run: updated,
     bundle,
     gateStates: gates,
@@ -929,7 +932,14 @@ export function runEvidenceRecord(input: {
         paths: ctx.paths,
         schemaRoot,
       });
-      populateCacheFromEvidence({ paths: ctx.paths, run, record, bundle, schemaRoot });
+      populateCacheFromEvidence({
+        paths: ctx.paths,
+        repoRoot: ctx.repoRoot,
+        run,
+        record,
+        bundle,
+        schemaRoot,
+      });
     } catch {
       // Cache population is best-effort and must not reject accepted evidence.
     }
@@ -1168,6 +1178,32 @@ export function runAssuranceRecord(input: {
   }
 
   persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
+  const evidenceAfterReview = listEvidenceRecords(ctx.paths, updated.executionRunId, schemaRoot);
+  const reviewsAfterReview = listReviewRecords(ctx.paths, updated.executionRunId, schemaRoot);
+  const gatesAfterReview = deriveGateStates({
+    selectedGates: updated.selectedGates,
+    digest: updated.currentChangeDigest,
+    evidence: evidenceAfterReview,
+    reviews: reviewsAfterReview,
+  });
+  const independentReview = reviewsAfterReview.find(
+    (item) => item.reviewerRole === INDEPENDENT_REVIEWER_ROLE && item.changeDigest === run.currentChangeDigest,
+  );
+  let independentStatus: "pending" | "satisfied" | "not-required" = "pending";
+  if (updated.requiredReviewers.length === 0) {
+    independentStatus = "not-required";
+  } else if (independentReview?.verdict === "APPROVED") {
+    independentStatus = "satisfied";
+  }
+  refreshQptSnapshot({
+    paths: ctx.paths,
+    projectId: ctx.projectId,
+    requiredGatesTotal: updated.selectedGates.length,
+    requiredGatesSatisfiedCurrent: gatesAfterReview.filter((gate) => gate.status === "PASS").length,
+    requiredIndependentReview: independentStatus,
+    contextRadius: updated.contextRadius,
+    schemaRoot,
+  });
   writeCheckpoint(
     ctx.paths,
     {
@@ -1289,6 +1325,21 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
         : "Generate a review ZIP if required. Do not deploy or transfer funds.",
   });
   persistExecutionRun({ paths: ctx.paths, run: updated, packet: buildPacket(updated, workOrder), schemaRoot });
+  const gateStatesAfterFinalize = deriveGateStates({
+    selectedGates: updated.selectedGates,
+    digest: updated.currentChangeDigest,
+    evidence,
+    reviews,
+  });
+  refreshQptSnapshot({
+    paths: ctx.paths,
+    projectId: ctx.projectId,
+    requiredGatesTotal: updated.selectedGates.length,
+    requiredGatesSatisfiedCurrent: gateStatesAfterFinalize.filter((gate) => gate.status === "PASS").length,
+    requiredIndependentReview: "satisfied",
+    contextRadius: updated.contextRadius,
+    schemaRoot,
+  });
   const completedWorkOrder: WorkOrder = {
     ...workOrder,
     status: "completed",
@@ -1387,6 +1438,7 @@ export function runContextExpand(input: {
       expansionHistory,
       approveC5: input.approveC5,
       schemaRoot,
+      persist: false,
     });
     enforceTokenBudget({
       paths: ctx.paths,
@@ -1396,6 +1448,7 @@ export function runContextExpand(input: {
       executionRunId: run.executionRunId,
       schemaRoot,
     });
+    publishImpactAndPack({ paths: ctx.paths, report: intel.report, pack: intel.pack, schemaRoot });
   } catch (error) {
     if (error instanceof CostBudgetError) {
       throw new ExecutionBlockedError(error.message, ["hard token budget exceeded"]);

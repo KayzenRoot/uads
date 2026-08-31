@@ -7,14 +7,24 @@ All notable changes to UADS (NexLabs) are documented here.
 ### Added
 
 - Deterministic Evidence Cache with sidecar `cache/evidence-index.json`, per-record validity basis, and explainable HIT/MISS/STALE/NOT_REUSABLE/BLOCKED decisions
-- Conservative gate reuse policy: eligible command gates (static, unit-test, contract-test, build, web3-unit, integration-test with env identity) only; reviews/security/migration/Web3 fuzz/invariants stay fresh-required
+- Conservative gate reuse policy: eligible command gates (static, unit-test, contract-test, build, web3-unit) only; integration-test, reviews, security, migration, Web3 fuzz, and invariants stay fresh-required
 - Cost Governor with provider-neutral ledger, hard/soft token-budget enforcement, and documented QPT snapshot (`verifiedQualityCoverage / max(1, estimatedContextTokens/1000)`)
 - CLI: `uads cache status|explain`, `uads cost status|explain`
 - Optional evidence provenance fields (`source`, `sourceCacheRecordId`, `sourceEvidenceId`, `cacheDecisionId`) on existing 0.3.0 evidence records
 - Optional Context Pack layer digests (`staticLayerDigest`, `semiStableLayerDigest`, `dynamicLayerDigest`) on 0.4.0 packs
 - Review ZIP summaries `cache/cache-summary.json` and `cost/cost-summary.json`
-- Cost eval suite `npm run eval:cost` (CC1–CC14)
-- CI runs `eval:cost` before the aggregate foundation validation
+- Cost eval suite `npm run eval:cost` (CC1–CC22)
+
+### Fixed (Correction 01)
+
+- Gate reuse contract identity: current command/toolchain must match cached PASS before HIT
+- Toolchain identity from package manifests (vitest/jest/tsc/eslint) rather than UADS Node alone
+- `integration-test` defaults to NOT_REUSABLE without a complete environment contract
+- Cache validity basis includes configures edges and test/build config files
+- Reuse proof digest on cache records, decisions, and cache-reuse evidence
+- Validity-first candidate selection (createdAt descending) with truthful STALE when all candidates are stale
+- Token budget preflight before publishing current Context Pack on dispatch/expand
+- Diagnostic token accounting, QPT diagnostic exposure, diagnosis reuse, and post-assurance QPT refresh
 
 ### Notes
 
@@ -22,6 +32,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - Current-digest FAIL/BLOCKED cannot be hidden by an older cached PASS
 - Unrelated files outside the proven validity basis do not globally invalidate eligible cache
 - Token estimates remain `byte-heuristic`; QPT is not financial cost or a provider tokenizer count
+- `estimatedDiagnosticTokens` is tracked separately and is not part of the QPT denominator
 - `status` / `resume` read compact cache/cost fields without a repository scan
 - Intelligence schemas remain 0.4.0; execution schemas remain 0.3.0; failure schemas remain 0.5.0
 

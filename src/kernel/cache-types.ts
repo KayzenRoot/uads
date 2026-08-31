@@ -17,6 +17,8 @@ export type EvidenceCacheRecord = {
   evidenceKind: "command" | "file" | "invariant";
   originatingChangeDigest: string;
   command: string | null;
+  gateReuseContractIdentity: string;
+  reuseProofDigest: string;
   toolIdentity: Record<string, string>;
   environmentIdentity: string | null;
   validityBasisPaths: string[];
@@ -49,6 +51,8 @@ export type CacheDecision = {
   maySatisfyGate: boolean;
   liveChangeDigest: string | null;
   indexDigest: string | null;
+  gateReuseContractIdentity?: string | null;
+  reuseProofDigest?: string | null;
   createdAt: string;
 };
 

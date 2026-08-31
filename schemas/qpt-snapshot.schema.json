@@ -47,6 +47,7 @@
     "qptRatio": { "type": "number" },
     "qptFormula": { "type": "string" },
     "limitations": { "type": "array", "items": { "type": "string" } },
+    "estimatedDiagnosticTokens": { "type": "integer", "minimum": 0 },
     "updatedAt": { "type": "string", "format": "date-time" }
   }
 }

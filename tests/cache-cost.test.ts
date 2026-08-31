@@ -44,7 +44,7 @@ function recordUnit(repo: string, home: string): void {
     gateId: "unit-test",
     kind: "command",
     role: "test-engineer",
-    command: "npm run unit-test",
+    command: "npm test :: vitest run",
     exitCode: 0,
     outputPath,
     summary: "unit-test recorded",
@@ -70,6 +70,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.decision).toBe("STALE");
@@ -83,6 +84,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.decision).toBe("STALE");
@@ -96,6 +98,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.decision).toBe("STALE");
@@ -109,20 +112,27 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.decision).toBe("STALE");
   });
 
-  it("5: tool version mismatch invalidates", () => {
+  it("5: toolchain version mismatch invalidates", () => {
     const { repo, home } = tempDirs();
     const { planned, paths } = ready(repo, home);
+    const pkgPath = path.join(repo, "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    pkg.devDependencies.vitest = "2.0.0";
+    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
     const decision = evaluateCache({
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
-      liveToolIdentity: { node: "v99.0.0", platform: process.platform, runtimeFamily: "node" },
     });
     expect(decision.decision).toBe("STALE");
     expect(decision.changedValidityInputs).toContain("toolIdentity");
@@ -138,6 +148,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle,
     });
     expect(decision.maySatisfyGate).toBe(false);
@@ -165,7 +176,7 @@ describe("evidence cache and cost governor", () => {
       gateId: "unit-test",
       kind: "command",
       role: "test-engineer",
-      command: "npm run unit-test",
+      command: "npm test :: vitest run",
       exitCode: 1,
       outputPath,
       summary: "unit-test failed",
@@ -184,6 +195,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "security-review",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.decision).toBe("NOT_REUSABLE");
@@ -205,6 +217,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.maySatisfyGate).toBe(false);
@@ -225,7 +238,7 @@ describe("evidence cache and cost governor", () => {
       gateId: "unit-test",
       kind: "command",
       role: "test-engineer",
-      command: "npm run unit-test",
+      command: "npm test :: vitest run",
       exitCode: 0,
       outputPath,
       summary: "unit-test recorded",
@@ -328,6 +341,7 @@ describe("evidence cache and cost governor", () => {
       paths,
       projectId: planned.workOrder.projectId,
       gateId: "unit-test",
+      repoRoot: repo,
       bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
     });
     expect(decision.maySatisfyGate).toBe(false);
@@ -355,5 +369,59 @@ describe("evidence cache and cost governor", () => {
     expect(fs.existsSync(path.join(repo, "cache"))).toBe(false);
     void recordGates;
     void findPackageRoot;
+  });
+
+  it("21: command contract mismatch cannot HIT", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as { scripts: Record<string, string> };
+    pkg.scripts.test = "vitest run other.test.ts";
+    fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).not.toBe("HIT");
+  });
+
+  it("22: integration-test is not reusable by default", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "integration-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).toBe("NOT_REUSABLE");
+  });
+
+  it("26: vitest config-only change invalidates", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "vitest.config.ts"), "export default {};\n");
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).toBe("STALE");
+  });
+
+  it("27: cache-reuse evidence carries reuse proof digest", () => {
+    const { repo, home } = tempDirs();
+    const { planned } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const paths = getUadsPaths(planned.workOrder.projectId, home);
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).filter((item) => item.source === "cache-reuse");
+    expect(reused[0]?.reuseProofDigest).toBeTruthy();
+    expect(reused[0]?.gateReuseContractIdentity).toBeTruthy();
   });
 });
