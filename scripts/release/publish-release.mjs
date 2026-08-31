@@ -53,9 +53,10 @@ function localTag(tag) {
 function releaseNotes(version) {
   const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
   const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = changelog.match(new RegExp("^## \\[" + escaped + "\\].*?(?=^## \\[|$)", "ms"));
-  if (!match?.[0]) fail("release changelog section is missing");
-  const section = match[0].trim();
+  const start = changelog.indexOf("## [" + version + "]");
+  if (start < 0) fail("release changelog section is missing");
+  const next = changelog.indexOf("\n## [", start + 1);
+  const section = changelog.slice(start, next < 0 ? changelog.length : next).trim();
   if (!/(Highlights|Fixed|Verification)/i.test(section) || /Release artifacts were produced/i.test(section)) {
     fail("release changelog section is not professional or is a placeholder");
   }
