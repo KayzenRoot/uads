@@ -22,6 +22,8 @@ All notable changes to UADS (NexLabs) are documented here.
 - Cache-reuse evidence provenance enforced at gate evaluation with cross-checks against CacheDecision and EvidenceCacheRecord
 - Evidence schema requires provenance fields when `source=cache-reuse`
 - Cache candidate semantic validation enforces canonical gate evidence kinds before HIT/maySatisfyGate
+- Cache-reuse chains now require reusable PASS source records, current work-order/run bindings, concrete gate proof, and a valid decision-to-record relationship
+- Malformed, contradictory, symlink-escaping, or `file:`/`link:` producer metadata remains unprovable and therefore fresh-required
 
 ### Fixed (Correction 01)
 

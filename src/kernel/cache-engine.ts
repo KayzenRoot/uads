@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { readJsonIfValid } from "../lib/atomic-write.js";
 import { sha256Hex } from "../lib/hash.js";
 import type { UadsPaths } from "../lib/workspace.js";
+import { isCacheRecordSemanticallyValid, validateCacheReuseEvidence } from "./cache-integrity.js";
 import { cachePaths } from "./cache-persist.js";
 import { buildValidityBasis } from "./failure-memory.js";
 import type { CacheDecision, CacheDecisionKind, EvidenceCacheRecord } from "./cache-types.js";
@@ -174,40 +175,6 @@ export function buildCacheValidityBasis(
 
 export function indexIsReusable(bundle: IndexBundle): boolean {
   return bundle.state.complete && !bundle.state.truncated && !bundle.state.stale;
-}
-
-function isCacheRecordSemanticallyValid(record: EvidenceCacheRecord): boolean {
-  const def = gateDef(record.gateId);
-  if (!def) {
-    return false;
-  }
-  if (!def.allowedEvidenceKinds.includes(record.evidenceKind)) {
-    return false;
-  }
-  if (def.contractKind === "command") {
-    if (record.evidenceKind !== "command") {
-      return false;
-    }
-    if (!record.command || !record.outputDigest) {
-      return false;
-    }
-    if (!record.toolIdentity.producerFamily || !record.toolIdentity.producerVersion) {
-      return false;
-    }
-  }
-  if (record.evidenceKind === "command" && !record.command) {
-    return false;
-  }
-  if (record.status !== "reusable" || !record.reusable) {
-    return false;
-  }
-  if (!record.gateReuseContractIdentity || !record.reuseProofDigest) {
-    return false;
-  }
-  if (record.reuseClass !== "eligible" || record.evidenceStatus !== "PASS") {
-    return false;
-  }
-  return true;
 }
 
 function listCandidatesForGate(
@@ -529,6 +496,9 @@ export function populateCacheFromEvidence(input: {
   if (input.record.kind === "command" && (!input.record.command || !input.record.outputDigest || input.record.exitCode !== 0)) {
     return null;
   }
+  if (!def.allowedEvidenceKinds.includes(input.record.kind)) {
+    return null;
+  }
   if (!indexIsReusable(input.bundle) || input.bundle.state.projectId !== input.run.projectId) {
     return null;
   }
@@ -689,6 +659,19 @@ export function applyEligibleCacheHits(input: {
       reuseProofDigest: decision.reuseProofDigest,
       gateReuseContractIdentity: decision.gateReuseContractIdentity,
     };
+    const provenance = validateCacheReuseEvidence({
+      paths: input.paths,
+      projectId: input.run.projectId,
+      gateId: gate,
+      changeDigest: input.run.currentChangeDigest,
+      workOrderId: input.run.workOrderId,
+      executionRunId: input.run.executionRunId,
+      record: derived,
+      schemaRoot: input.schemaRoot,
+    });
+    if (!provenance.valid) {
+      continue;
+    }
     persistEvidenceRecord({ paths: input.paths, record: derived, schemaRoot: input.schemaRoot });
     applied.push(derived);
   }

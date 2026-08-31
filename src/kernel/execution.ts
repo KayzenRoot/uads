@@ -237,6 +237,8 @@ function reviewGateState(
 export type GateStateValidationContext = {
   paths: UadsPaths;
   projectId: string;
+  workOrderId?: string | null;
+  executionRunId?: string | null;
   schemaRoot?: string;
 };
 
@@ -268,12 +270,17 @@ export function deriveGateStates(input: {
       if (!evidenceSatisfiesGate(item, def)) {
         return false;
       }
-      if (item.source === "cache-reuse" && input.validation) {
+      if (item.source === "cache-reuse") {
+        if (!input.validation) {
+          return false;
+        }
         const provenance = validateCacheReuseEvidence({
           paths: input.validation.paths,
           projectId: input.validation.projectId,
           gateId,
           changeDigest: input.digest,
+          workOrderId: input.validation.workOrderId,
+          executionRunId: input.validation.executionRunId,
           record: item,
           schemaRoot: input.validation.schemaRoot,
         });
@@ -314,7 +321,14 @@ export function buildExecutionResumeView(
     digest: run.currentChangeDigest,
     evidence,
     reviews,
-    validation: paths ? { paths, projectId: run.projectId } : undefined,
+    validation: paths
+      ? {
+          paths,
+          projectId: run.projectId,
+          workOrderId: run.workOrderId,
+          executionRunId: run.executionRunId,
+        }
+      : undefined,
   });
   const completedReviewers = unique(
     reviews
@@ -685,7 +699,13 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
     digest: updated.currentChangeDigest,
     evidence,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      schemaRoot,
+    },
   });
   let bundle = null;
   try {
@@ -750,7 +770,13 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
     digest: updated.currentChangeDigest,
     evidence: evidenceAfter,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      schemaRoot,
+    },
   });
   refreshQptSnapshot({
     paths: ctx.paths,
@@ -1002,7 +1028,13 @@ export function runEvidenceRecord(input: {
     digest: run.currentChangeDigest,
     evidence,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: run.workOrderId,
+      executionRunId: run.executionRunId,
+      schemaRoot,
+    },
   });
   const failed = gateStates.filter((gate) => gate.status === "FAIL" || gate.status === "BLOCKED").map((gate) => gate.gateId);
   const updated = touchRun(run, {
@@ -1047,7 +1079,13 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
     digest: run.currentChangeDigest,
     evidence,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: run.workOrderId,
+      executionRunId: run.executionRunId,
+      schemaRoot,
+    },
   });
   const blocking = gateStates.filter((gate) => !isReviewGate(gate.gateId) && gate.status !== "PASS");
   if (blocking.length > 0) {
@@ -1226,7 +1264,13 @@ export function runAssuranceRecord(input: {
     digest: updated.currentChangeDigest,
     evidence: evidenceAfterReview,
     reviews: reviewsAfterReview,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      schemaRoot,
+    },
   });
   const independentReview = reviewsAfterReview.find(
     (item) => item.reviewerRole === INDEPENDENT_REVIEWER_ROLE && item.changeDigest === run.currentChangeDigest,
@@ -1297,7 +1341,13 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     digest: run.currentChangeDigest,
     evidence,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: run.workOrderId,
+      executionRunId: run.executionRunId,
+      schemaRoot,
+    },
   });
   for (const gate of gateStates) {
     if (!isKnownGateId(gate.gateId) && run.selectedGates.includes(gate.gateId)) {
@@ -1373,7 +1423,13 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     digest: updated.currentChangeDigest,
     evidence,
     reviews,
-    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: updated.workOrderId,
+      executionRunId: updated.executionRunId,
+      schemaRoot,
+    },
   });
   refreshQptSnapshot({
     paths: ctx.paths,

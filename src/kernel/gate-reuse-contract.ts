@@ -144,78 +144,205 @@ function isExactVersionSpec(value: string): boolean {
   if (trimmed.startsWith(">") || trimmed.startsWith("<") || trimmed.includes("||")) {
     return false;
   }
-  return EXACT_VERSION_RE.test(trimmed) || trimmed.startsWith("file:") || trimmed.startsWith("link:");
+  return EXACT_VERSION_RE.test(trimmed);
 }
 
-function readJsonUnderRepo(repoRoot: string, relativePath: string): Record<string, unknown> | null {
+type JsonProbe = {
+  present: boolean;
+  value: Record<string, unknown> | null;
+  reason: "missing" | "valid" | "invalid" | "unsafe";
+};
+
+function readJsonUnderRepo(repoRoot: string, relativePath: string): JsonProbe {
   const normalizedRoot = path.resolve(repoRoot);
   const target = path.resolve(repoRoot, relativePath);
   if (!target.startsWith(normalizedRoot + path.sep) && target !== normalizedRoot) {
-    return null;
+    return { present: true, value: null, reason: "unsafe" };
   }
-  if (!fs.existsSync(target)) {
-    return null;
-  }
+
+  let lexicalStat: fs.Stats;
   try {
-    return JSON.parse(fs.readFileSync(target, "utf8")) as Record<string, unknown>;
+    lexicalStat = fs.lstatSync(target);
   } catch {
-    return null;
+    return { present: false, value: null, reason: "missing" };
+  }
+
+  try {
+    const realRoot = fs.realpathSync.native(normalizedRoot);
+    const realTarget = fs.realpathSync.native(target);
+    const relative = path.relative(realRoot, realTarget);
+    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      return { present: true, value: null, reason: "unsafe" };
+    }
+    if (!lexicalStat.isFile() && !lexicalStat.isSymbolicLink()) {
+      return { present: true, value: null, reason: "invalid" };
+    }
+    const parsed = JSON.parse(fs.readFileSync(realTarget, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { present: true, value: null, reason: "invalid" };
+    }
+    return { present: true, value: parsed as Record<string, unknown>, reason: "valid" };
+  } catch {
+    return { present: true, value: null, reason: "invalid" };
   }
 }
 
-function resolveFromNpmLock(repoRoot: string, packageName: string): string | null {
-  const lock = readJsonUnderRepo(repoRoot, "package-lock.json");
-  if (!lock) {
-    return null;
+type VersionEvidence = {
+  version: string | null;
+  resolvedFrom: string | null;
+  state: "missing" | "valid" | "invalid";
+  reasonCode?: string;
+};
+
+function missingVersionEvidence(): VersionEvidence {
+  return { version: null, resolvedFrom: null, state: "missing" };
+}
+
+function invalidVersionEvidence(reasonCode: string): VersionEvidence {
+  return { version: null, resolvedFrom: null, state: "invalid", reasonCode };
+}
+
+function validVersionEvidence(version: string, resolvedFrom: string): VersionEvidence {
+  return { version, resolvedFrom, state: "valid" };
+}
+
+function resolveFromNpmLock(repoRoot: string, packageName: string): VersionEvidence {
+  const probe = readJsonUnderRepo(repoRoot, "package-lock.json");
+  if (!probe.present) {
+    return missingVersionEvidence();
   }
-  const packages = lock.packages as Record<string, { version?: string }> | undefined;
+  if (probe.reason === "unsafe") {
+    return invalidVersionEvidence("PRODUCER_METADATA_UNSAFE_PATH");
+  }
+  if (probe.reason !== "valid" || !probe.value) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+  }
+
+  const lock = probe.value;
+  const rawPackages = lock.packages;
+  if (rawPackages !== undefined && (!rawPackages || typeof rawPackages !== "object" || Array.isArray(rawPackages))) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+  }
+  const packages = rawPackages as Record<string, unknown> | undefined;
   if (packages) {
-    const direct = packages[`node_modules/${packageName}`]?.version;
-    if (typeof direct === "string" && isExactVersionSpec(direct)) {
-      return direct;
+    const directEntry = packages[`node_modules/${packageName}`];
+    if (directEntry !== undefined) {
+      if (!directEntry || typeof directEntry !== "object" || Array.isArray(directEntry)) {
+        return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+      }
+      const direct = (directEntry as { version?: unknown }).version;
+      return typeof direct === "string" && isExactVersionSpec(direct)
+        ? validVersionEvidence(direct, "lockfile")
+        : invalidVersionEvidence("PRODUCER_VERSION_UNRESOLVED");
     }
   }
-  const dependencies = lock.dependencies as Record<string, { version?: string }> | undefined;
-  const nested = dependencies?.[packageName]?.version;
-  if (typeof nested === "string" && isExactVersionSpec(nested)) {
-    return nested;
+  const rawDependencies = lock.dependencies;
+  if (rawDependencies !== undefined && (!rawDependencies || typeof rawDependencies !== "object" || Array.isArray(rawDependencies))) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
   }
-  return null;
+  const dependencies = rawDependencies as Record<string, unknown> | undefined;
+  const nestedEntry = dependencies?.[packageName];
+  if (nestedEntry !== undefined) {
+    if (!nestedEntry || typeof nestedEntry !== "object" || Array.isArray(nestedEntry)) {
+      return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+    }
+    const nested = (nestedEntry as { version?: unknown }).version;
+    return typeof nested === "string" && isExactVersionSpec(nested)
+      ? validVersionEvidence(nested, "lockfile")
+      : invalidVersionEvidence("PRODUCER_VERSION_UNRESOLVED");
+  }
+  return missingVersionEvidence();
 }
 
-function resolveFromNodeModules(repoRoot: string, packageName: string): string | null {
-  const pkg = readJsonUnderRepo(repoRoot, `node_modules/${packageName}/package.json`);
-  const version = pkg?.version;
-  return typeof version === "string" && isExactVersionSpec(version) ? version : null;
+function resolveFromNodeModules(repoRoot: string, packageName: string): VersionEvidence {
+  const probe = readJsonUnderRepo(repoRoot, `node_modules/${packageName}/package.json`);
+  if (!probe.present) {
+    return missingVersionEvidence();
+  }
+  if (probe.reason === "unsafe") {
+    return invalidVersionEvidence("PRODUCER_METADATA_UNSAFE_PATH");
+  }
+  if (probe.reason !== "valid" || !probe.value) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+  }
+  const version = probe.value.version;
+  return typeof version === "string" && isExactVersionSpec(version)
+    ? validVersionEvidence(version, "node_modules")
+    : invalidVersionEvidence("PRODUCER_VERSION_UNRESOLVED");
 }
 
-function resolveFromPackageJsonExact(repoRoot: string, packageName: string): string | null {
-  const pkg = readJsonUnderRepo(repoRoot, "package.json");
-  if (!pkg) {
-    return null;
+function resolveFromPackageJsonExact(repoRoot: string, packageName: string): VersionEvidence {
+  const probe = readJsonUnderRepo(repoRoot, "package.json");
+  if (!probe.present) {
+    return missingVersionEvidence();
   }
-  const deps = {
-    ...((pkg.dependencies as Record<string, string> | undefined) ?? {}),
-    ...((pkg.devDependencies as Record<string, string> | undefined) ?? {}),
+  if (probe.reason === "unsafe") {
+    return invalidVersionEvidence("PRODUCER_METADATA_UNSAFE_PATH");
+  }
+  if (probe.reason !== "valid" || !probe.value) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+  }
+
+  const pkg = probe.value;
+  const dependencySources: Array<{ name: string; values: Record<string, unknown> }> = [];
+  for (const name of ["dependencies", "devDependencies"] as const) {
+    const raw = pkg[name];
+    if (raw === undefined) {
+      continue;
+    }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+    }
+    dependencySources.push({ name, values: raw as Record<string, unknown> });
+  }
+  const matching = dependencySources
+    .map((source) => ({ source: source.name, spec: source.values[packageName] }))
+    .filter((item) => item.spec !== undefined);
+  if (matching.length === 0) {
+    return missingVersionEvidence();
+  }
+  const specs = matching.map((item) => item.spec);
+  if (specs.some((spec) => typeof spec !== "string" || !spec.trim())) {
+    return invalidVersionEvidence("PRODUCER_METADATA_INVALID");
+  }
+  const normalizedSpecs = [...new Set(specs.map((spec) => (spec as string).trim()))];
+  if (normalizedSpecs.length > 1) {
+    return invalidVersionEvidence("PRODUCER_VERSION_AMBIGUOUS");
+  }
+  const spec = normalizedSpecs[0];
+  return spec && isExactVersionSpec(spec) ? validVersionEvidence(spec, "package-json-exact") : missingVersionEvidence();
+}
+
+function resolveProducerVersion(repoRoot: string, npmPackage: string): {
+  version: string | null;
+  resolvedFrom: string | null;
+  reasonCodes: string[];
+} {
+  const sources = [
+    resolveFromNpmLock(repoRoot, npmPackage),
+    resolveFromNodeModules(repoRoot, npmPackage),
+    resolveFromPackageJsonExact(repoRoot, npmPackage),
+  ];
+  const invalid = sources.find((source) => source.state === "invalid");
+  if (invalid) {
+    return { version: null, resolvedFrom: null, reasonCodes: [invalid.reasonCode ?? "PRODUCER_METADATA_INVALID"] };
+  }
+
+  const valid = sources.filter((source): source is VersionEvidence & { version: string; resolvedFrom: string } =>
+    source.state === "valid" && Boolean(source.version && source.resolvedFrom),
+  );
+  const versions = [...new Set(valid.map((source) => source.version))];
+  if (versions.length === 0) {
+    return { version: null, resolvedFrom: null, reasonCodes: ["PRODUCER_VERSION_UNRESOLVED"] };
+  }
+  if (versions.length > 1) {
+    return { version: null, resolvedFrom: null, reasonCodes: ["PRODUCER_VERSION_AMBIGUOUS"] };
+  }
+  return {
+    version: versions[0] ?? null,
+    resolvedFrom: valid.map((source) => source.resolvedFrom).join("+") || null,
+    reasonCodes: [],
   };
-  const spec = deps[packageName];
-  return spec && isExactVersionSpec(spec) ? spec.trim() : null;
-}
-
-function resolveProducerVersion(repoRoot: string, npmPackage: string): { version: string | null; resolvedFrom: string | null } {
-  const fromLock = resolveFromNpmLock(repoRoot, npmPackage);
-  if (fromLock) {
-    return { version: fromLock, resolvedFrom: "lockfile" };
-  }
-  const fromNodeModules = resolveFromNodeModules(repoRoot, npmPackage);
-  if (fromNodeModules) {
-    return { version: fromNodeModules, resolvedFrom: "node_modules" };
-  }
-  const fromExactDep = resolveFromPackageJsonExact(repoRoot, npmPackage);
-  if (fromExactDep) {
-    return { version: fromExactDep, resolvedFrom: "package-json-exact" };
-  }
-  return { version: null, resolvedFrom: null };
 }
 
 function detectProducerFromScript(scriptBody: string): { family: string; npmPackage: string } | null {
@@ -288,7 +415,7 @@ export function resolveToolchainIdentity(
   const resolved = resolveProducerVersion(repoRoot, producer.npmPackage);
   if (!resolved.version) {
     reasonCodes.push("TOOLCHAIN_UNPROVABLE");
-    reasonCodes.push("PRODUCER_VERSION_UNRESOLVED");
+    reasonCodes.push(...resolved.reasonCodes);
     return {
       provable: false,
       identity,

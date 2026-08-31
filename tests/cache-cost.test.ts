@@ -8,6 +8,7 @@ import { cachePaths, markCacheRecordStatus, persistEvidenceCacheRecord, readEvid
 import { evaluateTokenBudget } from "../src/kernel/cost-governor.js";
 import { ExecutionBlockedError, deriveGateStates, runDispatch, runEvidenceRecord, runFinalize, runVerify } from "../src/kernel/execution.js";
 import { validateCacheReuseEvidence } from "../src/kernel/cache-integrity.js";
+import { resolveToolchainIdentity } from "../src/kernel/gate-reuse-contract.js";
 import { persistEvidenceRecord } from "../src/kernel/execution-persist.js";
 import { lastIndexScan } from "../src/kernel/index-engine.js";
 import { buildImpactAndPack, currentOrRefreshIndex } from "../src/kernel/intelligence.js";
@@ -486,6 +487,73 @@ describe("evidence cache and cost governor", () => {
     });
     expect(decision.decision).toBe("STALE");
     expect(decision.changedValidityInputs).toContain("toolIdentity");
+  });
+
+  it("41: file dependency spec is not exact producer proof", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.rmSync(path.join(repo, "node_modules", "vitest"), { recursive: true, force: true });
+    const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    pkg.devDependencies.vitest = "file:../vitest";
+    fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    const bundle = currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+    const result = resolveToolchainIdentity(repo, "npm test :: vitest run", bundle);
+    expect(result.provable).toBe(false);
+    expect(result.reasonCodes).toContain("PRODUCER_VERSION_UNRESOLVED");
+  });
+
+  it("42: historical source cache evidence cannot satisfy a gate", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).find((item) => item.source === "cache-reuse");
+    expect(reused).toBeTruthy();
+    const cacheRecord = readEvidenceCacheRecord(paths, reused!.sourceCacheRecordId!);
+    expect(cacheRecord).toBeTruthy();
+    persistEvidenceCacheRecord(paths, {
+      ...cacheRecord!,
+      reusable: false,
+      status: "historical",
+      invalidationReason: "test-tamper",
+    });
+    const validation = validateCacheReuseEvidence({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      changeDigest: verified.run.currentChangeDigest,
+      record: reused!,
+    });
+    expect(validation.valid).toBe(false);
+  });
+
+  it("43: malformed producer metadata is unprovable", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.rmSync(path.join(repo, "node_modules", "vitest"), { recursive: true, force: true });
+    const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as Record<string, unknown>;
+    pkg.devDependencies = [];
+    fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    const bundle = currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+    const result = resolveToolchainIdentity(repo, "npm test :: vitest run", bundle);
+    expect(result.provable).toBe(false);
+    expect(result.reasonCodes).toContain("PRODUCER_METADATA_INVALID");
+  });
+
+  it("44: contradictory exact producer specs are unprovable", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.rmSync(path.join(repo, "node_modules", "vitest"), { recursive: true, force: true });
+    const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as Record<string, unknown>;
+    pkg.dependencies = { vitest: "1.0.0" };
+    pkg.devDependencies = { vitest: "2.0.0" };
+    fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    const bundle = currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths });
+    const result = resolveToolchainIdentity(repo, "npm test :: vitest run", bundle);
+    expect(result.provable).toBe(false);
+    expect(result.reasonCodes).toContain("PRODUCER_VERSION_AMBIGUOUS");
   });
 
   it("35: forged cache-reuse evidence with missing provenance cannot satisfy gate", () => {

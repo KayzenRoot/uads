@@ -62,6 +62,70 @@
           "gateReuseContractIdentity"
         ]
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": { "const": "cache-reuse" },
+          "status": { "const": "PASS" },
+          "kind": { "const": "command" }
+        },
+        "required": ["source", "status", "kind"]
+      },
+      "then": {
+        "required": ["command", "exitCode", "outputRef", "outputDigest"],
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "exitCode": { "const": 0 },
+          "outputRef": { "type": "string", "minLength": 1 },
+          "outputDigest": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": { "const": "cache-reuse" },
+          "status": { "const": "PASS" },
+          "kind": { "const": "file" }
+        },
+        "required": ["source", "status", "kind"]
+      },
+      "then": {
+        "required": ["fileRef", "fileDigest"],
+        "properties": {
+          "fileRef": { "type": "string", "minLength": 1 },
+          "fileDigest": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": { "const": "cache-reuse" },
+          "status": { "const": "PASS" },
+          "kind": { "const": "invariant" }
+        },
+        "required": ["source", "status", "kind"]
+      },
+      "then": {
+        "anyOf": [
+          {
+            "required": ["outputRef", "outputDigest"],
+            "properties": {
+              "outputRef": { "type": "string", "minLength": 1 },
+              "outputDigest": { "type": "string", "minLength": 1 }
+            }
+          },
+          {
+            "required": ["fileRef", "fileDigest"],
+            "properties": {
+              "fileRef": { "type": "string", "minLength": 1 },
+              "fileDigest": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
     }
   ]
 }
