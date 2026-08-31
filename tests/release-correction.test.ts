@@ -40,7 +40,7 @@ function canonicalFiles(): Map<string, string> {
     ["release/SHA256SUMS.txt", ""],
     ["release/uads-" + version + ".spdx.json", "{}"],
     ["release/ci-binding.json", JSON.stringify(binding)],
-    ["release/verification-summary.json", JSON.stringify({ version, tag: "v" + version, headSha: commit })],
+    ["release/verification-summary.json", JSON.stringify({ version, tag: "v" + version, headSha: commit, historicalTagPreservation: { unchanged: true } })],
   ]);
   const artifacts = [
     { name: "uads-" + version + ".tgz", size: 1, sha256: "a".repeat(64) },

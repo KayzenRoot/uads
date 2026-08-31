@@ -185,6 +185,9 @@ export function validateCanonicalReleaseEvidence(
   if (verification?.version !== version || verification?.tag !== expectedTag) {
     errors.push("verification-version-mismatch");
   }
+  if (verification?.historicalTagPreservation?.unchanged !== true) {
+    errors.push("historical-tag-preservation-failed");
+  }
   if (typeof getFile(files, "release/SHA256SUMS.txt") === "string") {
     verifyChecksums(files, releaseManifest, errors);
   }

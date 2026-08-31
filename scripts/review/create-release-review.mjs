@@ -54,6 +54,10 @@ if (checksums.get("release-manifest.json") !== manifestSha) {
   fail("release manifest checksum is missing or invalid");
 }
 const v070Tag = tags.find((tag) => tag.name === "v0.7.0");
+const v070TargetSha = v070Tag?.targetCommitSha ?? null;
+if (v070TargetSha !== "bdfec142ee0b94593a6d0372fb1eb95409ef391d") {
+  fail("historical v0.7.0 tag target preservation check failed");
+}
 writeJson(path.join(releaseDir, "verification-summary.json"), {
   schema: "uads.release-verification-summary",
   schemaVersion: version,
@@ -74,7 +78,7 @@ writeJson(path.join(releaseDir, "verification-summary.json"), {
   attestation: findAttestationStep(releaseRun),
   historicalTagPreservation: {
     tag: "v0.7.0",
-    targetSha: v070Tag?.object?.sha ?? null,
+    targetSha: v070TargetSha,
     expectedSha: "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
     unchanged: v070Tag?.object?.sha === "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
   },

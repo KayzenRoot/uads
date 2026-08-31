@@ -147,7 +147,11 @@ function resolveTagCommit(targetRepo, tagName) {
 }
 function awaitResolvedTags(targetRepo) {
   const refs = api("repos/" + targetRepo + "/git/matching-refs/tags") ?? [];
-  return refs.map((ref) => ({ name: ref.ref.replace(/^refs\/tags\//, ""), object: ref.object }));
+  return refs.map((ref) => ({
+    name: ref.ref.replace(/^refs\/tags\//, ""),
+    object: ref.object,
+    targetCommitSha: resolveTagCommit(targetRepo, ref.ref.replace(/^refs\/tags\//, "")),
+  }));
 }
 function awaitReleaseRunSummary(run, targetRepo) {
   if (!run) return { status: "unavailable", reason: "release-workflow-run-unavailable" };
