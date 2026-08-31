@@ -177,10 +177,14 @@ export async function inspectReviewBundle(
     const name = entry.name.replace(/\\/g, "/");
     if (name.startsWith("github/") || name.startsWith("release/")) {
       canonicalFiles.set(name, entry.content.toString("utf8"));
+    } else if (name === "project/package.json" || name === "project/VERSION") {
+      canonicalFiles.set(name, entry.content.toString("utf8"));
     }
   }
   const listedReviewEvidence = [...(manifest.reviewEvidenceIncluded ?? [])].sort();
-  const actualReviewEvidence = [...canonicalFiles.keys()].sort();
+  const actualReviewEvidence = [...canonicalFiles.keys()]
+    .filter((name) => name.startsWith("github/") || name.startsWith("release/"))
+    .sort();
   if (options.requireCanonicalEvidence && JSON.stringify(actualReviewEvidence) !== JSON.stringify(listedReviewEvidence)) {
     errors.push("reviewEvidenceIncluded-mismatch");
   }
