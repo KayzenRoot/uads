@@ -30,6 +30,7 @@ import {
 import { assertActiveExecutionConsistency } from "./execution-integrity.js";
 import { collectFailureSnapshot, readFailureCursor } from "./failure-persist.js";
 import { applyEligibleCacheHits, populateCacheFromEvidence } from "./cache-engine.js";
+import { validateCacheReuseEvidence } from "./cache-integrity.js";
 import { collectCacheCostSnapshot } from "./cache-cost-snapshot.js";
 import { CostBudgetError, enforceTokenBudget, noteGovernorEvent, refreshQptSnapshot } from "./cost-governor.js";
 import { markVerifiedResolution } from "./failure-memory.js";
@@ -182,6 +183,17 @@ function evidenceSatisfiesGate(record: EvidenceRecord, def: GateDef): boolean {
   if (!def.allowedEvidenceKinds.includes(record.kind)) {
     return false;
   }
+  if (record.source === "cache-reuse") {
+    if (
+      !record.sourceCacheRecordId ||
+      !record.sourceEvidenceId ||
+      !record.cacheDecisionId ||
+      !record.reuseProofDigest ||
+      !record.gateReuseContractIdentity
+    ) {
+      return false;
+    }
+  }
   if (def.contractKind === "command" || record.kind === "command") {
     return (
       record.kind === "command" &&
@@ -222,11 +234,18 @@ function reviewGateState(
   return { gateId, status: "PENDING", evidenceId: null };
 }
 
+export type GateStateValidationContext = {
+  paths: UadsPaths;
+  projectId: string;
+  schemaRoot?: string;
+};
+
 export function deriveGateStates(input: {
   selectedGates: string[];
   digest: string | null;
   evidence: EvidenceRecord[];
   reviews: ReviewRecord[];
+  validation?: GateStateValidationContext;
 }): GateStateSnapshot[] {
   return input.selectedGates.map((gateId) => {
     if (isReviewGate(gateId)) {
@@ -245,7 +264,23 @@ export function deriveGateStates(input: {
     if (!def) {
       return { gateId, status: "PENDING" as GateRuntimeStatus, evidenceId: null };
     }
-    const passing = [...current].reverse().find((item) => evidenceSatisfiesGate(item, def));
+    const passing = [...current].reverse().find((item) => {
+      if (!evidenceSatisfiesGate(item, def)) {
+        return false;
+      }
+      if (item.source === "cache-reuse" && input.validation) {
+        const provenance = validateCacheReuseEvidence({
+          paths: input.validation.paths,
+          projectId: input.validation.projectId,
+          gateId,
+          changeDigest: input.digest,
+          record: item,
+          schemaRoot: input.validation.schemaRoot,
+        });
+        return provenance.valid;
+      }
+      return true;
+    });
     if (passing) {
       return { gateId, status: "PASS", evidenceId: passing.evidenceId };
     }
@@ -257,6 +292,7 @@ export function buildExecutionResumeView(
   run: ExecutionRun | null,
   evidence: EvidenceRecord[] = [],
   reviews: ReviewRecord[] = [],
+  paths?: UadsPaths,
 ): ExecutionResumeView {
   if (!run) {
     return {
@@ -278,6 +314,7 @@ export function buildExecutionResumeView(
     digest: run.currentChangeDigest,
     evidence,
     reviews,
+    validation: paths ? { paths, projectId: run.projectId } : undefined,
   });
   const completedReviewers = unique(
     reviews
@@ -648,6 +685,7 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
     digest: updated.currentChangeDigest,
     evidence,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   let bundle = null;
   try {
@@ -712,6 +750,7 @@ export function runVerify(input: { cwd?: string; uadsHome?: string }): {
     digest: updated.currentChangeDigest,
     evidence: evidenceAfter,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   refreshQptSnapshot({
     paths: ctx.paths,
@@ -963,6 +1002,7 @@ export function runEvidenceRecord(input: {
     digest: run.currentChangeDigest,
     evidence,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   const failed = gateStates.filter((gate) => gate.status === "FAIL" || gate.status === "BLOCKED").map((gate) => gate.gateId);
   const updated = touchRun(run, {
@@ -1007,6 +1047,7 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
     digest: run.currentChangeDigest,
     evidence,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   const blocking = gateStates.filter((gate) => !isReviewGate(gate.gateId) && gate.status !== "PASS");
   if (blocking.length > 0) {
@@ -1185,6 +1226,7 @@ export function runAssuranceRecord(input: {
     digest: updated.currentChangeDigest,
     evidence: evidenceAfterReview,
     reviews: reviewsAfterReview,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   const independentReview = reviewsAfterReview.find(
     (item) => item.reviewerRole === INDEPENDENT_REVIEWER_ROLE && item.changeDigest === run.currentChangeDigest,
@@ -1255,6 +1297,7 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     digest: run.currentChangeDigest,
     evidence,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   for (const gate of gateStates) {
     if (!isKnownGateId(gate.gateId) && run.selectedGates.includes(gate.gateId)) {
@@ -1330,6 +1373,7 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     digest: updated.currentChangeDigest,
     evidence,
     reviews,
+    validation: { paths: ctx.paths, projectId: ctx.projectId, schemaRoot },
   });
   refreshQptSnapshot({
     paths: ctx.paths,
@@ -1500,7 +1544,7 @@ export function loadExecutionView(input: { cwd?: string; uadsHome?: string }): E
     }
     const evidence = listEvidenceRecords(ctx.paths, run.executionRunId);
     const reviews = listReviewRecords(ctx.paths, run.executionRunId);
-    return buildExecutionResumeView(run, evidence, reviews);
+    return buildExecutionResumeView(run, evidence, reviews, ctx.paths);
   } catch (error) {
     if (error instanceof InvalidOrchestrationStateError) {
       return {

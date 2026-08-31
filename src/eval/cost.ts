@@ -9,15 +9,17 @@ import { evaluateTokenBudget } from "../kernel/cost-governor.js";
 import { readCostLedger, readQptSnapshot } from "../kernel/cost-persist.js";
 import {
   ExecutionBlockedError,
+  deriveGateStates,
   runContextExpand,
   runDispatch,
   runEvidenceRecord,
   runVerify,
 } from "../kernel/execution.js";
+import { validateCacheReuseEvidence } from "../kernel/cache-integrity.js";
 import { diagnoseFailure, recordFailure } from "../kernel/fault-localization.js";
 import { buildImpactAndPack, currentOrRefreshIndex } from "../kernel/intelligence.js";
 import { readCurrentContextPack } from "../kernel/intelligence-persist.js";
-import { persistEvidenceCacheRecord } from "../kernel/cache-persist.js";
+import { persistEvidenceCacheRecord, readEvidenceCacheRecord, markCacheRecordStatus, listCacheRecordIdsForGate } from "../kernel/cache-persist.js";
 import { listEvidenceRecords } from "../kernel/execution-persist.js";
 import { persistPlan } from "../kernel/persist.js";
 import { runPlan } from "../kernel/orchestrator.js";
@@ -62,6 +64,12 @@ function write(root: string, rel: string, contents: string): void {
   fs.writeFileSync(abs, contents);
 }
 
+function writeResolvedPackage(repo: string, packageName: string, version: string): void {
+  const pkgDir = path.join(repo, "node_modules", packageName);
+  fs.mkdirSync(pkgDir, { recursive: true });
+  fs.writeFileSync(path.join(pkgDir, "package.json"), `${JSON.stringify({ name: packageName, version }, null, 2)}\n`);
+}
+
 function seedRepo(repo: string): void {
   initRepo(repo);
   write(repo, "src/ui/Button.tsx", `import { format } from "../util/format";\nexport const Button = () => format("ok");\n`);
@@ -78,11 +86,12 @@ function seedRepo(repo: string): void {
         lint: "echo lint ok",
         build: "echo build ok",
       },
-      devDependencies: { vitest: "1.6.0" },
+      devDependencies: { vitest: "^1.6.0" },
     },
     null,
     2,
   )}\n`);
+  writeResolvedPackage(repo, "vitest", "1.6.0");
   gitCommit(repo, "init");
 }
 
@@ -192,6 +201,11 @@ function main(): number {
     { id: "CC20", name: "validity-first candidate selection" },
     { id: "CC21", name: "transactional hard-budget preflight" },
     { id: "CC22", name: "QPT diagnostic and diagnosis reuse" },
+    { id: "CC23", name: "unprovable toolchain fresh-required" },
+    { id: "CC24", name: "resolved producer version invalidation" },
+    { id: "CC25", name: "cache-reuse provenance cross-check" },
+    { id: "CC26", name: "tampered provenance cannot satisfy gate" },
+    { id: "CC27", name: "wrong evidence kind cannot HIT" },
   ];
 
   const results = cases.map((item) =>
@@ -230,11 +244,7 @@ function main(): number {
         assert(decision.decision === "STALE", `CC5 expected STALE, got ${decision.decision}`);
       } else if (item.id === "CC6") {
         const { planned } = prepared(repo, home);
-        const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as {
-          devDependencies: Record<string, string>;
-        };
-        pkg.devDependencies.vitest = "9.9.9";
-        fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+        writeResolvedPackage(repo, "vitest", "9.9.9");
         const decision = evalCache(repo, home, planned.workOrder.projectId, "unit-test");
         assert(decision.decision === "STALE", `CC6 expected STALE, got ${decision.decision}`);
         assert(decision.changedValidityInputs.includes("toolIdentity"), "CC6 must name toolIdentity");
@@ -375,11 +385,7 @@ function main(): number {
         );
       } else if (item.id === "CC16") {
         const { planned } = prepared(repo, home);
-        const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as {
-          devDependencies: Record<string, string>;
-        };
-        pkg.devDependencies.vitest = "3.0.0";
-        fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+        writeResolvedPackage(repo, "vitest", "3.0.0");
         const decision = evalCache(repo, home, planned.workOrder.projectId, "unit-test");
         assert(decision.decision === "STALE", `CC16 expected STALE, got ${decision.decision}`);
         assert(decision.changedValidityInputs.includes("toolIdentity"), "CC16 toolchain mismatch");
@@ -482,6 +488,100 @@ function main(): number {
           qpt?.limitations.some((line) => /diagnostic/i.test(line)),
           "CC22 QPT documents diagnostic token separation",
         );
+      } else if (item.id === "CC23") {
+        const { planned } = prepared(repo, home);
+        const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as {
+          scripts: Record<string, string>;
+        };
+        pkg.scripts.build = "mystery-bundler --production";
+        fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+        const decision = evalCache(repo, home, planned.workOrder.projectId, "build");
+        assert(decision.decision === "NOT_REUSABLE", `CC23 expected NOT_REUSABLE, got ${decision.decision}`);
+        assert(
+          decision.reasonCodes.some((code) => code.includes("TOOLCHAIN_UNPROVABLE")),
+          "CC23 must report toolchain unprovable",
+        );
+      } else if (item.id === "CC24") {
+        const { planned } = prepared(repo, home);
+        writeResolvedPackage(repo, "vitest", "2.5.5");
+        const decision = evalCache(repo, home, planned.workOrder.projectId, "unit-test");
+        assert(decision.decision === "STALE", `CC24 expected STALE, got ${decision.decision}`);
+        assert(decision.changedValidityInputs.includes("toolIdentity"), "CC24 toolchain identity change");
+      } else if (item.id === "CC25") {
+        const { planned } = prepared(repo, home);
+        write(repo, "src/ui/orphan.css", "/* unrelated */\n");
+        const verified = runVerify({ cwd: repo, uadsHome: home });
+        const paths = getUadsPaths(planned.workOrder.projectId, home);
+        const reused = listEvidenceRecords(paths, verified.run.executionRunId, findPackageRoot()).filter(
+          (row) => row.source === "cache-reuse",
+        );
+        assert(reused.length > 0, "CC25 missing cache-reuse evidence");
+        const validation = validateCacheReuseEvidence({
+          paths,
+          projectId: planned.workOrder.projectId,
+          gateId: "unit-test",
+          changeDigest: verified.run.currentChangeDigest,
+          record: reused[0]!,
+          schemaRoot: findPackageRoot(),
+        });
+        assert(validation.valid, `CC25 provenance invalid: ${validation.reasonCodes.join(",")}`);
+      } else if (item.id === "CC26") {
+        const { planned } = prepared(repo, home);
+        write(repo, "src/ui/orphan.css", "/* unrelated */\n");
+        const verified = runVerify({ cwd: repo, uadsHome: home });
+        const paths = getUadsPaths(planned.workOrder.projectId, home);
+        const reused = listEvidenceRecords(paths, verified.run.executionRunId, findPackageRoot()).find(
+          (row) => row.source === "cache-reuse",
+        );
+        assert(reused, "CC26 missing cache-reuse evidence");
+        const tampered = { ...reused, evidenceId: "ev_cc26tampered1", reuseProofDigest: "deadbeefproof" };
+        const evidence = listEvidenceRecords(paths, verified.run.executionRunId, findPackageRoot()).filter(
+          (item) => item.gateId !== "unit-test" || item.evidenceId === tampered.evidenceId,
+        );
+        const gates = deriveGateStates({
+          selectedGates: verified.run.selectedGates,
+          digest: verified.run.currentChangeDigest,
+          evidence: [...evidence, tampered],
+          reviews: [],
+          validation: { paths, projectId: planned.workOrder.projectId, schemaRoot: findPackageRoot() },
+        });
+        assert(gates.find((gate) => gate.gateId === "unit-test")?.status !== "PASS", "CC26 tampered proof must not PASS");
+      } else if (item.id === "CC27") {
+        const { planned, paths } = prepared(repo, home);
+        for (const cacheRecordId of listCacheRecordIdsForGate(paths, planned.workOrder.projectId, "unit-test")) {
+          markCacheRecordStatus(paths, cacheRecordId, "stale", "cc27-setup", findPackageRoot());
+        }
+        const evidenceDir = path.join(paths.workspace, "cache", "evidence");
+        const template = fs
+          .readdirSync(evidenceDir)
+          .map((name) => readEvidenceCacheRecord(paths, name.replace(/\.json$/, ""), findPackageRoot()))
+          .find((record) => record?.gateId === "unit-test");
+        assert(template, "CC27 missing unit-test cache template");
+        const wrongKind = structuredClone(template);
+        wrongKind.cacheRecordId = "ecr_cc27wrongkind1";
+        wrongKind.evidenceKind = "file";
+        wrongKind.command = null;
+        wrongKind.outputDigest = null;
+        wrongKind.fileDigest = "filedigestcc27";
+        wrongKind.status = "reusable";
+        wrongKind.reusable = true;
+        wrongKind.invalidationReason = null;
+        persistEvidenceCacheRecord(paths, wrongKind, findPackageRoot());
+        const indexPath = path.join(paths.workspace, "cache", "evidence-index.json");
+        const index = JSON.parse(fs.readFileSync(indexPath, "utf8")) as {
+          records: Array<{ cacheRecordId: string; gateId: string; reusable: boolean; status: string }>;
+        };
+        index.records = index.records.filter((row) => row.gateId !== "unit-test" || row.status === "stale");
+        index.records.push({
+          cacheRecordId: wrongKind.cacheRecordId,
+          gateId: "unit-test",
+          reusable: true,
+          status: "reusable",
+        });
+        fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+        const decision = evalCache(repo, home, planned.workOrder.projectId, "unit-test");
+        assert(decision.decision !== "HIT", `CC27 wrong kind must not HIT, got ${decision.decision}`);
+        assert(decision.maySatisfyGate !== true, "CC27 maySatisfyGate must be false");
       }
     }),
   );

@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import { sidecarJsonPath } from "../src/lib/atomic-write.js";
 import { computeLayerDigest } from "../src/kernel/context-pack.js";
 import { evaluateCache } from "../src/kernel/cache-engine.js";
-import { cachePaths, persistEvidenceCacheRecord, readEvidenceCacheRecord } from "../src/kernel/cache-persist.js";
+import { cachePaths, markCacheRecordStatus, persistEvidenceCacheRecord, readEvidenceCacheRecord } from "../src/kernel/cache-persist.js";
 import { evaluateTokenBudget } from "../src/kernel/cost-governor.js";
-import { ExecutionBlockedError, runDispatch, runEvidenceRecord, runFinalize, runVerify } from "../src/kernel/execution.js";
+import { ExecutionBlockedError, deriveGateStates, runDispatch, runEvidenceRecord, runFinalize, runVerify } from "../src/kernel/execution.js";
+import { validateCacheReuseEvidence } from "../src/kernel/cache-integrity.js";
+import { persistEvidenceRecord } from "../src/kernel/execution-persist.js";
 import { lastIndexScan } from "../src/kernel/index-engine.js";
 import { buildImpactAndPack, currentOrRefreshIndex } from "../src/kernel/intelligence.js";
 import { persistPlan } from "../src/kernel/persist.js";
@@ -16,7 +18,7 @@ import { listEvidenceRecords } from "../src/kernel/execution-persist.js";
 import { findPackageRoot } from "../src/lib/version.js";
 import { getUadsPaths } from "../src/lib/workspace.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "../src/lib/secrets.js";
-import { implement, planFrontend, recordGates, seedFrontend } from "./execution-helpers.js";
+import { approveAll, implement, planFrontend, recordGates, seedFrontend, writeResolvedPackage } from "./execution-helpers.js";
 import { gitCommit, tempDirs } from "./helpers.js";
 
 const TOKEN = `ghp_${"c".repeat(36)}`;
@@ -121,12 +123,7 @@ describe("evidence cache and cost governor", () => {
   it("5: toolchain version mismatch invalidates", () => {
     const { repo, home } = tempDirs();
     const { planned, paths } = ready(repo, home);
-    const pkgPath = path.join(repo, "package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
-      devDependencies: Record<string, string>;
-    };
-    pkg.devDependencies.vitest = "2.0.0";
-    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    writeResolvedPackage(repo, "vitest", "2.0.0");
     const decision = evaluateCache({
       paths,
       projectId: planned.workOrder.projectId,
@@ -423,5 +420,251 @@ describe("evidence cache and cost governor", () => {
     const reused = listEvidenceRecords(paths, verified.run.executionRunId).filter((item) => item.source === "cache-reuse");
     expect(reused[0]?.reuseProofDigest).toBeTruthy();
     expect(reused[0]?.gateReuseContractIdentity).toBeTruthy();
+  });
+
+  it("32: unknown producer toolchain is fresh-required", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    pkg.scripts.build = "mystery-bundler --production";
+    fs.writeFileSync(path.join(repo, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    const outputPath = path.join(home, "gate-build.txt");
+    fs.writeFileSync(outputPath, "build captured output\n");
+    runEvidenceRecord({
+      cwd: repo,
+      uadsHome: home,
+      gateId: "build",
+      kind: "command",
+      role: "test-engineer",
+      command: "npm run build :: mystery-bundler --production",
+      exitCode: 0,
+      outputPath,
+      summary: "build recorded",
+    });
+    const buildCaches = fs
+      .readdirSync(cachePaths(paths).evidence)
+      .map((name) => readEvidenceCacheRecord(paths, name.replace(/\.json$/, "")))
+      .filter((record) => record?.gateId === "build");
+    expect(buildCaches.length).toBe(0);
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "build",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).toBe("NOT_REUSABLE");
+    expect(decision.reasonCodes.some((code) => code.includes("TOOLCHAIN_UNPROVABLE"))).toBe(true);
+  });
+
+  it("33: supported producer with exact version can still HIT", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).toBe("HIT");
+    expect(decision.maySatisfyGate).toBe(true);
+  });
+
+  it("34: actual resolved producer version change invalidates", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    writeResolvedPackage(repo, "vitest", "2.0.0");
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).toBe("STALE");
+    expect(decision.changedValidityInputs).toContain("toolIdentity");
+  });
+
+  it("35: forged cache-reuse evidence with missing provenance cannot satisfy gate", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const forged = {
+      schema: "uads.evidence-record" as const,
+      schemaVersion: "0.3.0" as const,
+      evidenceId: "ev_forgedmissing01",
+      projectId: planned.workOrder.projectId,
+      workOrderId: planned.workOrder.workOrderId,
+      executionRunId: verified.run.executionRunId,
+      changeDigest: verified.run.currentChangeDigest!,
+      gateId: "unit-test",
+      sourceRole: "forged",
+      kind: "command" as const,
+      createdAt: new Date().toISOString(),
+      status: "PASS" as const,
+      summary: "forged cache-reuse missing provenance",
+      command: "npm test :: vitest run",
+      exitCode: 0,
+      outputRef: "sidecar://forged",
+      outputDigest: "deadbeef",
+      source: "cache-reuse" as const,
+    };
+    const evidence = listEvidenceRecords(paths, verified.run.executionRunId).filter(
+      (item) => item.gateId !== "unit-test" || item.changeDigest !== verified.run.currentChangeDigest,
+    );
+    const gates = deriveGateStates({
+      selectedGates: verified.run.selectedGates,
+      digest: verified.run.currentChangeDigest,
+      evidence: [...evidence, forged],
+      reviews: [],
+      validation: { paths, projectId: planned.workOrder.projectId },
+    });
+    expect(gates.find((gate) => gate.gateId === "unit-test")?.status).not.toBe("PASS");
+    expect(validateCacheReuseEvidence({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      changeDigest: verified.run.currentChangeDigest,
+      record: forged,
+    }).valid).toBe(false);
+  });
+
+  it("36: forged provenance ids cannot satisfy a gate", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).find((item) => item.source === "cache-reuse");
+    expect(reused).toBeTruthy();
+    const tampered = {
+      ...reused!,
+      evidenceId: "ev_forgedids01",
+      sourceCacheRecordId: "ecr_tampered00001",
+    };
+    const evidence = listEvidenceRecords(paths, verified.run.executionRunId).filter(
+      (item) => item.gateId !== "unit-test" || item.evidenceId === tampered.evidenceId,
+    );
+    const gates = deriveGateStates({
+      selectedGates: verified.run.selectedGates,
+      digest: verified.run.currentChangeDigest,
+      evidence: [...evidence, tampered],
+      reviews: [],
+      validation: { paths, projectId: planned.workOrder.projectId },
+    });
+    expect(gates.find((gate) => gate.gateId === "unit-test")?.status).not.toBe("PASS");
+  });
+
+  it("37: reuse proof mismatch cannot satisfy a gate", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).find((item) => item.source === "cache-reuse");
+    expect(reused).toBeTruthy();
+    const tampered = { ...reused!, evidenceId: "ev_forgedproof01", reuseProofDigest: "deadbeefproof" };
+    fs.unlinkSync(path.join(paths.workspace, "execution-runs", verified.run.executionRunId, "evidence", `${reused!.evidenceId}.json`));
+    persistEvidenceRecord({ paths, record: tampered });
+    const gates = deriveGateStates({
+      selectedGates: verified.run.selectedGates,
+      digest: verified.run.currentChangeDigest,
+      evidence: listEvidenceRecords(paths, verified.run.executionRunId),
+      reviews: [],
+      validation: { paths, projectId: planned.workOrder.projectId },
+    });
+    expect(gates.find((gate) => gate.gateId === "unit-test")?.status).not.toBe("PASS");
+    expect(() => runFinalize({ cwd: repo, uadsHome: home })).toThrow();
+  });
+
+  it("38: gate-contract identity mismatch cannot satisfy a gate", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).find((item) => item.source === "cache-reuse");
+    expect(reused).toBeTruthy();
+    const tampered = { ...reused!, evidenceId: "ev_forgedcontract01", gateReuseContractIdentity: "deadbeefcontract" };
+    const evidence = listEvidenceRecords(paths, verified.run.executionRunId).filter(
+      (item) => item.gateId !== "unit-test" || item.evidenceId === tampered.evidenceId,
+    );
+    const gates = deriveGateStates({
+      selectedGates: verified.run.selectedGates,
+      digest: verified.run.currentChangeDigest,
+      evidence: [...evidence, tampered],
+      reviews: [],
+      validation: { paths, projectId: planned.workOrder.projectId },
+    });
+    expect(gates.find((gate) => gate.gateId === "unit-test")?.status).not.toBe("PASS");
+  });
+
+  it("39: wrong evidence kind cache candidate cannot report HIT", () => {
+    const { repo, home } = tempDirs();
+    const { planned, paths } = ready(repo, home);
+    const evidenceDir = cachePaths(paths).evidence;
+    for (const name of fs.readdirSync(evidenceDir)) {
+      const record = readEvidenceCacheRecord(paths, name.replace(/\.json$/, ""));
+      if (record?.gateId === "unit-test") {
+        markCacheRecordStatus(paths, record.cacheRecordId, "stale", "test-setup");
+      }
+    }
+    const firstName = fs.readdirSync(evidenceDir)[0];
+    expect(firstName).toBeTruthy();
+    const base = JSON.parse(fs.readFileSync(path.join(evidenceDir, firstName!), "utf8"));
+    const wrongKind = structuredClone(base);
+    wrongKind.cacheRecordId = "ecr_wrongkind0001";
+    wrongKind.evidenceKind = "file";
+    wrongKind.command = null;
+    wrongKind.outputDigest = null;
+    wrongKind.fileDigest = "filedigest01";
+    persistEvidenceCacheRecord(paths, wrongKind);
+    const indexPath = cachePaths(paths).index;
+    const index = JSON.parse(fs.readFileSync(indexPath, "utf8")) as {
+      records: Array<{ cacheRecordId: string; gateId: string; reusable: boolean; status: string }>;
+    };
+    index.records = index.records.filter((row) => row.gateId !== "unit-test" || row.status === "stale");
+    index.records.push({
+      cacheRecordId: wrongKind.cacheRecordId,
+      gateId: "unit-test",
+      reusable: true,
+      status: "reusable",
+    });
+    fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+    const decision = evaluateCache({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      repoRoot: repo,
+      bundle: currentOrRefreshIndex({ repoRoot: repo, projectId: planned.workOrder.projectId, paths }),
+    });
+    expect(decision.decision).not.toBe("HIT");
+    expect(decision.maySatisfyGate).not.toBe(true);
+  });
+
+  it("40: valid provenance chain survives status/verify/finalize", () => {
+    const { repo, home } = tempDirs();
+    const { planned } = ready(repo, home);
+    fs.writeFileSync(path.join(repo, "src", "ui", "orphan.css"), "/* unrelated */\n");
+    const verified = runVerify({ cwd: repo, uadsHome: home });
+    const paths = getUadsPaths(planned.workOrder.projectId, home);
+    const reused = listEvidenceRecords(paths, verified.run.executionRunId).filter((item) => item.source === "cache-reuse");
+    expect(reused.length).toBeGreaterThan(0);
+    const validation = validateCacheReuseEvidence({
+      paths,
+      projectId: planned.workOrder.projectId,
+      gateId: "unit-test",
+      changeDigest: verified.run.currentChangeDigest,
+      record: reused[0]!,
+    });
+    expect(validation.valid).toBe(true);
+    recordGates(
+      repo,
+      home,
+      planned.workOrder.qualityGates.filter((gate) => gate !== "unit-test"),
+    );
+    approveAll(repo, home, planned.workOrder.assuranceReviewers);
+    const finalized = runFinalize({ cwd: repo, uadsHome: home });
+    expect(finalized.run.status).toBe("completed");
   });
 });

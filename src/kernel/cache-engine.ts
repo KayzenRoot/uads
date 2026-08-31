@@ -27,9 +27,9 @@ import { persistEvidenceRecord } from "./execution-persist.js";
 import { gateDef } from "./gates.js";
 import {
   buildGateReuseContract,
-  collectToolchainIdentity,
   computeReuseProofDigest,
   deriveNormalizedCommandFromMap,
+  resolveToolchainIdentity,
 } from "./gate-reuse-contract.js";
 import { newPrefixedId } from "./ids.js";
 import type { IndexBundle } from "./intelligence-types.js";
@@ -177,6 +177,24 @@ export function indexIsReusable(bundle: IndexBundle): boolean {
 }
 
 function isCacheRecordSemanticallyValid(record: EvidenceCacheRecord): boolean {
+  const def = gateDef(record.gateId);
+  if (!def) {
+    return false;
+  }
+  if (!def.allowedEvidenceKinds.includes(record.evidenceKind)) {
+    return false;
+  }
+  if (def.contractKind === "command") {
+    if (record.evidenceKind !== "command") {
+      return false;
+    }
+    if (!record.command || !record.outputDigest) {
+      return false;
+    }
+    if (!record.toolIdentity.producerFamily || !record.toolIdentity.producerVersion) {
+      return false;
+    }
+  }
   if (record.evidenceKind === "command" && !record.command) {
     return false;
   }
@@ -221,11 +239,12 @@ function decideKind(input: {
   candidate: EvidenceCacheRecord | null;
   changed: string[];
   contractUnprovable: boolean;
+  toolchainUnprovable: boolean;
   allCandidatesStale: boolean;
 }): CacheDecisionKind {
   if (input.blocked) return "BLOCKED";
   if (!input.eligible) return "NOT_REUSABLE";
-  if (input.contractUnprovable) return "NOT_REUSABLE";
+  if (input.contractUnprovable || input.toolchainUnprovable) return "NOT_REUSABLE";
   if (input.allCandidatesStale && input.changed.length > 0) return "STALE";
   if (!input.candidate) return "MISS";
   if (input.changed.length > 0) return "STALE";
@@ -321,6 +340,7 @@ export function evaluateCache(input: {
   let candidate: EvidenceCacheRecord | null = null;
   let blocked = false;
   let contractUnprovable = false;
+  let toolchainUnprovable = false;
   let reuseProofDigest: string | null = null;
 
   if (!eligible) {
@@ -348,12 +368,22 @@ export function evaluateCache(input: {
   }
 
   const repoRoot = input.repoRoot ?? process.cwd();
-  const liveToolchain = collectToolchainIdentity(repoRoot, contract.normalizedCommandIdentity, input.bundle);
+  const toolchainResult = resolveToolchainIdentity(repoRoot, contract.normalizedCommandIdentity, input.bundle);
+  const liveToolchain = toolchainResult.identity;
+  if (eligible && contract.contractKind === "command" && !toolchainResult.provable) {
+    toolchainUnprovable = true;
+    reasonCodes.push("TOOLCHAIN_UNPROVABLE");
+    for (const code of toolchainResult.reasonCodes) {
+      if (code !== "TOOLCHAIN_UNPROVABLE") {
+        reasonCodes.push(code);
+      }
+    }
+  }
   const liveEnv = collectEnvironmentIdentity(input.gateId);
   const liveManifests = input.bundle ? manifestDigestsFromBundle(input.bundle) : {};
   const bundle = input.bundle;
 
-  if (eligible && !blocked && !contractUnprovable && index && bundle) {
+  if (eligible && !blocked && !contractUnprovable && !toolchainUnprovable && index && bundle) {
     const candidates = listCandidatesForGate(input.paths, input.projectId, input.gateId, input.schemaRoot);
     let sawCorrupt = false;
     let sawStale = false;
@@ -431,6 +461,7 @@ export function evaluateCache(input: {
     candidate,
     changed,
     contractUnprovable,
+    toolchainUnprovable,
     allCandidatesStale: !candidate && changed.length > 0,
   });
   if (decision === "HIT") {
@@ -515,7 +546,11 @@ export function populateCacheFromEvidence(input: {
   }
 
   const basis = buildCacheValidityBasis(input.bundle, input.run.changedFiles);
-  const toolchain = collectToolchainIdentity(input.repoRoot, normalizedCommand, input.bundle);
+  const toolchainResult = resolveToolchainIdentity(input.repoRoot, normalizedCommand, input.bundle);
+  if (contract.contractKind === "command" && !toolchainResult.provable) {
+    return null;
+  }
+  const toolchain = toolchainResult.identity;
   const environmentIdentity = collectEnvironmentIdentity(input.record.gateId);
   const gateReuseContractIdentity = contract.gateReuseContractIdentity;
   const reuseProofDigest = computeReuseProofDigest({

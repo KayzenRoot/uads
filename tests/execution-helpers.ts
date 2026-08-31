@@ -17,6 +17,12 @@ export const frontendIntake = {
   classifier: "host-structured",
 };
 
+export function writeResolvedPackage(repo: string, packageName: string, version: string): void {
+  const pkgDir = path.join(repo, "node_modules", packageName);
+  fs.mkdirSync(pkgDir, { recursive: true });
+  fs.writeFileSync(path.join(pkgDir, "package.json"), `${JSON.stringify({ name: packageName, version }, null, 2)}\n`);
+}
+
 export function seedFrontend(repo: string): void {
   initRepo(repo, "https://github.com/example/uads-exec.git");
   fs.mkdirSync(path.join(repo, "src"), { recursive: true });
@@ -33,12 +39,13 @@ export function seedFrontend(repo: string): void {
           lint: "echo lint ok",
           build: "echo build ok",
         },
-        devDependencies: { vitest: "1.6.0" },
+        devDependencies: { vitest: "^1.6.0" },
       },
       null,
       2,
     )}\n`,
   );
+  writeResolvedPackage(repo, "vitest", "1.6.0");
   gitCommit(repo, "init");
 }
 

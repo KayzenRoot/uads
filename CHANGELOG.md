@@ -13,7 +13,15 @@ All notable changes to UADS (NexLabs) are documented here.
 - Optional evidence provenance fields (`source`, `sourceCacheRecordId`, `sourceEvidenceId`, `cacheDecisionId`) on existing 0.3.0 evidence records
 - Optional Context Pack layer digests (`staticLayerDigest`, `semiStableLayerDigest`, `dynamicLayerDigest`) on 0.4.0 packs
 - Review ZIP summaries `cache/cache-summary.json` and `cost/cost-summary.json`
-- Cost eval suite `npm run eval:cost` (CC1–CC22)
+- Cost eval suite `npm run eval:cost` (CC1–CC27)
+
+### Fixed (Correction 02)
+
+- Toolchain provability: command-gate reuse requires a supported producer with an exact resolved version (lockfile, node_modules, or exact dep — not semver ranges alone)
+- Unknown producers (e.g. mystery-bundler) cannot create reusable cache records or HIT
+- Cache-reuse evidence provenance enforced at gate evaluation with cross-checks against CacheDecision and EvidenceCacheRecord
+- Evidence schema requires provenance fields when `source=cache-reuse`
+- Cache candidate semantic validation enforces canonical gate evidence kinds before HIT/maySatisfyGate
 
 ### Fixed (Correction 01)
 

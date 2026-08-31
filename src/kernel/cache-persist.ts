@@ -103,6 +103,29 @@ export function persistCacheDecision(
   return sanitized;
 }
 
+export function readCacheDecision(
+  paths: UadsPaths,
+  cacheDecisionId: string,
+  schemaRoot?: string,
+): CacheDecision | null {
+  let target: string;
+  try {
+    target = sidecarJsonPath(cachePaths(paths).decisions, cacheDecisionId);
+  } catch {
+    return null;
+  }
+  const parsed = readJsonIfValid<CacheDecision>(target);
+  if (!parsed.ok) {
+    return null;
+  }
+  try {
+    assertSchema("cache-decision.schema.json", parsed.value, schemaRoot);
+    return parsed.value;
+  } catch {
+    return null;
+  }
+}
+
 export function readEvidenceCacheRecord(
   paths: UadsPaths,
   cacheRecordId: string,
