@@ -25,6 +25,9 @@ secrets.json
 
 # Caches and generated artifacts
 .cache/
+.tmp/
+tmp/
+/release/
 .turbo/
 .next/
 .parcel-cache/

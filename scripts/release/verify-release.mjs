@@ -1,0 +1,138 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const { validateReleaseMetadata } = await import("../../dist/release/semver.js");
+
+const version = process.argv[2];
+if (!version) fail("usage: node scripts/release/verify-release.mjs X.Y.Z [--ci-binding file] [--historical]");
+const historical = process.argv.includes("--historical");
+const bindingPath = valueOf("--ci-binding");
+const packageJson = readJson("package.json");
+const lockfile = readJson("package-lock.json");
+const currentSha = git(["rev-parse", "HEAD"]);
+const branch = git(["branch", "--show-current"]);
+const originMainSha = remoteMainSha();
+const tag = `v${version}`;
+const localTagSha = resolveTag(tag);
+const remoteTagCommitSha = remoteTagSha(tag);
+const tagSha = remoteTagCommitSha ?? localTagSha;
+
+const errors = validateReleaseMetadata({
+  version,
+  packageVersion: typeof packageJson.version === "string" ? packageJson.version : null,
+  versionFile: readText("VERSION"),
+  lockfileVersion: typeof lockfile.packages?.[""]?.version === "string" ? lockfile.packages[""].version : null,
+  changelog: readText("CHANGELOG.md"),
+  branch,
+  currentSha,
+  originMainSha,
+  tagSha,
+  historical,
+});
+
+if (!historical && !isClean()) errors.push("worktree-not-clean");
+if (tagSha && tagSha !== currentSha && !historical) errors.push("release-tag-conflict");
+if (tagSha && historical) errors.push("historical-release-requires-explicit-map");
+
+if (!historical) {
+  if (!bindingPath) {
+    const local = runLocalValidation();
+    if (!local) errors.push("local-validation-failed");
+  } else if (!verifyCiBinding(bindingPath, currentSha)) {
+    errors.push("ci-binding-invalid");
+  }
+}
+
+const result = {
+  ok: errors.length === 0,
+  version,
+  tag,
+  branch,
+  currentSha,
+  originMainSha,
+  localTagSha,
+  remoteTagSha: remoteTagCommitSha,
+  errors,
+};
+process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+if (!result.ok) process.exit(1);
+
+function valueOf(name) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : null;
+}
+
+function readText(relative) {
+  return fs.readFileSync(path.join(root, relative), "utf8");
+}
+
+function readJson(relative) {
+  return JSON.parse(readText(relative));
+}
+
+function git(args) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function remoteMainSha() {
+  const result = spawnSync("git", ["ls-remote", "origin", "refs/heads/main"], {
+    cwd: root,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim().split(/\s+/)[0] || null;
+}
+
+function remoteTagSha(tagName) {
+  const result = spawnSync("git", ["ls-remote", "origin", `refs/tags/${tagName}`, `refs/tags/${tagName}^{}`], {
+    cwd: root,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) return null;
+  const lines = result.stdout.trim().split(/\r?\n/).filter(Boolean);
+  const peeled = lines.find((line) => line.endsWith(`refs/tags/${tagName}^{}`));
+  return (peeled ?? lines[0])?.split(/\s+/)[0] ?? null;
+}
+
+function resolveTag(tagName) {
+  const result = spawnSync("git", ["rev-parse", `${tagName}^{commit}`], { cwd: root, encoding: "utf8", windowsHide: true });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function isClean() {
+  const result = spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8", windowsHide: true });
+  return result.status === 0 && result.stdout.trim().length === 0;
+}
+
+function verifyCiBinding(file, expectedSha) {
+  try {
+    const value = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
+    const runs = Array.isArray(value) ? value : Array.isArray(value.runs) ? value.runs : [value];
+    return runs.some((run) => {
+      const headSha = run.head_sha ?? run.headSha;
+      const status = run.status;
+      const conclusion = run.conclusion;
+      return headSha === expectedSha && status === "completed" && conclusion === "success";
+    });
+  } catch {
+    return false;
+  }
+}
+
+function runLocalValidation() {
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const result = spawnSync(npm, ["run", "release:validate"], { cwd: root, stdio: "inherit", windowsHide: true });
+  return result.status === 0;
+}
+
+function fail(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(2);
+}

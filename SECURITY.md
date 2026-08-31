@@ -4,15 +4,19 @@ UADS is maintained by **NexLabs**.
 
 ## Supported versions
 
-The `main` branch and the latest published version (currently `0.1.0` foundation) receive security fixes.
+UADS is pre-1.0. The `main` branch and the latest `0.7.x` release line receive security fixes. Older pre-1.0 release lines are historical snapshots; fixes may be backported when practical, but users should upgrade to the latest release.
 
 ## Reporting a vulnerability
 
 Do **not** open a public issue for exploitable vulnerabilities.
 
-1. Email or privately contact the NexLabs maintainers via GitHub security advisories on https://github.com/KayzenRoot/uads
+1. Use [GitHub Private Vulnerability Reporting](https://github.com/KayzenRoot/uads/security/advisories/new) when available, or privately contact the NexLabs maintainers through the repository.
 2. Include reproduction notes, affected version, and impact
 3. Do not attach secrets, private keys, or production credentials
+
+Maintainers acknowledge reports when practicable, review the reproduction and impact, coordinate a fix, and publish a release note when disclosure is appropriate. No fixed response-time SLA is promised.
+
+Security scope includes orchestration and execution controls, cache and evidence integrity, local sidecars, adapters and installers, GitHub automation, release artifacts, and the software supply chain. Do not open a public issue for an exploitable vulnerability.
 
 ## Review bundles
 

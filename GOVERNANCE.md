@@ -14,7 +14,13 @@ Architecture Freeze documents in `docs/` are normative. Changes that alter globa
 
 ## Versioning
 
-`VERSION` and `CHANGELOG.md` are the source of truth for release numbering. Foundation increment is `0.1.0`.
+UADS follows SemVer 2.0.0 while pre-1.0. `package.json`, the root `VERSION` file, and the package-lock root version must agree. `CHANGELOG.md` is the curated release history. Tags use immutable `vX.Y.Z` names.
+
+## Main branch protection
+
+Normal contributions go through pull requests with one approval, stale-review dismissal, code-owner review, resolved conversations, green `Foundation checks`, linear history, and no force pushes or deletion. Administrator enforcement is deliberately disabled so the verified NexLabs maintainer can continue the controlled construction workflow and recover from repository-level configuration failures. Signed commits and tags are not mandatory yet.
+
+The exact remote state is audited by `npm run github:audit -- --output <sidecar-directory>`; permission- or plan-gated features are reported rather than assumed.
 
 ## Out of scope for informal PRs
 

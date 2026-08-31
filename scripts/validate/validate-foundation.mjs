@@ -7,6 +7,14 @@ import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const lockfile = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
+const versionFile = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
+if (packageJson.version !== versionFile || lockfile.packages?.[""]?.version !== packageJson.version) {
+  process.stderr.write("Release version sources disagree.\n");
+  process.exit(1);
+}
+
 const requiredFiles = [
   "README.md",
   "LICENSE",
@@ -21,12 +29,18 @@ const requiredFiles = [
   ".gitignore",
   ".editorconfig",
   ".github/pull_request_template.md",
-  ".github/ISSUE_TEMPLATE/bug_report.md",
-  ".github/ISSUE_TEMPLATE/feature_request.md",
+  ".github/ISSUE_TEMPLATE/bug.yml",
+  ".github/ISSUE_TEMPLATE/feature.yml",
+  ".github/ISSUE_TEMPLATE/config.yml",
   ".github/ISSUE_TEMPLATE/security_review.md",
   ".github/CODEOWNERS",
   ".github/dependabot.yml",
+  ".github/release.yml",
   ".github/workflows/ci.yml",
+  ".github/workflows/codeql.yml",
+  ".github/workflows/dependency-review.yml",
+  ".github/workflows/release.yml",
+  ".github/workflows/scorecard.yml",
   "docs/01-PROJECT-OVERVIEW.md",
   "docs/02-REQUIREMENTS.md",
   "docs/03-SCOPE.md",
@@ -90,8 +104,18 @@ const requiredFiles = [
   "scripts/lib/exec.mjs",
   "scripts/review/create-review-bundle.mjs",
   "scripts/review/inspect-review-bundle.mjs",
+  "scripts/validate/validate-action-pins.mjs",
   "scripts/validate/capture-evidence.mjs",
+  "scripts/release/verify-release.mjs",
+  "scripts/release/run-validation.mjs",
+  "scripts/release/build-release.mjs",
+  "scripts/release/reconstruct-historical.mjs",
+  "scripts/release/publish-release.mjs",
+  "scripts/github/configure-repository.mjs",
+  "scripts/github/audit-repository.mjs",
   "schemas/validation-summary.schema.json",
+  "schemas/release-manifest.schema.json",
+  "schemas/release-validation-report.schema.json",
   "src/cli.ts",
   "package.json",
 ];
@@ -122,6 +146,7 @@ runNpmGate(["run", "eval:context"]);
 runNpmGate(["run", "eval:fault"]);
 runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "validate:skills"]);
+runNpmGate(["run", "validate:actions"]);
 
 const cli = path.join(root, "dist", "cli.js");
 for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) {

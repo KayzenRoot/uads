@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer release version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: npm
+      - name: Prepare release workspace
+        run: mkdir -p tmp release
+      - name: Bind a successful Foundation CI run to this SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --commit "$GITHUB_SHA" --json databaseId,status,conclusion,headSha,name > tmp/ci-binding.json
+      - name: Validate exact CI binding
+        run: node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/ci-binding.json','utf8')); if(!a.some(x=>x.name==='CI'&&x.headSha===process.env.GITHUB_SHA&&x.status==='completed'&&x.conclusion==='success')) process.exit(1)"
+      - name: Run complete release validation
+        run: npm run release:validate -- --output tmp/release-validation-report.json --ci-binding tmp/ci-binding.json
+      - name: Verify release metadata and provenance
+        run: npm run release:verify -- "${{ inputs.version }}" --ci-binding tmp/ci-binding.json
+      - name: Build release artifacts
+        run: npm run release:build -- "${{ inputs.version }}" --output release --validation-report tmp/release-validation-report.json
+      - name: Attest release artifacts when supported
+        id: attest
+        continue-on-error: true
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*
+      - name: Publish immutable tag and GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run release:publish -- "${{ inputs.version }}" --artifacts release --repo "$GITHUB_REPOSITORY"
+      - name: Verify release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "v${{ inputs.version }}" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName,targetCommitish,assets

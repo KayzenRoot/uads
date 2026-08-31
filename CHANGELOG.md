@@ -2,6 +2,25 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.7.0] - 2026-08-31
+
+### Added
+
+- Professional GitHub repository governance with issue forms, CODEOWNERS, Dependabot grouping, labels, release-note categories, and documented maintainer continuity.
+- Immutable-action-pinned CI, CodeQL, dependency review, OpenSSF Scorecard, and manual release workflows with least-privilege permissions.
+- Deterministic release tooling for SemVer validation, exact historical tag mapping, npm packaging, SPDX SBOM, SHA-256 checksums, release manifests, and machine-readable validation reports.
+- GitHub configuration and audit helpers that re-read remote state and report permission or plan limitations without exposing credentials.
+
+### Changed
+
+- Product version sources now consistently identify `0.7.0`; the Architecture Freeze and historical schema versions remain unchanged.
+- Release policy, security support, contribution requirements, and governance documentation now describe the reproducible pre-1.0 lifecycle.
+
+### Security
+
+- Workflow action references are required to use immutable 40-character commit SHAs and are validated as part of the mandatory foundation path.
+- Release outputs reject credential-like values and absolute host paths; npm publication remains explicitly out of scope.
+
 ## [0.6.0] - 2026-08-30
 
 ### Added

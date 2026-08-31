@@ -13,15 +13,18 @@ UADS is an open-source project by **NexLabs**, licensed under Apache License 2.0
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run build
 npm test
+npm run validate:actions
 npm run validate
 ```
 
+The complete release gate is `npm run release:validate -- --output tmp/release-validation-report.json`; it records the exact command results needed for a release. Do not publish packages to npm from this repository.
+
 ## Pull requests
 
-Use the PR template. Keep diffs focused. Do not commit `.env`, keys, or generated `dist/` unless a release process later requires it (this repo gitignores `dist/`).
+Use the PR template. Keep diffs focused. Do not commit `.env`, keys, or generated `dist/` or release output. Every behavioral claim should include evidence, and every release-affecting change must update `CHANGELOG.md` when appropriate.
 
 ## Code of conduct
 

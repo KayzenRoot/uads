@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { createReleaseManifest, checksumFile, assertReleaseTextSafe } from "../../dist/release/release-artifacts.js";
+import { runNpm } from "../lib/exec.mjs";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const version = process.argv[2];
+if (!version) fail("usage: node scripts/release/build-release.mjs X.Y.Z --output directory --validation-report file");
+const output = path.resolve(valueOf("--output") ?? path.join(root, "tmp", "release", version));
+const validationReportPath = valueOf("--validation-report");
+if (!validationReportPath) fail("--validation-report is required");
+fs.mkdirSync(output, { recursive: true });
+
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+if (packageJson.version !== version) fail(`package.json version is ${packageJson.version}, expected ${version}`);
+const commit = git(["rev-parse", "HEAD"]);
+const npmPack = runNpm(["pack", "--json", "--pack-destination", output]);
+if (npmPack.status !== 0) fail(String(npmPack.stderr || npmPack.stdout));
+const packed = JSON.parse(String(npmPack.stdout).trim());
+const packedName = packed[0]?.filename;
+if (!packedName) fail("npm pack did not return an artifact filename");
+const packagePath = path.isAbsolute(packedName) ? packedName : path.join(output, packedName);
+const expectedPackagePath = path.join(output, `uads-${version}.tgz`);
+if (packagePath !== expectedPackagePath) fs.renameSync(packagePath, expectedPackagePath);
+
+const sbom = runNpm(["sbom", "--sbom-format=spdx", "--sbom-type=application", "--omit=dev"]);
+if (sbom.status !== 0) fail(String(sbom.stderr || sbom.stdout));
+const sbomPath = path.join(output, `uads-${version}.spdx.json`);
+const sbomText = String(sbom.stdout).trim();
+const sbomJson = JSON.parse(sbomText);
+const describesUads = sbomJson.name === `uads@${version}` && (sbomJson.packages ?? []).some((pkg) => pkg.name === "uads" && pkg.versionInfo === version);
+if (!describesUads || !String(sbomJson.documentNamespace ?? "").includes(version)) {
+  fail("SBOM does not identify the requested UADS release");
+}
+assertReleaseTextSafe(sbomText);
+fs.writeFileSync(sbomPath, `${JSON.stringify(sbomJson, null, 2)}\n`);
+
+const validationReport = JSON.parse(fs.readFileSync(path.resolve(validationReportPath), "utf8"));
+if (validationReport.version !== version || validationReport.commit !== commit || validationReport.summary?.failed !== 0) {
+  fail("validation report is not bound to the release version/commit or contains failures");
+}
+assertReleaseTextSafe(JSON.stringify(validationReport));
+const validationPath = path.join(output, "validation-report.json");
+fs.writeFileSync(validationPath, `${JSON.stringify(validationReport, null, 2)}\n`);
+
+const artifactPaths = [expectedPackagePath, sbomPath, validationPath];
+const artifacts = artifactPaths.map((artifactPath) => ({
+  name: path.basename(artifactPath),
+  size: fs.statSync(artifactPath).size,
+  sha256: sha256File(artifactPath),
+}));
+const checksumPath = path.join(output, "SHA256SUMS.txt");
+fs.writeFileSync(checksumPath, checksumFile(artifacts));
+const manifest = createReleaseManifest({
+  version,
+  tag: `v${version}`,
+  commit,
+  generatedAt: new Date().toISOString(),
+  artifacts,
+  validationReport: "validation-report.json",
+  ciBinding: validationReport.ciBinding ?? null,
+});
+const manifestPath = path.join(output, "release-manifest.json");
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+assertReleaseTextSafe(fs.readFileSync(manifestPath, "utf8"));
+fs.writeFileSync(checksumPath, checksumFile([...artifacts, {
+  name: path.basename(manifestPath),
+  size: fs.statSync(manifestPath).size,
+  sha256: sha256File(manifestPath),
+}]));
+
+const finalArtifacts = [...artifactPaths, manifestPath, checksumPath].map((file) => path.basename(file));
+process.stdout.write(`${JSON.stringify({ output, version, commit, artifacts: finalArtifacts }, null, 2)}\n`);
+
+function valueOf(name) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : null;
+}
+
+function git(args) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });
+  if (result.status !== 0) fail(result.stderr || `git ${args.join(" ")} failed`);
+  return result.stdout.trim();
+}
+
+function sha256File(file) {
+  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function fail(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+}

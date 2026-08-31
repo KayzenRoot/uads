@@ -2,9 +2,11 @@
 
 **Universal Autonomous Development Studio** by **NexLabs**.
 
-UADS is a global-first autonomous software engineering orchestration framework. It helps agents build Web2, Web3, SaaS, AI, finance, quant, math-heavy systems and games with architecture discipline, quality gates, security and performance verification, evidence-based delivery, and review bundles for external audit.
+[![CI](https://github.com/KayzenRoot/uads/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KayzenRoot/uads/actions/workflows/ci.yml) [![CodeQL](https://github.com/KayzenRoot/uads/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/KayzenRoot/uads/security/code-scanning) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-This repository is the public open-source UADS product. Prompt 001 delivered the foundation. Prompt 002 added the Orchestrator Kernel. Prompt 003 added bounded execution. Prompt 004 added Context Intelligence. Prompt 005 added fault localization. **v0.6.0** adds an Evidence Cache and Cost Governor: eligible PASS can be reused only when its validity basis is still proven, and token budgets are enforced without skipping required gates. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+UADS is a pre-1.0, global-first autonomous software engineering orchestration framework for specialist delegation, independent review, evidence-based quality gates, context intelligence, and cost-aware execution.
+
+This repository is the public open-source UADS product. The latest release is [v0.7.0](https://github.com/KayzenRoot/uads/releases/tag/v0.7.0). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -56,6 +58,15 @@ node dist/cli.js review
 ```
 
 `npm run lint` is TypeScript `tsc --noEmit` (compile/static check; not ESLint).
+
+## Project and release documentation
+
+- [Releases](https://github.com/KayzenRoot/uads/releases) and [changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Governance](GOVERNANCE.md)
+- [Release policy](RELEASING.md)
+- [CI and security workflows](.github/workflows/)
 
 Review bundles and validation evidence are written **outside** the project:
 
