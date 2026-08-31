@@ -32,6 +32,7 @@ Validation evidence is stored in the sidecar (`.../evidence/`), never in git.
 - `git-status.txt`, `git-diff.txt`, `git-log.txt`
 - `version.txt`, `README.txt`
 - `evidence/validation-summary.json` and per-command outputs
+- `github/` and `release/` — optional canonical release evidence for an external release audit; generated from the global sidecar and never from repository-root staging directories
 - `orchestration/` — sanitized checkpoint/Work Order/routing/execution/evidence/review snapshot when present
 - `intelligence/` — sanitized index-state and current Context Pack metadata when present
 - `failures/` — sanitized failure/diagnosis/memory summaries when present (no raw `--input` logs)
@@ -79,5 +80,6 @@ The inspector independently checks:
 - no unredacted high-confidence secret signature remains
 - `review-manifest.json` is valid JSON and conforms to `schemas/review-manifest.schema.json` (Ajv)
 - `includedFiles` / `evidenceIncluded` match ZIP entries
+- when release evidence is required, `reviewEvidenceIncluded` matches the canonical `github/` and `release/` entries and all release identities resolve to one commit
 - no `../`, absolute, or drive-prefixed ZIP entry names
 - duplicate ZIP entry names are rejected

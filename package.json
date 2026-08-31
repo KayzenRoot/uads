@@ -1,6 +1,6 @@
 {
   "name": "uads",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "UADS - Universal Autonomous Development Studio by NexLabs. Global-first autonomous software engineering orchestration framework.",
   "license": "Apache-2.0",
   "author": "NexLabs",
@@ -62,6 +62,7 @@
     "github:configure": "node scripts/github/configure-repository.mjs",
     "github:audit": "node scripts/github/audit-repository.mjs",
     "review": "node dist/cli.js review",
+    "review:release": "node scripts/review/create-release-review.mjs",
     "uads": "node dist/cli.js"
   },
   "dependencies": {

@@ -39,7 +39,7 @@ jobs:
       - name: Bind a successful Foundation CI run to this SHA
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --commit "$GITHUB_SHA" --json databaseId,status,conclusion,headSha,name > tmp/ci-binding.json
+        run: gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --commit "$GITHUB_SHA" --json databaseId,status,conclusion,headSha,name,event,url,createdAt,updatedAt > tmp/ci-binding.json
       - name: Validate exact CI binding
         run: node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/ci-binding.json','utf8')); if(!a.some(x=>x.name==='CI'&&x.headSha===process.env.GITHUB_SHA&&x.status==='completed'&&x.conclusion==='success')) process.exit(1)"
       - name: Run complete release validation
@@ -47,7 +47,7 @@ jobs:
       - name: Verify release metadata and provenance
         run: npm run release:verify -- "${{ inputs.version }}" --ci-binding tmp/ci-binding.json
       - name: Build release artifacts
-        run: npm run release:build -- "${{ inputs.version }}" --output release --validation-report tmp/release-validation-report.json
+        run: npm run release:build -- "${{ inputs.version }}" --output release --validation-report tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --repo "$GITHUB_REPOSITORY"
       - name: Attest release artifacts when supported
         id: attest
         continue-on-error: true

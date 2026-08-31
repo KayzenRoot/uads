@@ -2,6 +2,39 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.7.1] - 2026-08-31
+
+### Highlights
+
+- Hardened release evidence and final Review ZIP integrity for reproducible, identity-bound release audits.
+- Added a canonical `ci-binding.json` release asset binding the published artifacts to one successful Foundation CI run and exact commit.
+
+### Fixed
+
+- Review snapshots no longer ingest repository-root UADS staging directories (`tmp/`, `.tmp/`, and `release/`) in the canonical UADS repository.
+- Release review inspection now fails closed on missing, conflicting, stale, or SHA-inconsistent GitHub and release evidence.
+- Release automation rejects ephemeral CI-binding paths and placeholder release notes.
+
+### Verification
+
+- The release sequence requires local validation, exact main-branch CI binding, release manifest/report/checksum verification, remote asset verification, and a clean final worktree.
+
+### Assets
+
+- `uads-0.7.1.tgz`, SPDX SBOM, `SHA256SUMS.txt`, `release-manifest.json`, `validation-report.json`, and `ci-binding.json`.
+
+### Compatibility
+
+- Node.js `>=20`; npm publication is not performed by this repository's release workflow.
+
+### Security / Supply Chain
+
+- Release metadata rejects credential-like values and absolute host paths; workflow actions remain pinned to immutable commit SHAs.
+
+### Pre-1.0 Notice
+
+- UADS remains pre-1.0.0; compatibility and release evidence contracts may evolve between minor releases.
+
 ## [0.7.0] - 2026-08-31
 
 ### Added

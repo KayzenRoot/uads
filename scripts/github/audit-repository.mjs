@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,26 +7,38 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
-const output = path.resolve(valueOf("--output") ?? path.join(root, "tmp", "github-audit"));
+const releaseVersion = valueOf("--release-version") ?? "0.7.1";
+const output = path.resolve(valueOf("--output") ?? defaultOutput());
 fs.mkdirSync(output, { recursive: true });
 
-const repository = api(`repos/${repo}`);
-const mainRef = api(`repos/${repo}/git/ref/heads/main`);
-const runs = api(`repos/${repo}/actions/runs?branch=main&per_page=100`);
-const ciRuns = (runs.workflow_runs ?? []).filter((run) => run.name === "CI").map((run) => ({
-  id: run.id,
-  name: run.name,
-  headSha: run.head_sha,
-  status: run.status,
-  conclusion: run.conclusion,
-  event: run.event,
-  url: run.html_url,
-  createdAt: run.created_at,
-  updatedAt: run.updated_at,
-}));
+const repositoryRaw = api("repos/" + repo);
+const mainRef = api("repos/" + repo + "/git/ref/heads/main");
+const mainBranchSha = mainRef?.object?.sha ?? null;
+const runs = api("repos/" + repo + "/actions/runs?branch=main&per_page=100");
+const ciRuns = (runs?.workflow_runs ?? []).filter((run) => run.name === "CI").map(summarizeRun);
+const exactCiRuns = ciRuns.filter((run) => run.headSha === mainBranchSha);
+const releaseRuns = api("repos/" + repo + "/actions/workflows/release.yml/runs?per_page=100");
+const releaseRun = (releaseRuns?.workflow_runs ?? [])
+  .filter((run) => run.head_sha === mainBranchSha)
+  .sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0] ?? null;
 
-write("repository.json", pick(repository, ["full_name", "visibility", "default_branch", "description", "homepage", "topics", "has_issues", "has_projects", "has_wiki", "has_discussions", "license", "permissions"]));
-write("releases.json", (api(`repos/${repo}/releases?per_page=100`) ?? []).map((release) => ({
+write("repository.json", {
+  full_name: repositoryRaw?.full_name ?? repo,
+  visibility: repositoryRaw?.visibility ?? null,
+  default_branch: repositoryRaw?.default_branch ?? "main",
+  defaultBranchSha: mainBranchSha,
+  mainBranchSha,
+  description: repositoryRaw?.description ?? null,
+  homepage: repositoryRaw?.homepage ?? null,
+  topics: repositoryRaw?.topics ?? [],
+  has_issues: repositoryRaw?.has_issues ?? null,
+  has_projects: repositoryRaw?.has_projects ?? null,
+  has_wiki: repositoryRaw?.has_wiki ?? null,
+  has_discussions: repositoryRaw?.has_discussions ?? null,
+  license: repositoryRaw?.license ?? null,
+  permissions: repositoryRaw?.permissions ?? null,
+});
+write("releases.json", (api("repos/" + repo + "/releases?per_page=100") ?? []).map((release) => ({
   id: release.id,
   tagName: release.tag_name,
   name: release.name,
@@ -36,38 +49,127 @@ write("releases.json", (api(`repos/${repo}/releases?per_page=100`) ?? []).map((r
   assets: (release.assets ?? []).map((asset) => ({ name: asset.name, size: asset.size, state: asset.state })),
 })));
 write("tags.json", awaitResolvedTags(repo));
-write("workflows.json", (api(`repos/${repo}/actions/workflows?per_page=100`).workflows ?? []).map((workflow) => ({ id: workflow.id, name: workflow.name, path: workflow.path, state: workflow.state })));
-write("main-protection.json", optional(`repos/${repo}/branches/main/protection`));
-write("main-ruleset.json", optional(`repos/${repo}/rulesets?includes_parents=true`));
+write("workflows.json", (api("repos/" + repo + "/actions/workflows?per_page=100")?.workflows ?? []).map((workflow) => ({
+  id: workflow.id,
+  name: workflow.name,
+  path: workflow.path,
+  state: workflow.state,
+})));
+write("main-protection.json", optional("repos/" + repo + "/branches/main/protection"));
+write("main-ruleset.json", optional("repos/" + repo + "/rulesets?includes_parents=true"));
 write("security-summary.json", {
-  securityAndAnalysis: optional(`repos/${repo}/security-and-analysis`),
-  automatedSecurityFixes: optional(`repos/${repo}/automated-security-fixes`),
-  privateVulnerabilityReporting: optional(`repos/${repo}/private-vulnerability-reporting`),
+  securityAndAnalysis: optional("repos/" + repo + "/security-and-analysis"),
+  automatedSecurityFixes: optional("repos/" + repo + "/automated-security-fixes"),
+  privateVulnerabilityReporting: optional("repos/" + repo + "/private-vulnerability-reporting"),
   limitations: ["GitHub may omit plan-gated security fields from the API response."],
 });
-write("labels.json", (api(`repos/${repo}/labels?per_page=100`) ?? []).map((label) => ({ name: label.name, color: label.color, description: label.description })));
-write("release-v0.7.0.json", optional(`repos/${repo}/releases/tags/v0.7.0`));
+write("labels.json", (api("repos/" + repo + "/labels?per_page=100") ?? []).map((label) => ({
+  name: label.name,
+  color: label.color,
+  description: label.description,
+})));
+const releaseRaw = optional("repos/" + repo + "/releases/tags/v" + releaseVersion);
+write("release-v" + releaseVersion + ".json", summarizeRelease(releaseRaw, resolveTagCommit(repo, "v" + releaseVersion)));
 write("ci-runs.json", ciRuns);
+write("ci-final.json", {
+  schema: "uads.github-ci-final",
+  schemaVersion: releaseVersion,
+  repository: repo,
+  mainBranchSha,
+  headSha: exactCiRuns.length === 1 ? exactCiRuns[0].headSha : null,
+  status: exactCiRuns.length === 1 ? exactCiRuns[0].status : "ambiguous",
+  conclusion: exactCiRuns.length === 1 ? exactCiRuns[0].conclusion : "ambiguous",
+  runId: exactCiRuns.length === 1 ? exactCiRuns[0].id : null,
+  event: exactCiRuns.length === 1 ? exactCiRuns[0].event : null,
+  htmlUrl: exactCiRuns.length === 1 ? exactCiRuns[0].url : null,
+  exactSuccessfulRunCount: exactCiRuns.filter((run) => run.status === "completed" && run.conclusion === "success").length,
+});
+write("release-run-v" + releaseVersion + ".json", awaitReleaseRunSummary(releaseRun, repo));
 
 const headSha = git(["rev-parse", "HEAD"]);
 write("summary.json", {
   schema: "uads.github-audit",
-  schemaVersion: "0.7.0",
+  schemaVersion: releaseVersion,
   generatedAt: new Date().toISOString(),
   repository: repo,
   finalCommitSha: headSha,
-  mainBranchSha: mainRef.object?.sha ?? null,
-  exactHeadCiRuns: ciRuns.filter((run) => run.headSha === (mainRef.object?.sha ?? null)),
+  mainBranchSha,
+  exactHeadCiRuns: exactCiRuns,
+  releaseRunId: releaseRun?.id ?? null,
   limitations: [
-    ...(repository.permissions?.admin === true ? [] : ["BLOCKED_BY_GITHUB_PERMISSION"]),
+    ...(repositoryRaw?.permissions?.admin === true ? [] : ["BLOCKED_BY_GITHUB_PERMISSION"]),
     "Administrative settings are reported as returned by the authenticated API.",
   ],
 });
-process.stdout.write(`${JSON.stringify({ output, files: fs.readdirSync(output).sort() }, null, 2)}\n`);
+process.stdout.write(JSON.stringify({ output, files: fs.readdirSync(output).sort() }, null, 2) + "\n");
 
+function defaultOutput() {
+  const originUrl = git(["config", "--get", "remote.origin.url"]) ?? repo;
+  const normalized = originUrl.replace(/^git\+/, "").replace(/\.git$/, "").replace(/^https?:\/\//, "");
+  const projectId = crypto.createHash("sha256").update(normalized || root).digest("hex").slice(0, 16);
+  const uadsHome = process.env.UADS_HOME ? path.resolve(process.env.UADS_HOME) : path.join(process.env.USERPROFILE ?? process.cwd(), ".uads");
+  return path.join(uadsHome, "workspaces", projectId, "review-evidence", "github");
+}
+function summarizeRun(run) {
+  return {
+    id: run.id,
+    name: run.name,
+    headSha: run.head_sha,
+    status: run.status,
+    conclusion: run.conclusion,
+    event: run.event,
+    url: run.html_url,
+    createdAt: run.created_at,
+    updatedAt: run.updated_at,
+  };
+}
+function summarizeRelease(release, tagCommit) {
+  if (!release || release.status === "unavailable") return release;
+  return {
+    id: release.id,
+    tag_name: release.tag_name,
+    name: release.name,
+    draft: release.draft,
+    prerelease: release.prerelease,
+    targetCommitish: release.target_commitish,
+    targetCommitSha: tagCommit ?? release.target_commitish,
+    published_at: release.published_at,
+    body: release.body,
+    assets: (release.assets ?? []).map((asset) => ({ name: asset.name, size: asset.size, state: asset.state, browser_download_url: asset.browser_download_url })),
+  };
+}
+function resolveTagCommit(targetRepo, tagName) {
+  const ref = api("repos/" + targetRepo + "/git/ref/tags/" + tagName);
+  if (!ref?.object?.sha) return null;
+  if (ref.object.type === "commit") return ref.object.sha;
+  const tag = api("repos/" + targetRepo + "/git/tags/" + ref.object.sha);
+  return tag?.object?.sha ?? null;
+}
 function awaitResolvedTags(targetRepo) {
-  const refs = api(`repos/${targetRepo}/git/matching-refs/tags`) ?? [];
+  const refs = api("repos/" + targetRepo + "/git/matching-refs/tags") ?? [];
   return refs.map((ref) => ({ name: ref.ref.replace(/^refs\/tags\//, ""), object: ref.object }));
+}
+function awaitReleaseRunSummary(run, targetRepo) {
+  if (!run) return { status: "unavailable", reason: "release-workflow-run-unavailable" };
+  const jobs = api("repos/" + targetRepo + "/actions/runs/" + run.id + "/jobs?per_page=100");
+  return {
+    id: run.id,
+    name: run.name,
+    headSha: run.head_sha,
+    status: run.status,
+    conclusion: run.conclusion,
+    event: run.event,
+    url: run.html_url,
+    createdAt: run.created_at,
+    updatedAt: run.updated_at,
+    jobs: (jobs?.jobs ?? []).map((job) => ({
+      id: job.id,
+      name: job.name,
+      status: job.status,
+      conclusion: job.conclusion,
+      steps: (job.steps ?? []).map((step) => ({ name: step.name, status: step.status, conclusion: step.conclusion })),
+    })),
+  };
 }
 function api(endpoint) {
   const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true });
@@ -78,12 +180,8 @@ function optional(endpoint) {
   const value = api(endpoint);
   return value ?? { status: "unavailable", reason: "github-api-response-unavailable" };
 }
-function pick(value, keys) {
-  if (!value) return { status: "unavailable", reason: "github-api-response-unavailable" };
-  return Object.fromEntries(keys.map((key) => [key, value[key] ?? null]));
-}
 function write(name, value) {
-  fs.writeFileSync(path.join(output, name), `${JSON.stringify(value, null, 2)}\n`);
+  fs.writeFileSync(path.join(output, name), JSON.stringify(value, null, 2) + "\n");
 }
 function git(args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });

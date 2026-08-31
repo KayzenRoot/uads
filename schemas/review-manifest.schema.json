@@ -71,6 +71,10 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "reviewEvidenceIncluded": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^(github|release)/" }
+    },
     "exclusions": {
       "type": "array",
       "items": { "type": "string" }

@@ -17,7 +17,7 @@ import { sha256Hex, toPosix } from "./hash.js";
 import { inspectReviewBundle, type InspectionResult } from "./inspect-review.js";
 import { sanitizeRemoteUrl } from "./sanitize-url.js";
 import { hostPathVariants, sanitizeReviewText } from "./secrets.js";
-import { readUadsVersion } from "./version.js";
+import { findPackageRoot, readUadsVersion } from "./version.js";
 import { ensureWorkspace, readOrCreateProfile } from "./workspace.js";
 
 export type ReviewManifest = {
@@ -41,6 +41,7 @@ export type ReviewManifest = {
   skipped: Array<{ path: string; reason: string }>;
   excludedDirectoryClasses: string[];
   evidenceIncluded: string[];
+  reviewEvidenceIncluded: string[];
   exclusions: string[];
   inspection: {
     ok: boolean;
@@ -72,7 +73,11 @@ type WalkResult = {
   excludedDirectoryClasses: string[];
 };
 
-export function walkProject(repoRoot: string): WalkResult {
+type WalkProjectOptions = {
+  excludeRootDirectories?: ReadonlySet<string>;
+};
+
+export function walkProject(repoRoot: string, options: WalkProjectOptions = {}): WalkResult {
   const candidates: string[] = [];
   const skipped: Array<{ path: string; reason: string }> = [];
   const excludedDirectoryClasses: string[] = [];
@@ -90,8 +95,15 @@ export function walkProject(repoRoot: string): WalkResult {
       const rel = toPosix(path.relative(repoRoot, abs));
 
       if (entry.isDirectory()) {
+        if (path.resolve(absDir) === path.resolve(repoRoot) && options.excludeRootDirectories?.has(entry.name)) {
+          const klass = entry.name + "/";
+          if (!excludedDirectoryClasses.includes(klass)) {
+            excludedDirectoryClasses.push(klass);
+          }
+          continue;
+        }
         if (isExcludedDirectoryName(entry.name)) {
-          const klass = `${entry.name}/`;
+          const klass = entry.name + "/";
           if (!excludedDirectoryClasses.includes(klass)) {
             excludedDirectoryClasses.push(klass);
           }
@@ -126,6 +138,62 @@ export function walkProject(repoRoot: string): WalkResult {
   return { candidates, skipped, excludedDirectoryClasses };
 }
 
+function isCanonicalUadsRepository(repoRoot: string): boolean {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
+      name?: unknown;
+      repository?: { url?: unknown };
+    };
+    const repositoryUrl = typeof packageJson.repository?.url === "string" ? packageJson.repository.url : "";
+    return (
+      packageJson.name === "uads" &&
+      /github\.com\/KayzenRoot\/uads(?:\.git)?$/i.test(repositoryUrl.replace(/^git\+/, "")) &&
+      fs.existsSync(path.join(repoRoot, "src", "lib", "review-bundle.ts"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function listCanonicalReviewEvidence(root: string): Array<{ name: string; content: string }> {
+  if (!fs.existsSync(root)) {
+    return [];
+  }
+  const files: Array<{ name: string; content: string }> = [];
+  const visit = (directory: string): void => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const abs = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+      if (entry.isDirectory()) {
+        visit(abs);
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      const relative = toPosix(path.relative(root, abs));
+      if (!/^(github|release)\//.test(relative) || isBinaryFileName(relative)) {
+        continue;
+      }
+      try {
+        files.push({ name: relative, content: fs.readFileSync(abs, "utf8") });
+      } catch {
+        continue;
+      }
+    }
+  };
+  visit(root);
+  return files.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function buildRepositoryTree(files: string[]): string {
   return files.length === 0 ? "(empty)\n" : `${files.join("\n")}\n`;
 }
@@ -157,6 +225,8 @@ export async function createReviewBundle(input: {
   requireEvidence?: boolean;
   requireGitHead?: boolean;
   requireCleanTree?: boolean;
+  requireCanonicalEvidence?: boolean;
+  canonicalReleaseVersion?: string;
   forbiddenSubstrings?: string[];
 }): Promise<ReviewBundleResult> {
   const cwd = path.resolve(input.cwd ?? process.cwd());
@@ -192,7 +262,12 @@ export async function createReviewBundle(input: {
     return { include: true, text: result.text };
   };
 
-  const walked = walkProject(repoRoot);
+  const packageRoot = path.resolve(input.uadsPackageRoot ?? findPackageRoot());
+  const excludeRootDirectories =
+    isCanonicalUadsRepository(repoRoot) || path.resolve(repoRoot) === packageRoot
+      ? new Set(["tmp", ".tmp", "release"])
+      : new Set<string>();
+  const walked = walkProject(repoRoot, { excludeRootDirectories });
   const includedFiles: string[] = [];
   const skipped = [...walked.skipped];
   const projectTexts = new Map<string, string>();
@@ -240,6 +315,19 @@ export async function createReviewBundle(input: {
     evidenceTexts.set(file.name, prepared.text);
   }
 
+  const reviewEvidenceFiles = listCanonicalReviewEvidence(paths.reviewEvidence);
+  const reviewEvidenceIncluded: string[] = [];
+  const reviewEvidenceTexts = new Map<string, string>();
+  for (const file of reviewEvidenceFiles) {
+    const prepared = prepareText(file.content);
+    if (!prepared.include) {
+      skipped.push({ path: file.name, reason: prepared.reason });
+      continue;
+    }
+    reviewEvidenceIncluded.push(file.name);
+    reviewEvidenceTexts.set(file.name, prepared.text);
+  }
+
   const orchestrationTexts = new Map<string, string>();
   for (const file of collectOrchestrationSnapshot(paths)) {
     const prepared = prepareText(file.content);
@@ -277,6 +365,7 @@ export async function createReviewBundle(input: {
     skipped,
     excludedDirectoryClasses: walked.excludedDirectoryClasses,
     evidenceIncluded,
+    reviewEvidenceIncluded,
     exclusions: [
       "node_modules/",
       ".git/",
@@ -286,6 +375,8 @@ export async function createReviewBundle(input: {
       ".env*",
       "sensitive data files (keys, credential stores)",
       "review output directories",
+      "generated UADS staging roots at repository root (tmp/, .tmp/, release/)",
+      "canonical release evidence is staged in the sidecar and copied under github/ and release/",
       "absolute local host paths",
       "common binary and cache artifacts",
     ],
@@ -310,8 +401,10 @@ export async function createReviewBundle(input: {
     requireEvidence,
     requireGitHead,
     requireCleanTree,
+    requireCanonicalEvidence: input.requireCanonicalEvidence,
+    canonicalReleaseVersion: input.canonicalReleaseVersion,
     forbiddenSubstrings: [...(input.forbiddenSubstrings ?? []), ...hostPaths.flatMap(hostPathVariants)],
-    schemaRoot: input.uadsPackageRoot,
+    schemaRoot: packageRoot,
   };
 
   const payload = {
@@ -323,6 +416,7 @@ export async function createReviewBundle(input: {
     includedFiles,
     projectTexts,
     evidenceTexts,
+    reviewEvidenceTexts,
     orchestrationTexts,
     uadsVersion,
   };
@@ -377,6 +471,7 @@ function writeZip(
     includedFiles: string[];
     projectTexts: Map<string, string>;
     evidenceTexts: Map<string, string>;
+    reviewEvidenceTexts: Map<string, string>;
     orchestrationTexts: Map<string, string>;
     uadsVersion: string;
   },
@@ -397,6 +492,9 @@ function writeZip(
 
   for (const [name, content] of payload.evidenceTexts) {
     zip.addFile(`evidence/${name}`, Buffer.from(content, "utf8"));
+  }
+  for (const [name, content] of payload.reviewEvidenceTexts) {
+    zip.addFile(name, Buffer.from(content, "utf8"));
   }
   for (const [name, content] of payload.orchestrationTexts) {
     zip.addFile(name, Buffer.from(content, "utf8"));

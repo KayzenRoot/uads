@@ -7,14 +7,17 @@ import { isUnsafeZipEntryName } from "./exclusions.js";
 import { findPackageRoot } from "./version.js";
 import { readZip } from "./zip-read.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "./secrets.js";
+import { validateCanonicalReleaseEvidence } from "./release-review.js";
 
 type ReviewManifest = {
   schema?: string;
   schemaVersion?: string;
+  uadsVersion?: string;
   repoRoot?: unknown;
   workspace?: unknown;
   includedFiles?: string[];
   evidenceIncluded?: string[];
+  reviewEvidenceIncluded?: string[];
   git?: {
     branch?: string | null;
     head?: string | null;
@@ -52,6 +55,8 @@ export type InspectOptions = {
   requireEvidence?: boolean;
   requireGitHead?: boolean;
   requireCleanTree?: boolean;
+  requireCanonicalEvidence?: boolean;
+  canonicalReleaseVersion?: string;
   schemaRoot?: string;
 };
 
@@ -154,6 +159,9 @@ export async function inspectReviewBundle(
   if (JSON.stringify(projectFiles) !== JSON.stringify(listedFiles)) {
     errors.push("includedFiles-mismatch");
   }
+  if (options.requireCanonicalEvidence && projectFiles.some((name) => /^(tmp|\.tmp|release)\//.test(name))) {
+    errors.push("generated-staging-in-project-snapshot");
+  }
 
   const evidenceFiles = names
     .filter((name) => name.startsWith("evidence/"))
@@ -162,6 +170,27 @@ export async function inspectReviewBundle(
   const listedEvidence = [...(manifest.evidenceIncluded ?? [])].sort();
   if (requireEvidence && JSON.stringify(evidenceFiles) !== JSON.stringify(listedEvidence)) {
     errors.push("evidenceIncluded-mismatch");
+  }
+
+  const canonicalFiles = new Map<string, string>();
+  for (const entry of entries) {
+    const name = entry.name.replace(/\\/g, "/");
+    if (name.startsWith("github/") || name.startsWith("release/")) {
+      canonicalFiles.set(name, entry.content.toString("utf8"));
+    }
+  }
+  const listedReviewEvidence = [...(manifest.reviewEvidenceIncluded ?? [])].sort();
+  const actualReviewEvidence = [...canonicalFiles.keys()].sort();
+  if (options.requireCanonicalEvidence && JSON.stringify(actualReviewEvidence) !== JSON.stringify(listedReviewEvidence)) {
+    errors.push("reviewEvidenceIncluded-mismatch");
+  }
+  if (options.requireCanonicalEvidence) {
+    const version = options.canonicalReleaseVersion ?? manifest.uadsVersion ?? "";
+    errors.push(...validateCanonicalReleaseEvidence(canonicalFiles, version, manifest.git?.head));
+    const releaseManifestNames = names.filter((name) => name.startsWith("release/release-manifest"));
+    if (releaseManifestNames.length !== 1 || releaseManifestNames[0] !== "release/release-manifest.json") {
+      errors.push("conflicting-release-manifests");
+    }
   }
 
   if (options.requireGitHead && !manifest.git?.head) {

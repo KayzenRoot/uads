@@ -7,11 +7,11 @@
   "required": ["schema", "schemaVersion", "generatedAt", "version", "commit", "ciBinding", "commands", "summary"],
   "properties": {
     "schema": { "const": "uads.release-validation-report" },
-    "schemaVersion": { "const": "0.7.0" },
+    "schemaVersion": { "enum": ["0.7.0", "0.7.1"] },
     "generatedAt": { "type": "string", "format": "date-time" },
     "version": { "type": "string", "minLength": 5 },
     "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "ciBinding": { "type": ["string", "null"] },
+    "ciBinding": { "type": ["string", "null"], "not": { "pattern": "^(tmp|\\.tmp|release)(/|\\\\)" } },
     "commands": {
       "type": "array",
       "items": {

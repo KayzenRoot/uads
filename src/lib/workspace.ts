@@ -13,6 +13,7 @@ export type UadsPaths = {
   workspaces: string;
   workspace: string;
   reviews: string;
+  reviewEvidence: string;
   evidence: string;
   state: string;
   checkpoints: string;
@@ -51,6 +52,7 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     workspaces: path.join(home, "workspaces"),
     workspace,
     reviews: path.join(workspace, "reviews"),
+    reviewEvidence: path.join(workspace, "review-evidence"),
     evidence: path.join(workspace, "evidence"),
     state: path.join(workspace, "state"),
     checkpoints: path.join(workspace, "state", "checkpoints"),
@@ -83,6 +85,7 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
   ensureGlobalLayout(uadsHome);
   for (const dir of [
     paths.reviews,
+    paths.reviewEvidence,
     paths.evidence,
     paths.state,
     paths.checkpoints,

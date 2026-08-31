@@ -62,11 +62,11 @@ function writeReport(commandsRun, destination) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const report = {
     schema: "uads.release-validation-report",
-    schemaVersion: "0.7.0",
+    schemaVersion: packageJson.version,
     generatedAt: new Date().toISOString(),
     version: packageJson.version,
     commit: git(["rev-parse", "HEAD"]),
-    ciBinding: ciBinding ? path.relative(root, path.resolve(ciBinding)).replaceAll(path.sep, "/") : null,
+    ciBinding: ciBinding ? "ci-binding.json" : null,
     commands: commandsRun,
     summary: {
       total: commandsRun.length,

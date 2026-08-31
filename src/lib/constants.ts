@@ -1,5 +1,5 @@
 export const UADS_DIR_NAME = ".uads";
-export const DEFAULT_UADS_VERSION = "0.7.0";
+export const DEFAULT_UADS_VERSION = "0.7.1";
 
 export const EXCLUDED_DIRECTORY_NAMES = new Set([
   "node_modules",

@@ -53,7 +53,12 @@ function localTag(tag) {
 function releaseNotes(version) {
   const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
   const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = changelog.match(new RegExp(`^## \\[${escaped}\\].*?(?=^## \\[|$)`, "ms"));
-  return `${match?.[0]?.trim() ?? `UADS ${version}`}\n\nRelease artifacts were produced by the validated release workflow.`;
+  const match = changelog.match(new RegExp("^## \\[" + escaped + "\\].*?(?=^## \\[|$)", "ms"));
+  if (!match?.[0]) fail("release changelog section is missing");
+  const section = match[0].trim();
+  if (!/(Highlights|Fixed|Verification)/i.test(section) || /Release artifacts were produced/i.test(section)) {
+    fail("release changelog section is not professional or is a placeholder");
+  }
+  return section;
 }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

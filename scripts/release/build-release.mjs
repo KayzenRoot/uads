@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createReleaseManifest, checksumFile, assertReleaseTextSafe } from "../../dist/release/release-artifacts.js";
+import { createCiBinding, assertCiBinding } from "../../dist/release/ci-binding.js";
 import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -12,7 +13,10 @@ const version = process.argv[2];
 if (!version) fail("usage: node scripts/release/build-release.mjs X.Y.Z --output directory --validation-report file");
 const output = path.resolve(valueOf("--output") ?? path.join(root, "tmp", "release", version));
 const validationReportPath = valueOf("--validation-report");
+const ciBindingPath = valueOf("--ci-binding");
+const repository = valueOf("--repo") ?? "KayzenRoot/uads";
 if (!validationReportPath) fail("--validation-report is required");
+if (!ciBindingPath) fail("--ci-binding is required for a published release");
 fs.mkdirSync(output, { recursive: true });
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -40,14 +44,26 @@ assertReleaseTextSafe(sbomText);
 fs.writeFileSync(sbomPath, `${JSON.stringify(sbomJson, null, 2)}\n`);
 
 const validationReport = JSON.parse(fs.readFileSync(path.resolve(validationReportPath), "utf8"));
-if (validationReport.version !== version || validationReport.commit !== commit || validationReport.summary?.failed !== 0) {
+if (validationReport.version !== version || validationReport.commit !== commit || validationReport.summary?.failed !== 0 || validationReport.ciBinding !== "ci-binding.json") {
   fail("validation report is not bound to the release version/commit or contains failures");
 }
 assertReleaseTextSafe(JSON.stringify(validationReport));
 const validationPath = path.join(output, "validation-report.json");
 fs.writeFileSync(validationPath, `${JSON.stringify(validationReport, null, 2)}\n`);
 
-const artifactPaths = [expectedPackagePath, sbomPath, validationPath];
+const ciBindingRaw = JSON.parse(fs.readFileSync(path.resolve(ciBindingPath), "utf8"));
+let ciBinding;
+try {
+  ciBinding = createCiBinding(ciBindingRaw, commit, repository);
+  assertCiBinding(ciBinding, commit, repository);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
+const ciBindingOutput = path.join(output, "ci-binding.json");
+fs.writeFileSync(ciBindingOutput, `${JSON.stringify(ciBinding, null, 2)}\n`);
+assertReleaseTextSafe(fs.readFileSync(ciBindingOutput, "utf8"));
+
+const artifactPaths = [expectedPackagePath, sbomPath, validationPath, ciBindingOutput];
 const artifacts = artifactPaths.map((artifactPath) => ({
   name: path.basename(artifactPath),
   size: fs.statSync(artifactPath).size,
@@ -62,7 +78,8 @@ const manifest = createReleaseManifest({
   generatedAt: new Date().toISOString(),
   artifacts,
   validationReport: "validation-report.json",
-  ciBinding: validationReport.ciBinding ?? null,
+  ciBinding: "ci-binding.json",
+  schemaVersion: "0.7.1",
 });
 const manifestPath = path.join(output, "release-manifest.json");
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);

@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const { validateReleaseMetadata } = await import("../../dist/release/semver.js");
+const { createCiBinding } = await import("../../dist/release/ci-binding.js");
 
 const version = process.argv[2];
 if (!version) fail("usage: node scripts/release/verify-release.mjs X.Y.Z [--ci-binding file] [--historical]");
@@ -114,13 +115,8 @@ function isClean() {
 function verifyCiBinding(file, expectedSha) {
   try {
     const value = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
-    const runs = Array.isArray(value) ? value : Array.isArray(value.runs) ? value.runs : [value];
-    return runs.some((run) => {
-      const headSha = run.head_sha ?? run.headSha;
-      const status = run.status;
-      const conclusion = run.conclusion;
-      return headSha === expectedSha && status === "completed" && conclusion === "success";
-    });
+    createCiBinding(value, expectedSha, "KayzenRoot/uads");
+    return true;
   } catch {
     return false;
   }

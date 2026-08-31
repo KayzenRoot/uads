@@ -6,7 +6,7 @@ export type ReleaseArtifact = {
 
 export type ReleaseManifest = {
   schema: "uads.release-manifest";
-  schemaVersion: "0.7.0";
+  schemaVersion: "0.7.0" | "0.7.1";
   version: string;
   tag: string;
   commit: string;
@@ -30,7 +30,7 @@ export function checksumFile(artifacts: readonly ReleaseArtifact[]): string {
   return `${sortArtifacts(artifacts).map((artifact) => `${artifact.sha256}  ${artifact.name}`).join("\n")}\n`;
 }
 
-export function createReleaseManifest(input: Omit<ReleaseManifest, "schema" | "schemaVersion" | "artifacts"> & { artifacts: readonly ReleaseArtifact[] }): ReleaseManifest {
+export function createReleaseManifest(input: Omit<ReleaseManifest, "schema" | "schemaVersion" | "artifacts"> & { artifacts: readonly ReleaseArtifact[]; schemaVersion?: ReleaseManifest["schemaVersion"] }): ReleaseManifest {
   const artifacts = sortArtifacts(input.artifacts);
   for (const artifact of artifacts) {
     if (!artifact.name || artifact.name.includes("\\") || artifact.name.startsWith("/") || /^[A-Za-z]:/.test(artifact.name)) {
@@ -42,7 +42,7 @@ export function createReleaseManifest(input: Omit<ReleaseManifest, "schema" | "s
   }
   const manifest: ReleaseManifest = {
     schema: "uads.release-manifest",
-    schemaVersion: "0.7.0",
+    schemaVersion: input.schemaVersion ?? "0.7.0",
     version: input.version,
     tag: input.tag,
     commit: input.commit,
