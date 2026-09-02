@@ -10,7 +10,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F2 | Compute a stable project fingerprint and project-id |
 | F3 | Create/read a global sidecar under `~/.uads/workspaces/<project-id>/` |
 | F4 | Default to zero project footprint |
-| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `index`, `impact`, `context`, `failure`, `diagnose`, `failures`, `cache`, `cost`, `status`, `resume`, `review` |
+| F5 | CLI commands: `--help`, `doctor`, `inspect`, `plan`, `dispatch`, `verify`, `evidence`, `assurance`, `finalize`, `index`, `impact`, `context`, `failure`, `diagnose`, `failures`, `cache`, `cost`, `models`, `capabilities`, `status`, `resume`, `review` |
 | F6 | Generate a review ZIP outside the project with SHA-256 checksum |
 | F7 | Exclude secrets and heavy/generated directories from review ZIPs |
 | F8 | Global install skeleton populates `~/.uads/{core,skills,agents,adapters,cache,workspaces}` without silent overwrites |
@@ -26,6 +26,8 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F18 | Fault eval suite (`npm run eval:fault`) covers FL1–FL18 |
 | F19 | Evidence Cache reuses only proven-valid PASS for eligible gates; Cost Governor enforces token budgets and records QPT |
 | F20 | Cost eval suite (`npm run eval:cost`) covers CC1–CC14 |
+| F21 | Provider-neutral Model Execution Plan and runtime capability negotiation persist globally/sidecar with no provider API calls |
+| F22 | Model routing eval suite (`npm run eval:model-routing`) covers MR1–MR20 and fail-closed adversarial behavior |
 
 ## Non-functional
 
@@ -39,4 +41,4 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 
 ## Future (not this increment)
 
-Provider API clients, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis.
+Provider API clients, vendor price catalogs, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis, and autonomous provider execution.

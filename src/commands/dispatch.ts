@@ -22,6 +22,9 @@ export function runDispatchCommand(input: {
       `baselineGitHead: ${result.run.baseline.gitHead ?? "(none)"}`,
       `contextRadius: ${result.run.contextRadius}`,
       `gates: ${result.run.selectedGates.join(", ") || "(none)"}`,
+      `modelPlanId: ${result.run.modelPlanId ?? "(none)"}`,
+      `selectedProfile: ${result.run.selectedProfileId ?? "(none)"}`,
+      `modelSelectionMode: ${result.run.selectionMode ?? "(none)"}`,
       `nextAction: ${result.run.nextAction}`,
       "",
     ].join("\n");

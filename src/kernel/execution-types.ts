@@ -1,4 +1,5 @@
 import type { ContextRadius, RiskLevel } from "./types.js";
+import type { ModelExecutionStrategy } from "./model-types.js";
 
 export const EXECUTION_SCHEMA_VERSION = "0.3.0";
 
@@ -67,6 +68,12 @@ export type ExecutionRun = {
   contextPackId?: string | null;
   impactReportId?: string | null;
   indexDigest?: string | null;
+  modelPlanId?: string | null;
+  selectedProfileId?: string | null;
+  selectedProviderId?: string | null;
+  selectedModelId?: string | null;
+  selectionMode?: "router" | "host-managed";
+  modelExecutionStrategy?: ModelExecutionStrategy;
 };
 
 export type ExecutionPacket = {
@@ -94,6 +101,12 @@ export type ExecutionPacket = {
   contextPackId?: string | null;
   impactReportId?: string | null;
   indexDigest?: string | null;
+  modelPlanId?: string | null;
+  selectedProfileId?: string | null;
+  selectedProviderId?: string | null;
+  selectedModelId?: string | null;
+  selectionMode?: "router" | "host-managed";
+  modelExecutionStrategy?: ModelExecutionStrategy;
 };
 
 export type EvidenceRecord = {

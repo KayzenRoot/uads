@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
-const releaseVersion = valueOf("--release-version") ?? "0.7.1";
+const releaseVersion = valueOf("--release-version") ?? "0.8.0";
 const output = path.resolve(valueOf("--output") ?? defaultOutput());
 fs.mkdirSync(output, { recursive: true });
 

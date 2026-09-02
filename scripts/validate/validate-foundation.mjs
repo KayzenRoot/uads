@@ -77,6 +77,10 @@ const requiredFiles = [
   "schemas/failure-record.schema.json",
   "schemas/diagnosis-report.schema.json",
   "schemas/failure-memory.schema.json",
+  "schemas/model-profile.schema.json",
+  "schemas/model-profile-registry.schema.json",
+  "schemas/runtime-capability-snapshot.schema.json",
+  "schemas/model-execution-plan.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
   "evals/execution/x1-frontend-happy.json",
@@ -88,6 +92,8 @@ const requiredFiles = [
   "evals/fault/fl17-stale-active-digest.json",
   "evals/fault/fl18-postfix-live-drift.json",
   "src/eval/fault.ts",
+  "src/eval/model-routing.ts",
+  "evals/model-routing/cases.json",
   "src/kernel/fault-localization.ts",
   "agents/uads-repo-inspector.md",
   "agents/uads-requirements-engineer.md",
@@ -145,6 +151,7 @@ runNpmGate(["run", "eval:execution"]);
 runNpmGate(["run", "eval:context"]);
 runNpmGate(["run", "eval:fault"]);
 runNpmGate(["run", "eval:cost"]);
+runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 
@@ -163,7 +170,7 @@ for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) 
     process.exit(1);
   }
   if (args[0] === "--help") {
-    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "status", "resume", "review", "doctor"]) {
+    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "models", "capabilities", "status", "resume", "review", "doctor"]) {
       if (!result.stdout.includes(command)) {
         process.stderr.write(`CLI help missing command: ${command}\n`);
         process.exit(1);

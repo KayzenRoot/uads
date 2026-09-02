@@ -30,6 +30,8 @@ Prompt 004 adds sidecar `index/index-state.json`, `dependency-graph.json`, `test
 
 Routing conclusions live in `schemas/routing-decision.schema.json`.
 
+The 0.8.0 Model Execution Plan is persisted separately at `model-routing/current.json` with immutable history entries. It binds the Work Order digest, change digest, registry digest, runtime identity digest, routing policy digest, quality floor, eligible/rejected profiles, fallback chain, cache-layer hints, and explicit runtime fallback strategy. Dispatch treats a missing, corrupt, stale, or blocked plan as a stop condition and never silently downgrades the Work Order.
+
 ## Discipline
 
 - Write checkpoints after each meaningful phase

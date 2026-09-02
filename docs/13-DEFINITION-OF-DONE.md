@@ -108,3 +108,17 @@ Complete only when all are true:
 ## Ongoing product DoD
 
 A work order is done only with evidence for selected gates, footprint, independent review when implementation occurred, and (when requested) a review bundle.
+
+## Prompt 008 increment
+
+Complete only when all are true:
+
+- Provider-neutral Model Profile, registry, Runtime Capability Snapshot, and Model Execution Plan schemas validate
+- Global registry and per-project sidecar routing state preserve zero project footprint and reject unsafe/duplicate/malformed input
+- Capability is negotiated before relative cost; runtime `unknown` is conservative false; no silent quality downgrade occurs
+- Quality floor is risk/scope-aware, escalation is monotonic, fallbacks preserve the floor, and context/output/hard-budget limits fail closed
+- Plan identities bind Work Order, change, registry, runtime, policy, and Context Pack layer digests; dispatch recomputes stale plans
+- `uads models list|status|explain|route|register` and `uads capabilities status|explain` work without provider calls
+- Runtime fallback metadata records sequential execution, role cycling, and null telemetry when unproven
+- Model routing evals MR1–MR20 and adversarial tests pass; existing orchestrator, execution, context, fault, and cost gates remain green
+- Documentation, review summaries, release evidence, and 0.8.0 package metadata are updated only after the complete validation matrix passes

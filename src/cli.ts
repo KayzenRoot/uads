@@ -16,6 +16,15 @@ import { runCacheExplainCommand, runCacheStatusCommand } from "./commands/cache.
 import { runCostExplainCommand, runCostStatusCommand } from "./commands/cost.js";
 import { runVerifyCommand } from "./commands/verify.js";
 import {
+  runCapabilitiesExplainCommand,
+  runCapabilitiesStatusCommand,
+  runModelsExplainCommand,
+  runModelsListCommand,
+  runModelsRegisterCommand,
+  runModelsRouteCommand,
+  runModelsStatusCommand,
+} from "./commands/models.js";
+import {
   runDiagnoseCommand,
   runFailureRecordCommand,
   runFailureResolveCommand,
@@ -72,6 +81,48 @@ program
   .action((options: { json?: boolean; session?: string }) => {
     process.stdout.write(runDispatchCommand({ json: options.json, session: options.session }));
   });
+
+const models = program.command("models").description("Provider-neutral model profiles and deterministic routing");
+models
+  .command("list")
+  .description("List registered model profiles without contacting providers")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runModelsListCommand({ json: options.json })); });
+models
+  .command("status")
+  .description("Show model registry, runtime identity, and current routing plan")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runModelsStatusCommand({ json: options.json })); });
+models
+  .command("explain")
+  .description("Explain a persisted model routing plan")
+  .requiredOption("--work-order <id>", "Work Order id")
+  .option("--json", "JSON output")
+  .action((options: { workOrder: string; json?: boolean }) => { process.stdout.write(runModelsExplainCommand({ workOrderId: options.workOrder, json: options.json })); });
+models
+  .command("route")
+  .description("Route a Work Order using the current global registry and runtime snapshot")
+  .requiredOption("--work-order <id>", "Work Order id")
+  .option("--json", "JSON output")
+  .action((options: { workOrder: string; json?: boolean }) => { process.stdout.write(runModelsRouteCommand({ workOrderId: options.workOrder, json: options.json })); });
+models
+  .command("register")
+  .description("Register safe JSON model profile data; never executes the input")
+  .requiredOption("--file <path>", "safe JSON profile or profile array")
+  .option("--json", "JSON output")
+  .action((options: { file: string; json?: boolean }) => { process.stdout.write(runModelsRegisterCommand({ filePath: options.file, json: options.json })); });
+
+const capabilities = program.command("capabilities").description("Runtime/host capability negotiation");
+capabilities
+  .command("status")
+  .description("Show the persisted conservative runtime capability snapshot")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runCapabilitiesStatusCommand({ json: options.json })); });
+capabilities
+  .command("explain")
+  .description("Explain effective runtime capability semantics")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runCapabilitiesExplainCommand({ json: options.json })); });
 
 program
   .command("verify")

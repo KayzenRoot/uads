@@ -61,6 +61,9 @@ jobs:
       - name: Cost eval
         run: npm run eval:cost
 
+      - name: Model routing eval
+        run: npm run eval:model-routing
+
       - name: Skills preflight
         run: npm run validate:skills
 

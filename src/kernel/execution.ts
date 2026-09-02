@@ -35,6 +35,7 @@ import { collectCacheCostSnapshot } from "./cache-cost-snapshot.js";
 import { CostBudgetError, enforceTokenBudget, noteGovernorEvent, refreshQptSnapshot } from "./cost-governor.js";
 import { markVerifiedResolution } from "./failure-memory.js";
 import { buildImpactAndPack, currentOrRefreshIndex, publishImpactAndPack } from "./intelligence.js";
+import { readCurrentContextPack } from "./intelligence-persist.js";
 import type {
   ChangeSet,
   EvidenceKind,
@@ -64,6 +65,12 @@ import {
 import { resolveProjectContext } from "./project-context.js";
 import { assertSafeRelativeProjectPath } from "./safe-path.js";
 import { classifyChangedPath } from "./scope-guard.js";
+import { loadModelProfileRegistry } from "./model-registry.js";
+import { computeWorkOrderRoutingDigest, routeModel } from "./model-router.js";
+import { isModelExecutionPlanCurrent, persistModelExecutionPlan, readCurrentModelExecutionPlan } from "./model-persist.js";
+import { MODEL_ROUTING_POLICY_DIGEST } from "./model-router.js";
+import { readRuntimeCapabilitySnapshot } from "./model-runtime.js";
+import type { ModelExecutionPlan } from "./model-types.js";
 import type { Checkpoint, ContextPlan, ContextRadius, RepositoryMap, WorkOrder } from "./types.js";
 import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
 
@@ -379,7 +386,59 @@ function buildPacket(run: ExecutionRun, workOrder: WorkOrder): ExecutionPacket {
     contextPackId: run.contextPackId ?? null,
     impactReportId: run.impactReportId ?? null,
     indexDigest: run.indexDigest ?? null,
+    modelPlanId: run.modelPlanId ?? null,
+    selectedProfileId: run.selectedProfileId ?? null,
+    selectedProviderId: run.selectedProviderId ?? null,
+    selectedModelId: run.selectedModelId ?? null,
+    selectionMode: run.selectionMode ?? "host-managed",
+    modelExecutionStrategy: run.modelExecutionStrategy,
   };
+}
+
+function ensureCurrentModelPlan(input: {
+  ctx: ReturnType<typeof resolveProjectContext>;
+  workOrder: WorkOrder;
+  contextPlan: ContextPlan;
+  schemaRoot: string;
+  changeDigest: string | null;
+}): ModelExecutionPlan {
+  const registry = loadModelProfileRegistry(input.ctx.paths, input.schemaRoot);
+  const runtime = readRuntimeCapabilitySnapshot(input.ctx.paths, "generic-runtime", input.schemaRoot);
+  const current = readCurrentModelExecutionPlan(input.ctx.paths, input.schemaRoot);
+  const contextPack = input.contextPlan.contextPackId
+    ? readCurrentContextPack(input.ctx.paths, input.schemaRoot)
+    : null;
+  const contextHintsCurrent =
+    current &&
+    current.cacheHints.staticLayerDigest === (contextPack?.staticLayerDigest ?? null) &&
+    current.cacheHints.semiStableLayerDigest === (contextPack?.semiStableLayerDigest ?? null) &&
+    current.cacheHints.dynamicLayerDigest === (contextPack?.dynamicLayerDigest ?? null);
+  if (
+    current &&
+    contextHintsCurrent &&
+    isModelExecutionPlanCurrent({
+      plan: current,
+      projectId: input.ctx.projectId,
+      workOrderId: input.workOrder.workOrderId,
+      workOrderDigest: computeWorkOrderRoutingDigest(input.workOrder),
+      registryDigest: registry.registryDigest,
+      runtimeIdentityDigest: runtime.identityDigest,
+      policyDigest: MODEL_ROUTING_POLICY_DIGEST,
+       changeDigest: input.changeDigest,
+    })
+  ) {
+    return current;
+  }
+  const next = routeModel({
+    projectId: input.ctx.projectId,
+    workOrder: input.workOrder,
+    registry,
+    runtime,
+    contextPack,
+    previousPlan: current,
+    changeDigest: input.changeDigest,
+  });
+  return persistModelExecutionPlan(input.ctx.paths, next, input.schemaRoot);
 }
 
 function writeCheckpoint(paths: UadsPaths, checkpoint: Checkpoint, workOrder: WorkOrder, contextPlan: ContextPlan, schemaRoot?: string): Checkpoint {
@@ -457,6 +516,34 @@ export function runDispatch(input: {
     };
     writeCheckpoint(ctx.paths, nextCheckpoint, workOrder, contextPlan, schemaRoot);
     throw new ExecutionBlockedError("dirty worktree blocks dispatch", ["pre-existing dirty worktree at dispatch"]);
+  }
+
+  let modelPlan: ModelExecutionPlan;
+  try {
+    modelPlan = ensureCurrentModelPlan({
+      ctx,
+      workOrder,
+      contextPlan,
+      schemaRoot,
+      changeDigest: computeLiveChangeDigest(ctx.repoRoot),
+    });
+  } catch (error) {
+    throw new ExecutionBlockedError(
+      `model routing state is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+      ["model routing state missing or corrupt"],
+    );
+  }
+  if (modelPlan.status === "BLOCKED") {
+    const blocker = modelPlan.blockedReason ?? "NO_ELIGIBLE_MODEL";
+    const nextCheckpoint: Checkpoint = {
+      ...checkpoint,
+      updatedAt: nowIso(),
+      status: "blocked",
+      blockers: unique([...checkpoint.blockers, blocker]),
+      nextAction: "Register a compatible model profile or configure a runtime that proves the required capabilities, then re-route.",
+    };
+    writeCheckpoint(ctx.paths, nextCheckpoint, workOrder, contextPlan, schemaRoot);
+    throw new ExecutionBlockedError("model routing blocked dispatch", [blocker]);
   }
 
   if (existing && existing.workOrderId === workOrder.workOrderId && existing.status === "completed") {
@@ -546,6 +633,12 @@ export function runDispatch(input: {
     contextPackId: intel.pack.contextPackId,
     impactReportId: intel.report.impactReportId,
     indexDigest: intel.pack.indexDigest,
+    modelPlanId: modelPlan.planId,
+    selectedProfileId: modelPlan.selectedProfileId,
+    selectedProviderId: modelPlan.selectedProviderId,
+    selectedModelId: modelPlan.selectedModelId,
+    selectionMode: modelPlan.selectionMode,
+    modelExecutionStrategy: modelPlan.execution,
   };
 
   const packet = buildPacket(run, workOrder);
@@ -1634,6 +1727,9 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
     );
   }
   add("orchestration/context-plan.json", path.join(paths.context, "plan.json"));
+  add("models/current-execution-plan.json", paths.currentModelRouting);
+  add("models/registry.json", paths.modelRegistry);
+  add("models/runtime-capabilities.json", path.join(paths.runtimeCapabilities, "generic-runtime.json"));
   add("intelligence/index-state.json", path.join(paths.index, "index-state.json"));
   add("intelligence/current-pack.json", path.join(paths.context, "current-pack.json"));
   const run = (() => {

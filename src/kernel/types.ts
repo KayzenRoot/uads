@@ -173,6 +173,10 @@ export type ResumePacket = {
   cacheReusableRecords?: number;
   costBudgetStatus?: string;
   qptRatio?: number | null;
+  modelPlanId?: string | null;
+  modelRoutingStatus?: string | null;
+  selectedProfileId?: string | null;
+  modelSelectionMode?: string | null;
 };
 
 export type ContextPlan = {

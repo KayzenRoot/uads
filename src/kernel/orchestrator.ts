@@ -27,6 +27,9 @@ import { readCostStatusCompact } from "./cost-persist.js";
 import { loadExecutionView } from "./execution.js";
 import { readFailureStatusFields } from "./failure-persist.js";
 import { buildImpactAndPack } from "./intelligence.js";
+import { readCurrentContextPack } from "./intelligence-persist.js";
+import { routeAndPersistModelExecutionPlan } from "./model-persist.js";
+import { readCurrentModelExecutionPlan } from "./model-persist.js";
 import { resolveProjectContext } from "./project-context.js";
 import type {
   Checkpoint,
@@ -37,6 +40,7 @@ import type {
   RoutingDecision,
   WorkOrder,
 } from "./types.js";
+import type { ModelExecutionPlan } from "./model-types.js";
 import { IMPLEMENTER_ROLE } from "./types.js";
 
 export function runInspect(input: { cwd?: string; uadsHome?: string; json?: boolean }): {
@@ -63,6 +67,7 @@ export type PlanResult = {
   contextPlan: ContextPlan;
   map: RepositoryMap;
   mapReused: boolean;
+  modelPlan: ModelExecutionPlan;
 };
 
 export function runPlan(input: {
@@ -298,6 +303,16 @@ export function planFromIntake(input: {
     }
   }
 
+  const failure = readFailureStatusFields(input.paths, input.schemaRoot);
+  const modelPlan = routeAndPersistModelExecutionPlan({
+    paths: input.paths,
+    projectId: input.projectId,
+    workOrder: persisted.workOrder,
+    contextPack: readCurrentContextPack(input.paths, input.schemaRoot),
+    failureSignals: { loopDetected: failure.loopDetected },
+    schemaRoot: input.schemaRoot,
+  });
+
   return {
     workOrder: persisted.workOrder,
     decision: persisted.decision,
@@ -305,11 +320,13 @@ export function planFromIntake(input: {
     contextPlan: persisted.contextPlan,
     map: input.map,
     mapReused: input.mapReused,
+    modelPlan,
   };
 }
 
 export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePacket {
   const cwd = input.cwd ?? process.cwd();
+  const schemaRoot = findPackageRoot();
   const ctx = resolveProjectContext(cwd, input.uadsHome);
   const state = inspectCurrentState(ctx.paths);
   if (!state.valid) {
@@ -364,6 +381,13 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
   const failure = readFailureStatusFields(ctx.paths);
   const cache = readCacheStatusCompact(ctx.paths, ctx.projectId);
   const cost = readCostStatusCompact(ctx.paths, ctx.projectId);
+  const modelPlan = (() => {
+    try {
+      return readCurrentModelExecutionPlan(ctx.paths, schemaRoot);
+    } catch {
+      return null;
+    }
+  })();
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
@@ -398,5 +422,9 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     cacheReusableRecords: cache.reusableRecords,
     costBudgetStatus: cost.budgetStatus,
     qptRatio: cost.qptRatio,
+    modelPlanId: modelPlan?.planId ?? null,
+    modelRoutingStatus: modelPlan?.status ?? null,
+    selectedProfileId: modelPlan?.selectedProfileId ?? null,
+    modelSelectionMode: modelPlan?.selectionMode ?? null,
   };
 }

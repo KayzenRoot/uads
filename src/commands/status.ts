@@ -9,6 +9,10 @@ import { readFailureStatusFields } from "../kernel/failure-persist.js";
 import { readCurrentCheckpoint, readContextPlan, readWorkOrder } from "../kernel/persist.js";
 import fs from "node:fs";
 import path from "node:path";
+import { loadModelProfileRegistry } from "../kernel/model-registry.js";
+import { readCurrentModelExecutionPlan } from "../kernel/model-persist.js";
+import { readRuntimeCapabilitySnapshot } from "../kernel/model-runtime.js";
+import { findPackageRoot } from "../lib/version.js";
 
 export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: string; json?: boolean } = {}): string {
   const git = readGitSummary(cwd);
@@ -49,6 +53,35 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
   const cost = fs.existsSync(paths.workspace)
     ? readCostStatusCompact(paths, fingerprint.projectId)
     : { budgetStatus: "unavailable" as const, qptRatio: null };
+  let model = {
+    registryStatus: "unavailable",
+    profileCount: 0,
+    runtimeId: null as string | null,
+    runtimeIdentityDigest: null as string | null,
+    routingStatus: null as string | null,
+    modelPlanId: null as string | null,
+    selectedProfileId: null as string | null,
+    selectionMode: null as string | null,
+    requiredCapabilityClass: null as string | null,
+  };
+  try {
+    const registry = loadModelProfileRegistry(paths, findPackageRoot());
+    const runtime = readRuntimeCapabilitySnapshot(paths, "generic-runtime", findPackageRoot());
+    const plan = readCurrentModelExecutionPlan(paths, findPackageRoot());
+    model = {
+      registryStatus: "valid",
+      profileCount: registry.profiles.length,
+      runtimeId: runtime.runtimeId,
+      runtimeIdentityDigest: runtime.identityDigest,
+      routingStatus: plan?.status ?? null,
+      modelPlanId: plan?.planId ?? null,
+      selectedProfileId: plan?.selectedProfileId ?? null,
+      selectionMode: plan?.selectionMode ?? null,
+      requiredCapabilityClass: plan?.requiredCapabilityClass ?? null,
+    };
+  } catch {
+    model.registryStatus = "blocked-corrupt-or-unavailable";
+  }
 
   if (options.json) {
     return `${JSON.stringify(
@@ -83,6 +116,15 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         cacheReusableRecords: cache.reusableRecords,
         costBudgetStatus: cost.budgetStatus,
         qptRatio: cost.qptRatio,
+        modelRegistryStatus: model.registryStatus,
+        modelProfileCount: model.profileCount,
+        runtimeId: model.runtimeId,
+        runtimeIdentityDigest: model.runtimeIdentityDigest,
+        modelRoutingStatus: model.routingStatus,
+        modelPlanId: model.modelPlanId,
+        selectedProfileId: model.selectedProfileId,
+        modelSelectionMode: model.selectionMode,
+        modelRequiredCapabilityClass: model.requiredCapabilityClass,
       },
       null,
       2,
@@ -117,6 +159,12 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     `diagnosisStatus: ${failure?.diagnosisStatus ?? "(none)"}`,
     `loopDetected: ${failure?.loopDetected ?? false}`,
     `recommendedDiagnosticRadius: ${failure?.recommendedDiagnosticRadius ?? "(none)"}`,
+    `modelRegistryStatus: ${model.registryStatus}`,
+    `modelProfileCount: ${model.profileCount}`,
+    `modelRoutingStatus: ${model.routingStatus ?? "(none)"}`,
+    `modelPlanId: ${model.modelPlanId ?? "(none)"}`,
+    `selectedProfileId: ${model.selectedProfileId ?? "(none)"}`,
+    `modelSelectionMode: ${model.selectionMode ?? "(none)"}`,
     "",
   ].join("\n");
 }

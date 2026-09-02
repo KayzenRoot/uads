@@ -4,9 +4,13 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ExecutionBlockedError, runAssuranceRecord, runAssuranceStart, runDispatch, runEvidenceRecord, runFinalize, runVerify } from "../kernel/execution.js";
+import { createModelProfileRegistry, normalizeModelProfile, persistModelProfileRegistry } from "../kernel/model-registry.js";
+import { computeRuntimeIdentityDigest, persistRuntimeCapabilitySnapshot } from "../kernel/model-runtime.js";
+import { MODEL_ROUTING_SCHEMA_VERSION, type RuntimeCapabilitySnapshot } from "../kernel/model-types.js";
 import { isReviewGate } from "../kernel/gates.js";
 import { runPlan } from "../kernel/orchestrator.js";
 import { findPackageRoot } from "../lib/version.js";
+import { ensureGlobalLayout, getUadsPaths } from "../lib/workspace.js";
 
 type EvalCase = {
   id: string;
@@ -81,6 +85,62 @@ function seedDefi(repo: string): void {
   fs.mkdirSync(path.join(repo, "contracts"), { recursive: true });
   fs.writeFileSync(path.join(repo, "contracts", "vault.ts"), "export function withdraw() { return 0; }\n");
   gitCommit(repo, "init");
+}
+
+function seedCriticalRouting(home: string): void {
+  ensureGlobalLayout(home);
+  const paths = getUadsPaths("execution-eval-routing", home);
+  const profile = normalizeModelProfile({
+    schema: "uads.model-profile",
+    schemaVersion: MODEL_ROUTING_SCHEMA_VERSION,
+    profileId: "eval-critical",
+    providerId: "eval-provider",
+    modelId: "eval-critical-model",
+    status: "enabled",
+    capabilityClass: "critical",
+    reasoningClass: "deep",
+    contextWindowTokens: 128000,
+    maxOutputTokens: 16000,
+    relativeCostClass: "unknown",
+    relativeLatencyClass: "unknown",
+    supports: {
+      toolCalling: true,
+      structuredOutput: true,
+      vision: false,
+      promptCache: true,
+      explicitCache: true,
+      persistentContext: true,
+      usageTelemetry: true,
+    },
+    constraints: { maxConcurrency: 1 },
+    notes: "deterministic local evaluation fixture",
+    source: "builtin-fixture",
+    adapterId: "execution-eval",
+    adapterVersion: MODEL_ROUTING_SCHEMA_VERSION,
+  });
+  persistModelProfileRegistry(paths, createModelProfileRegistry([profile]));
+  const base: Omit<RuntimeCapabilitySnapshot, "identityDigest"> = {
+    schema: "uads.runtime-capability-snapshot",
+    schemaVersion: MODEL_ROUTING_SCHEMA_VERSION,
+    runtimeId: "generic-runtime",
+    adapterId: "execution-eval",
+    adapterVersion: MODEL_ROUTING_SCHEMA_VERSION,
+    runtimeVersion: process.versions.node,
+    capabilities: {
+      modelSelection: true,
+      toolCalling: true,
+      structuredOutput: true,
+      promptCache: true,
+      explicitCache: true,
+      persistentContext: true,
+      subagents: false,
+      parallelAgents: false,
+      usageTelemetry: true,
+      visionInput: false,
+    },
+    provenance: { source: "test-fixture", confidence: "proven" },
+  };
+  persistRuntimeCapabilitySnapshot(paths, { ...base, identityDigest: computeRuntimeIdentityDigest(base) });
 }
 
 function recordGates(repo: string, home: string, gates: string[], exitCode = 0): void {
@@ -237,6 +297,7 @@ function runScenario(id: string, home: string, repo: string): void {
   }
   if (id === "X7") {
     seedDefi(repo);
+    seedCriticalRouting(home);
     const planned = runPlan({ cwd: repo, uadsHome: home, intake: defiIntake() });
     if (!planned.workOrder.assuranceReviewers.includes("security-reviewer")) {
       throw new Error("X7 missing security reviewer");

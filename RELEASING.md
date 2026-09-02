@@ -13,14 +13,14 @@ From a clean `main` checkout whose commit is already on `origin/main`:
 ```bash
 npm ci
 npm run release:validate -- --output tmp/release-validation-report.json --ci-binding tmp/ci-binding.json
-npm run release:verify -- 0.7.1 --ci-binding tmp/ci-binding.json
-npm run release:build -- 0.7.1 --output release --validation-report tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --repo KayzenRoot/uads
-npm run release:publish -- 0.7.1 --artifacts release
+npm run release:verify -- 0.8.0 --ci-binding tmp/ci-binding.json
+npm run release:build -- 0.8.0 --output release --validation-report tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --repo KayzenRoot/uads
+npm run release:publish -- 0.8.0 --artifacts release
 ```
 
 The canonical GitHub Actions workflow is `.github/workflows/release.yml` and accepts a manual `X.Y.Z` input. It validates the exact successful Foundation CI run, records it as the published `ci-binding.json` asset, runs the complete local gate, builds the npm tarball, SPDX SBOM, validation report, release manifest, and SHA-256 checksums, then creates an immutable pre-release and uploads those assets. UADS is not published to npm.
 
-Before publishing, generate the final external-review evidence with `npm run review:release -- 0.7.1`. The resulting ZIP is created in the global sidecar and must contain only the source snapshot plus one canonical `github/` and `release/` evidence set. The release reviewer rejects stale or conflicting manifests, mismatched commit identities, ephemeral CI-binding paths, and a dirty final worktree.
+Before publishing, generate the final external-review evidence with `npm run review:release -- 0.8.0`. The resulting ZIP is created in the global sidecar and must contain only the source snapshot plus one canonical `github/` and `release/` evidence set. The release reviewer rejects stale or conflicting manifests, mismatched commit identities, ephemeral CI-binding paths, and a dirty final worktree.
 
 ## Historical reconstruction
 

@@ -28,6 +28,7 @@ Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reser
 | failure | Normalized failure records, fault ranking, Failure Memory, loop/escalation |
 | cost | Token budget by capability class plus Cost Governor, ledger, and QPT snapshot |
 | cache | Evidence Cache validity, reuse policy, and derived current-digest evidence |
+| model routing | Provider-neutral Model Profiles, runtime capability intersection, deterministic Model Execution Plans |
 | risk | Structured-signal risk classification |
 | gates | Selected quality/security/performance gates |
 | state | Atomic sidecar checkpoints, execution runs, and resume packets |
@@ -43,6 +44,9 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
   agents/
   adapters/
   cache/
+  registry/
+    models/profiles.json
+    runtime/capabilities/
   workspaces/
     <project-id>/
       profile.json
@@ -70,6 +74,9 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
           packet.json
           evidence/
           reviews/
+      model-routing/
+        current.json
+        history/
       reviews/
 ```
 
@@ -88,9 +95,11 @@ USER REQUEST
   → host Skill semantic intake (or CLI --request fallback)
   → deterministic kernel
   → repository map + scope/risk (task-relevant repo context only)/domain/specialists/gates/context/budget
-  → Work Order + routing decision + checkpoint (sidecar only)
+  → Work Order + routing decision + checkpoint + Model Execution Plan (global/sidecar only)
   → uads resume (no full-repo re-ingestion)
 ```
+
+The Model Execution Plan is computed by capability floor first, then deterministic cost/latency tie-breaking. It carries registry/runtime/policy/change identities and is revalidated before dispatch. No model provider HTTP call is part of this data flow.
 
 ## Freeze status
 

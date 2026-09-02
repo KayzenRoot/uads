@@ -9,6 +9,15 @@
 - CLI: `cache status`, `cache explain`, `cost status`, `cost explain`
 - Cost evals CC1–CC14
 
+## In scope (Prompt 008)
+
+- Provider-neutral Model Profile registry and Runtime Capability Snapshot schemas
+- Deterministic quality-floor routing, capability intersection, context/budget checks, fallback, and monotonic failure escalation
+- Evidence-bearing Model Execution Plans bound to Work Order, change, registry, runtime, policy, and Context Pack layer identities
+- CLI: `models list|status|explain|route|register` and `capabilities status|explain`
+- Global/sidecar persistence with zero project footprint, conservative runtime fallbacks, and no provider API invocation
+- Model routing evals MR1–MR20 and adversarial registry/runtime tests
+
 ## In scope (Prompt 005)
 
 - Normalized failure records, deterministic signatures, and secret-safe persist
@@ -48,7 +57,7 @@
 ## Out of scope (Prompt 003)
 
 - Semantic dependency/impact graph and embeddings
-- Provider API clients and hard-coded model price tables
+- Provider API clients, live provider catalogs, volatile pricing, and model invocation proxy/gateway
 - Complete 30+ department specialist catalog
 - Marketplace, dashboard, cloud control plane, enterprise server
 - Deep UGAS integration

@@ -21,6 +21,7 @@ const commands = [
   ["eval-context", ["run", "eval:context"]],
   ["eval-fault", ["run", "eval:fault"]],
   ["eval-cost", ["run", "eval:cost"]],
+  ["eval-model-routing", ["run", "eval:model-routing"]],
   ["skills-validation", ["run", "validate:skills"]],
   ["action-pin-validation", ["run", "validate:actions"]],
   ["aggregate-validation", ["run", "validate"]],

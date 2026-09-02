@@ -9,7 +9,7 @@ import { createReviewBundle } from "../../dist/lib/review-bundle.js";
 import { ensureWorkspace } from "../../dist/lib/workspace.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const version = process.argv[2] ?? "0.7.1";
+const version = process.argv[2] ?? "0.8.0";
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
 const origin = git(["config", "--get", "remote.origin.url"]) ?? repo;
 const fingerprint = computeProjectFingerprint({ originUrl: origin, repoRoot: root });

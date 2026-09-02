@@ -2,6 +2,30 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [0.8.0] - 2026-09-02
+
+### Added
+
+- Provider-neutral Model Profile, global registry, Runtime Capability Snapshot, and evidence-bearing Model Execution Plan contracts.
+- Deterministic capability-before-cost routing with risk/scope quality floors, reasoning/context/output checks, ordinal relative cost/latency, stable reason codes, and lexicographic tie-breaking.
+- Conservative runtime intersection: unknown capabilities are unavailable; critical/high assurance work fails closed without a sufficient proven profile; empty non-critical routing is explicitly host-managed compatibility.
+- Monotonic failure/loop escalation, floor-preserving fallbacks, explicit preference floor protection, cache-layer digest hints, and sequential/role-cycling runtime fallbacks.
+- CLI commands `models list|status|explain|route|register` and `capabilities status|explain`.
+- MR1–MR20 model-routing evaluation suite and adversarial tests for schema closure, duplicate/corrupt state, path/secret safety, stale identity, and no provider HTTP invocation.
+
+### Changed
+
+- `plan`, `dispatch`, `status`, `resume`, and review snapshots now expose model routing identity and selection metadata while preserving Architecture Freeze v0.2 and zero project footprint.
+- Dispatch revalidates Work Order, change, registry, runtime, policy, and Context Pack identities before creating an execution run.
+
+### Security / Scope
+
+- Profile/runtime imports are bounded, schema-closed, deterministic, secret/path screened, and never executed as code. Provider credentials, URLs, hooks, live catalogs, prices, and provider API calls remain out of scope.
+
+### Verification
+
+- Full validation matrix, CI binding, security workflows, release assets, and a privacy-minimized Review ZIP are required for the final release record.
+
 ## [0.7.1] - 2026-08-31
 
 ### Highlights

@@ -6,7 +6,7 @@
 
 UADS is a pre-1.0, global-first autonomous software engineering orchestration framework for specialist delegation, independent review, evidence-based quality gates, context intelligence, and cost-aware execution.
 
-This repository is the public open-source UADS product. The latest release is [v0.7.1](https://github.com/KayzenRoot/uads/releases/tag/v0.7.1). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+This repository is the public open-source UADS product. The latest release is [v0.8.0](https://github.com/KayzenRoot/uads/releases/tag/v0.8.0). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -16,7 +16,7 @@ This repository is the public open-source UADS product. The latest release is [v
 - Agent Skills entrypoint, Cursor + Codex/generic adapters
 - Context routing, repository map, dependency/impact map
 - Token budget manager and cache-first prompt architecture
-- Model routing, evidence protocol, review ZIP workflow
+- Provider-neutral model routing, evidence protocol, review ZIP workflow
 - Staged implementation roadmap
 
 Normative detail: [`docs/`](docs/).
@@ -54,6 +54,8 @@ node dist/cli.js failure record --source test --input ./fail.txt --json
 node dist/cli.js diagnose --failure <id> --json
 node dist/cli.js cache status --json
 node dist/cli.js cost status --json
+node dist/cli.js models status --json
+node dist/cli.js capabilities status --json
 node dist/cli.js review
 ```
 
@@ -80,10 +82,10 @@ Review bundles and validation evidence are written **outside** the project:
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator, execution, context, fault, and cost evals |
+| `evals/` | Orchestrator, execution, context, fault, cost, and model-routing evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Cursor / Codex / generic adapters |
-| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory |
+| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, and model-routing contracts |
 | `docs/` | Architecture Freeze v0.2 |
 | `scripts/` | Install, review, validate |
 

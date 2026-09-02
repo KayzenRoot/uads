@@ -108,5 +108,20 @@
     "contextPackId": { "type": ["string", "null"] },
     "impactReportId": { "type": ["string", "null"] },
     "indexDigest": { "type": ["string", "null"] }
+    ,"modelPlanId": { "type": ["string", "null"] }
+    ,"selectedProfileId": { "type": ["string", "null"] }
+    ,"selectedProviderId": { "type": ["string", "null"] }
+    ,"selectedModelId": { "type": ["string", "null"] }
+    ,"selectionMode": { "enum": ["router", "host-managed"] }
+    ,"modelExecutionStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parallel", "roleDispatch", "usageTelemetryAvailable"],
+      "properties": {
+        "parallel": { "type": "boolean" },
+        "roleDispatch": { "enum": ["subagents", "role-cycling"] },
+        "usageTelemetryAvailable": { "type": ["boolean", "null"] }
+      }
+    }
   }
 }

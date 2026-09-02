@@ -10,6 +10,11 @@ export type UadsPaths = {
   agents: string;
   adapters: string;
   cache: string;
+  registry: string;
+  modelRegistry: string;
+  modelProfiles: string;
+  registryState: string;
+  runtimeCapabilities: string;
   workspaces: string;
   workspace: string;
   reviews: string;
@@ -22,6 +27,9 @@ export type UadsPaths = {
   index: string;
   context: string;
   executionRuns: string;
+  modelRouting: string;
+  currentModelRouting: string;
+  modelRoutingHistory: string;
   profile: string;
   currentState: string;
   repositoryMap: string;
@@ -49,6 +57,11 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     agents: path.join(home, "agents"),
     adapters: path.join(home, "adapters"),
     cache: path.join(home, "cache"),
+    registry: path.join(home, "registry"),
+    modelRegistry: path.join(home, "registry", "models", "profiles.json"),
+    modelProfiles: path.join(home, "registry", "models", "profiles.json"),
+    registryState: path.join(home, "registry", "registry-state.json"),
+    runtimeCapabilities: path.join(home, "registry", "runtime", "capabilities"),
     workspaces: path.join(home, "workspaces"),
     workspace,
     reviews: path.join(workspace, "reviews"),
@@ -61,6 +74,9 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     index: path.join(workspace, "index"),
     context: path.join(workspace, "context"),
     executionRuns: path.join(workspace, "execution-runs"),
+    modelRouting: path.join(workspace, "model-routing"),
+    currentModelRouting: path.join(workspace, "model-routing", "current.json"),
+    modelRoutingHistory: path.join(workspace, "model-routing", "history"),
     profile: path.join(workspace, "profile.json"),
     currentState: path.join(workspace, "state", "current.json"),
     repositoryMap: path.join(workspace, "index", "repository-map.json"),
@@ -70,7 +86,17 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
 
 export function ensureGlobalLayout(uadsHome?: string): string {
   const home = resolveUadsHome(uadsHome);
-  for (const dir of ["core", "skills", "agents", "adapters", "cache", "workspaces"]) {
+  for (const dir of [
+    "core",
+    "skills",
+    "agents",
+    "adapters",
+    "cache",
+    "registry",
+    path.join("registry", "models"),
+    path.join("registry", "runtime", "capabilities"),
+    "workspaces",
+  ]) {
     fs.mkdirSync(path.join(home, dir), { recursive: true });
   }
   return home;
@@ -94,6 +120,8 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.index,
     paths.context,
     paths.executionRuns,
+    paths.modelRouting,
+    paths.modelRoutingHistory,
     path.join(paths.context, "impact-reports"),
     path.join(paths.context, "packs"),
     path.join(paths.context, "diagnostic-packs"),

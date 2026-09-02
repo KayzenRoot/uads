@@ -8,7 +8,7 @@ Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that 
 - Richer cache analytics / adaptive TTL / shared static metadata cache
 - Vector embeddings / vector database
 - Provider API clients and hard-coded model price tables
-- Full multi-provider model router
+- Provider API clients, model invocation proxy/gateway, and live vendor catalog synchronization
 - Complete 30+ department specialist catalog
 - Production Skill registry / marketplace
 - Dashboard, cloud control plane, enterprise server, remote graph service
