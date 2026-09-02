@@ -6,7 +6,7 @@ export type ReleaseArtifact = {
 
 export type ReleaseManifest = {
   schema: "uads.release-manifest";
-  schemaVersion: "0.7.0" | "0.7.1";
+  schemaVersion: "0.7.0" | "0.7.1" | "0.8.0";
   version: string;
   tag: string;
   commit: string;

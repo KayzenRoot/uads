@@ -55,6 +55,7 @@ const requiredFiles = [
   "docs/12-REVIEW-BUNDLE.md",
   "docs/13-DEFINITION-OF-DONE.md",
   "docs/14-BACKLOG.md",
+  "docs/15-GITHUB-DIRECT-REVIEW.md",
   "skills/uads-orchestrator/SKILL.md",
   "schemas/checkpoint.schema.json",
   "schemas/work-order.schema.json",
@@ -81,6 +82,7 @@ const requiredFiles = [
   "schemas/model-profile-registry.schema.json",
   "schemas/runtime-capability-snapshot.schema.json",
   "schemas/model-execution-plan.schema.json",
+  "schemas/github-direct-review-evidence.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
   "evals/execution/x1-frontend-happy.json",
@@ -119,6 +121,9 @@ const requiredFiles = [
   "scripts/release/publish-release.mjs",
   "scripts/github/configure-repository.mjs",
   "scripts/github/audit-repository.mjs",
+  "scripts/github/generate-direct-review-evidence.mjs",
+  "scripts/github/validate-direct-review.mjs",
+  "scripts/github/finalize-direct-review-evidence.mjs",
   "schemas/validation-summary.schema.json",
   "schemas/release-manifest.schema.json",
   "schemas/release-validation-report.schema.json",
@@ -154,6 +159,7 @@ runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
+runNpmGate(["run", "validate:direct-review"]);
 
 const cli = path.join(root, "dist", "cli.js");
 for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) {

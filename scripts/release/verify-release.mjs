@@ -7,11 +7,14 @@ import { spawnSync } from "node:child_process";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const { validateReleaseMetadata } = await import("../../dist/release/semver.js");
 const { createCiBinding } = await import("../../dist/release/ci-binding.js");
+const { assertSchema } = await import("../../dist/lib/json-schema.js");
+const { validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
 
 const version = process.argv[2];
 if (!version) fail("usage: node scripts/release/verify-release.mjs X.Y.Z [--ci-binding file] [--historical]");
 const historical = process.argv.includes("--historical");
 const bindingPath = valueOf("--ci-binding");
+const directReviewPath = valueOf("--direct-review");
 const packageJson = readJson("package.json");
 const lockfile = readJson("package-lock.json");
 const currentSha = git(["rev-parse", "HEAD"]);
@@ -45,6 +48,11 @@ if (!historical) {
     if (!local) errors.push("local-validation-failed");
   } else if (!verifyCiBinding(bindingPath, currentSha)) {
     errors.push("ci-binding-invalid");
+  }
+  if (!directReviewPath) {
+    errors.push("direct-review-evidence-missing");
+  } else if (!verifyDirectReview(directReviewPath, currentSha, version, bindingPath)) {
+    errors.push("direct-review-evidence-invalid");
   }
 }
 
@@ -122,9 +130,27 @@ function verifyCiBinding(file, expectedSha) {
   }
 }
 
+function verifyDirectReview(file, expectedSha, expectedVersion, bindingFile) {
+  try {
+    const evidence = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
+    assertSchema("github-direct-review-evidence.schema.json", evidence, root);
+    if (validateDirectReviewEvidence(evidence, root).length > 0) return false;
+    if (evidence.commitSha !== expectedSha || evidence.version !== expectedVersion || evidence.finalVerdict !== "PASS") return false;
+    if (bindingFile) {
+      const binding = JSON.parse(fs.readFileSync(path.resolve(bindingFile), "utf8"));
+      if (evidence.workflow?.runId !== binding.runId || evidence.provenance?.sourceRunId !== binding.runId) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function runLocalValidation() {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-  const result = spawnSync(npm, ["run", "release:validate"], { cwd: root, stdio: "inherit", windowsHide: true });
+  const args = ["run", "release:validate"];
+  if (directReviewPath) args.push("--", "--direct-review", path.resolve(directReviewPath));
+  const result = spawnSync(npm, args, { cwd: root, stdio: "inherit", windowsHide: true });
   return result.status === 0;
 }
 

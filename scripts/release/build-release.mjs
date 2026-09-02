@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createReleaseManifest, checksumFile, assertReleaseTextSafe } from "../../dist/release/release-artifacts.js";
 import { createCiBinding, assertCiBinding } from "../../dist/release/ci-binding.js";
+import { assertSchema } from "../../dist/lib/json-schema.js";
+import { validateDirectReviewEvidence } from "../../dist/github/direct-review.js";
 import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -14,9 +16,11 @@ if (!version) fail("usage: node scripts/release/build-release.mjs X.Y.Z --output
 const output = path.resolve(valueOf("--output") ?? path.join(root, "tmp", "release", version));
 const validationReportPath = valueOf("--validation-report");
 const ciBindingPath = valueOf("--ci-binding");
+const directReviewPath = valueOf("--direct-review");
 const repository = valueOf("--repo") ?? "KayzenRoot/uads";
 if (!validationReportPath) fail("--validation-report is required");
 if (!ciBindingPath) fail("--ci-binding is required for a published release");
+if (!directReviewPath) fail("--direct-review is required for a published release");
 fs.mkdirSync(output, { recursive: true });
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -63,7 +67,20 @@ const ciBindingOutput = path.join(output, "ci-binding.json");
 fs.writeFileSync(ciBindingOutput, `${JSON.stringify(ciBinding, null, 2)}\n`);
 assertReleaseTextSafe(fs.readFileSync(ciBindingOutput, "utf8"));
 
-const artifactPaths = [expectedPackagePath, sbomPath, validationPath, ciBindingOutput];
+const directReview = JSON.parse(fs.readFileSync(path.resolve(directReviewPath), "utf8"));
+try {
+  assertSchema("github-direct-review-evidence.schema.json", directReview, root);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
+if (validateDirectReviewEvidence(directReview, root).length > 0 || directReview.finalVerdict !== "PASS" || directReview.commitSha !== commit || directReview.version !== version || directReview.workflow?.runId !== ciBinding.runId) {
+  fail("direct review evidence is not a successful exact-SHA CI proof");
+}
+const directReviewOutput = path.join(output, "github-direct-review-evidence.json");
+fs.copyFileSync(path.resolve(directReviewPath), directReviewOutput);
+assertReleaseTextSafe(fs.readFileSync(directReviewOutput, "utf8"));
+
+const artifactPaths = [expectedPackagePath, sbomPath, validationPath, ciBindingOutput, directReviewOutput];
 const artifacts = artifactPaths.map((artifactPath) => ({
   name: path.basename(artifactPath),
   size: fs.statSync(artifactPath).size,
@@ -79,7 +96,7 @@ const manifest = createReleaseManifest({
   artifacts,
   validationReport: "validation-report.json",
   ciBinding: "ci-binding.json",
-  schemaVersion: "0.7.1",
+  schemaVersion: "0.8.0",
 });
 const manifestPath = path.join(output, "release-manifest.json");
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);

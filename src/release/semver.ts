@@ -57,6 +57,23 @@ export const HISTORICAL_RELEASES: readonly HistoricalRelease[] = Object.freeze([
   },
 ]);
 
+/**
+ * Canonical commit targets for every published tag known to the release
+ * reviewer. This map is data-driven so new reviews never need a one-off tag
+ * comparison branch.
+ */
+export const IMMUTABLE_TAG_TARGETS: Readonly<Record<string, string>> = Object.freeze({
+  "v0.1.0": "fed4a41fa606d2c20f045c49872c4a4a384ba341",
+  "v0.2.0": "8a920a22f28e7317883776bb397060deaf5306d8",
+  "v0.3.0": "ccd24218c1ffa2693f9e3d2d5dfe797738961ac0",
+  "v0.4.0": "de0842435890517c02f5c1171cacd1fec3e845d7",
+  "v0.5.0": "9b1012c11c135c2eaa8b191d0526e796a0c6bcda",
+  "v0.6.0": "9433ca04d3db41411d313959f140a707459bae74",
+  "v0.7.0": "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
+  "v0.7.1": "f6d36261545bb70ac9b566bef6313b31f2c22e6d",
+  "v0.8.0": "54506705573bed5453a3f441d707f384da8c28f7",
+});
+
 const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 
 export function isValidSemVer(version: string): boolean {

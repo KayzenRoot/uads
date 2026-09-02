@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KayzenRoot/uads/schemas/github-direct-review-evidence.schema.json",
+  "title": "UADS GitHub Direct Review Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schemaVersion", "repository", "branch", "commitSha", "gitTreeSha", "version", "generatedAt", "event",
+    "workflow", "comparison", "requiredGates", "validation", "securityWorkflows", "release", "artifact", "provenance",
+    "finalVerdict", "reasonCodes", "evidenceContractDigest"
+  ],
+  "properties": {
+    "schema": { "const": "uads.github-direct-review-evidence" },
+    "schemaVersion": { "const": "0.8.0" },
+    "repository": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "branch": { "type": ["string", "null"], "maxLength": 128 },
+    "commitSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+    "gitTreeSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "event": { "type": ["string", "null"], "maxLength": 80 },
+    "workflow": { "$ref": "#/$defs/workflow" },
+    "comparison": { "$ref": "#/$defs/comparison" },
+    "requiredGates": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "#/$defs/gate" } },
+    "validation": { "$ref": "#/$defs/validation" },
+    "securityWorkflows": { "$ref": "#/$defs/securityWorkflows" },
+    "release": { "$ref": "#/$defs/release" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "finalVerdict": { "enum": ["PASS", "FAIL", "INCOMPLETE", "BLOCKED"] },
+    "reasonCodes": { "type": "array", "maxItems": 128, "items": { "type": "string", "pattern": "^[A-Z0-9_:-]{1,120}$" } },
+    "evidenceContractDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "outcome": { "enum": ["success", "failure", "cancelled", "skipped", "unknown"] },
+    "shaOrNull": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+    "urlOrNull": { "type": ["string", "null"], "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/[0-9]+$" },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["passed", "failed", "total"],
+      "properties": {
+        "passed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "failed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "total": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 }
+      }
+    },
+    "workflow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runId", "runAttempt", "workflowName", "jobName", "htmlUrl", "startedAt", "completedAt"],
+      "properties": {
+        "runId": { "type": ["integer", "null"], "minimum": 1 },
+        "runAttempt": { "type": ["integer", "null"], "minimum": 1 },
+        "workflowName": { "type": ["string", "null"], "maxLength": 128 },
+        "jobName": { "type": ["string", "null"], "maxLength": 128 },
+        "htmlUrl": { "$ref": "#/$defs/urlOrNull" },
+        "startedAt": { "type": ["string", "null"], "format": "date-time" },
+        "completedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "comparison": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseSha", "headSha", "changedFileCount", "changedPaths"],
+      "properties": {
+        "baseSha": { "$ref": "#/$defs/shaOrNull" },
+        "headSha": { "$ref": "#/$defs/shaOrNull" },
+        "changedFileCount": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "changedPaths": {
+          "type": ["array", "null"], "maxItems": 500,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 }
+        }
+      }
+    },
+    "gate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "outcome", "required"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,80}$" },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "npmAudit", "packaging"],
+      "properties": {
+        "testFilesPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "testsPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "testsFailed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "orchestrator": { "$ref": "#/$defs/summary" },
+        "execution": { "$ref": "#/$defs/summary" },
+        "context": { "$ref": "#/$defs/summary" },
+        "fault": { "$ref": "#/$defs/summary" },
+        "cost": { "$ref": "#/$defs/summary" },
+        "modelRouting": { "$ref": "#/$defs/summary" },
+        "npmAudit": {
+          "type": "object", "additionalProperties": false,
+          "required": ["outcome", "highOrGreaterVulnerabilities"],
+          "properties": { "outcome": { "$ref": "#/$defs/outcome" }, "highOrGreaterVulnerabilities": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 } }
+        },
+        "packaging": {
+          "type": "object", "additionalProperties": false,
+          "required": ["outcome"],
+          "properties": { "outcome": { "$ref": "#/$defs/outcome" } }
+        }
+      }
+    },
+    "workflowStatus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "outcome", "runId", "commitSha", "htmlUrl", "reasonCode"],
+      "properties": {
+        "status": { "$ref": "#/$defs/outcome" },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "runId": { "type": ["integer", "null"], "minimum": 1 },
+        "commitSha": { "$ref": "#/$defs/shaOrNull" },
+        "htmlUrl": { "$ref": "#/$defs/urlOrNull" },
+        "reasonCode": { "type": ["string", "null"], "pattern": "^[A-Z0-9_:-]{1,100}$" }
+      }
+    },
+    "securityWorkflows": {
+      "type": "object", "additionalProperties": false,
+      "required": ["codeql", "scorecard", "dependencyReview"],
+      "properties": {
+        "codeql": { "$ref": "#/$defs/workflowStatus" },
+        "scorecard": { "$ref": "#/$defs/workflowStatus" },
+        "dependencyReview": { "$ref": "#/$defs/workflowStatus" }
+      }
+    },
+    "release": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "tag", "tagTargetSha", "releaseRunId", "releaseRunConclusion", "assetNames", "ciBindingAsset", "directReviewArtifactName"],
+      "properties": {
+        "version": { "type": ["string", "null"], "maxLength": 64 },
+        "tag": { "type": ["string", "null"], "pattern": "^v[0-9]" },
+        "tagTargetSha": { "$ref": "#/$defs/shaOrNull" },
+        "releaseRunId": { "type": ["integer", "null"], "minimum": 1 },
+        "releaseRunConclusion": { "$ref": "#/$defs/outcome" },
+        "assetNames": { "type": ["array", "null"], "maxItems": 128, "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 } },
+        "ciBindingAsset": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]+$" },
+        "directReviewArtifactName": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]+$" }
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "retentionDays"],
+      "properties": {
+        "name": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 },
+        "retentionDays": { "type": ["integer", "null"], "minimum": 1, "maximum": 3650 }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["generatedByScript", "evidenceContractDigest", "sourceRunSha", "sourceRunId"],
+      "properties": {
+        "generatedByScript": { "enum": ["scripts/github/generate-direct-review-evidence.mjs", "scripts/github/finalize-direct-review-evidence.mjs"] },
+        "evidenceContractDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "sourceRunSha": { "$ref": "#/$defs/shaOrNull" },
+        "sourceRunId": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    }
+  }
+}

@@ -8,6 +8,9 @@ import { runNpm } from "../lib/exec.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = argumentValue("--output") ?? path.join(root, "tmp", "release", "validation-report.json");
 const ciBinding = argumentValue("--ci-binding");
+const directReview = argumentValue("--direct-review");
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const currentCommit = git(["rev-parse", "HEAD"]);
 fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
 
 const commands = [
@@ -24,6 +27,7 @@ const commands = [
   ["eval-model-routing", ["run", "eval:model-routing"]],
   ["skills-validation", ["run", "validate:skills"]],
   ["action-pin-validation", ["run", "validate:actions"]],
+  ["direct-review-validation", ["run", "validate:direct-review", "--", ...(directReview ? ["--file", path.resolve(directReview), "--expected-sha", currentCommit, "--expected-version", packageJson.version] : [])]],
   ["aggregate-validation", ["run", "validate"]],
   ["npm-audit", ["audit", "--audit-level=high"]],
   ["packaging", ["pack", "--dry-run", "--json"]],
@@ -60,7 +64,6 @@ function argumentValue(name) {
 }
 
 function writeReport(commandsRun, destination) {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const report = {
     schema: "uads.release-validation-report",
     schemaVersion: packageJson.version,

@@ -29,49 +29,147 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        id: install
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee "$RUNNER_TEMP/uads-install.log"
 
       - name: Lint
-        run: npm run lint
+        id: lint
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee "$RUNNER_TEMP/uads-lint.log"
 
       - name: Typecheck
-        run: npm run typecheck
+        id: typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee "$RUNNER_TEMP/uads-typecheck.log"
 
       - name: Build
-        run: npm run build
+        id: build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee "$RUNNER_TEMP/uads-build.log"
 
       - name: Validate immutable action pins
-        run: npm run validate:actions
+        id: action_pins
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run validate:actions 2>&1 | tee "$RUNNER_TEMP/uads-action-pins.log"
 
       - name: Test
-        run: npm test
+        id: tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$RUNNER_TEMP/uads-tests.log"
 
       - name: Orchestrator eval
-        run: npm run eval:orchestrator
+        id: eval_orchestrator
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:orchestrator 2>&1 | tee "$RUNNER_TEMP/uads-eval-orchestrator.log"
 
       - name: Execution eval
-        run: npm run eval:execution
+        id: eval_execution
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:execution 2>&1 | tee "$RUNNER_TEMP/uads-eval-execution.log"
 
       - name: Context eval
-        run: npm run eval:context
+        id: eval_context
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:context 2>&1 | tee "$RUNNER_TEMP/uads-eval-context.log"
 
       - name: Fault eval
-        run: npm run eval:fault
+        id: eval_fault
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:fault 2>&1 | tee "$RUNNER_TEMP/uads-eval-fault.log"
 
       - name: Cost eval
-        run: npm run eval:cost
+        id: eval_cost
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:cost 2>&1 | tee "$RUNNER_TEMP/uads-eval-cost.log"
 
       - name: Model routing eval
-        run: npm run eval:model-routing
+        id: eval_model_routing
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:model-routing 2>&1 | tee "$RUNNER_TEMP/uads-eval-model-routing.log"
 
       - name: Skills preflight
-        run: npm run validate:skills
+        id: skills_validation
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run validate:skills 2>&1 | tee "$RUNNER_TEMP/uads-skills-validation.log"
 
       - name: Validate foundation
-        run: npm run validate
+        id: validate
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run validate 2>&1 | tee "$RUNNER_TEMP/uads-validate.log"
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        id: npm_audit
+        shell: bash
+        run: |
+          set -o pipefail
+          npm audit --audit-level=high 2>&1 | tee "$RUNNER_TEMP/uads-npm-audit.log"
 
       - name: Packaging smoke test
-        run: npm pack --dry-run
+        id: packaging
+        shell: bash
+        run: |
+          set -o pipefail
+          npm pack --dry-run 2>&1 | tee "$RUNNER_TEMP/uads-packaging.log"
+
+      - name: Generate GitHub Direct Review Evidence
+        id: direct_review
+        if: always()
+        env:
+          UADS_DIRECT_REVIEW_STEPS: >-
+            {"install":"${{ steps.install.outcome }}","lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","action-pins":"${{ steps.action_pins.outcome }}","tests":"${{ steps.tests.outcome }}","eval-orchestrator":"${{ steps.eval_orchestrator.outcome }}","eval-execution":"${{ steps.eval_execution.outcome }}","eval-context":"${{ steps.eval_context.outcome }}","eval-fault":"${{ steps.eval_fault.outcome }}","eval-cost":"${{ steps.eval_cost.outcome }}","eval-model-routing":"${{ steps.eval_model_routing.outcome }}","skills-validation":"${{ steps.skills_validation.outcome }}","validate":"${{ steps.validate.outcome }}","npm-audit":"${{ steps.npm_audit.outcome }}","packaging":"${{ steps.packaging.outcome }}"}
+          UADS_COMPARISON_BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha || '' }}
+        shell: bash
+        run: |
+          node scripts/github/generate-direct-review-evidence.mjs \
+            --output "$RUNNER_TEMP/github-direct-review-evidence.json" \
+            --log-dir "$RUNNER_TEMP"
+
+      - name: Validate GitHub Direct Review Evidence
+        id: direct_review_validation
+        if: always()
+        shell: bash
+        run: |
+          node scripts/github/validate-direct-review.mjs \
+            --file "$RUNNER_TEMP/github-direct-review-evidence.json" \
+            --expected-sha "$GITHUB_SHA" \
+            --expected-ci-run-id "$GITHUB_RUN_ID" \
+            --expected-version "$(node -p "require('./package.json').version")"
+
+      - name: Upload GitHub Direct Review Evidence
+        id: direct_review_artifact
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: uads-direct-review-${{ github.sha }}
+          path: ${{ runner.temp }}/github-direct-review-evidence.json
+          retention-days: 90
+          if-no-files-found: error

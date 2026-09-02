@@ -22,7 +22,7 @@ if (!tagSha) {
   run("git", ["push", "origin", `refs/tags/${tag}`]);
 }
 const assets = fs.readdirSync(path.resolve(artifactDir)).filter((name) => /\.(tgz|json|txt)$/.test(name)).sort();
-if (assets.length < 5) fail("release artifact directory is incomplete");
+if (assets.length < 6 || !assets.includes("github-direct-review-evidence.json")) fail("release artifact directory is incomplete or lacks direct review evidence");
 const existing = spawnSync("gh", ["release", "view", tag, "--repo", repo], { cwd: root, windowsHide: true }).status === 0;
 if (!existing) {
   const notes = releaseNotes(version);
@@ -60,6 +60,31 @@ function releaseNotes(version) {
   if (!/(Highlights|Fixed|Verification)/i.test(section) || /Release artifacts were produced/i.test(section)) {
     fail("release changelog section is not professional or is a placeholder");
   }
-  return section;
+  const directReviewPath = path.join(path.resolve(artifactDir), "github-direct-review-evidence.json");
+  if (!fs.existsSync(directReviewPath)) fail("release direct review evidence is missing");
+  const evidence = JSON.parse(fs.readFileSync(directReviewPath, "utf8"));
+  if (evidence.finalVerdict !== "PASS" || evidence.commitSha !== head) fail("release notes cannot be derived from a non-PASS direct review proof");
+  const validation = evidence.validation ?? {};
+  const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting"]
+    .map((name) => `${name}: ${formatSummary(validation[name])}`)
+    .join("; ");
+  const audit = validation.npmAudit?.outcome === "success"
+    ? `clean (${validation.npmAudit.highOrGreaterVulnerabilities ?? 0} high-or-greater)`
+    : "not provable";
+  const reviewBlock = [
+    "### Review Evidence",
+    `- Commit SHA: ${evidence.commitSha}`,
+    `- CI run ID + conclusion: ${evidence.workflow?.runId ?? "unknown"} + ${evidence.finalVerdict === "PASS" ? "success" : "unknown"}`,
+    `- Test summary: ${validation.testFilesPassed ?? "unknown"} test files; ${validation.testsPassed ?? "unknown"} passed; ${validation.testsFailed ?? "unknown"} failed`,
+    `- Eval summary: ${evals}`,
+    `- npm audit: ${audit}`,
+    `- Release run ID: ${process.env.GITHUB_RUN_ID ?? "unknown-at-note-generation"}`,
+    "- Direct-review artifact: github-direct-review-evidence.json",
+  ].join("\n");
+  return `${section}\n\n${reviewBlock}`;
+}
+function formatSummary(summary) {
+  if (!summary || summary.passed === null || summary.failed === null || summary.total === null) return "not provable";
+  return `${summary.passed}/${summary.total} passed`;
 }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

@@ -2,6 +2,16 @@
 
 All notable changes to UADS (NexLabs) are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Strict GitHub Direct Review Evidence schema, bounded parsers, exact-SHA Actions artifact generation, CI log markers, release derivatives, and adversarial validation.
+
+### Security / Supply Chain
+
+- Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
+
 ## [0.8.0] - 2026-09-02
 
 ### Added

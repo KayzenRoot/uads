@@ -122,3 +122,15 @@ Complete only when all are true:
 - Runtime fallback metadata records sequential execution, role cycling, and null telemetry when unproven
 - Model routing evals MR1–MR20 and adversarial tests pass; existing orchestrator, execution, context, fault, and cost gates remain green
 - Documentation, review summaries, release evidence, and 0.8.0 package metadata are updated only after the complete validation matrix passes
+
+## GitHub Direct Review Evidence correction
+
+Complete the correction only when all are true:
+
+- `schemas/github-direct-review-evidence.schema.json` is strict, versioned, and validated by `npm run validate:direct-review`
+- CI gates have stable IDs, streamed `pipefail`/`tee` logs, exact `UADS_DIRECT_REVIEW_BEGIN` / `UADS_DIRECT_REVIEW_END` markers, and an `if: always()` evidence step
+- The SHA-bound 90-day Actions artifact is uploaded under `uads-direct-review-<commit-sha>` and contains no raw logs, secrets, or host paths
+- Release validation, build, notes, and the external Review ZIP consume exact direct-review evidence and cross-check commit, CI, tag, manifest, validation, and release identities
+- Parser uncertainty is explicit (`null` plus `COUNT_PARSE_UNAVAILABLE:*`); it cannot fabricate a PASS or a count
+- CI, CodeQL, OpenSSF Scorecard, Dependency Review applicability, npm audit, packaging, release run, assets, and limitations are recorded
+- Existing historical tag targets remain unchanged and no immutable tag is moved or recreated

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -85,6 +86,15 @@ write("ci-final.json", {
   exactSuccessfulRunCount: exactCiRuns.filter((run) => run.status === "completed" && run.conclusion === "success").length,
 });
 write("release-run-v" + releaseVersion + ".json", awaitReleaseRunSummary(releaseRun, repo));
+const securityWorkflows = {
+  codeql: awaitWorkflowStatus(repo, "codeql.yml", mainBranchSha),
+  scorecard: awaitWorkflowStatus(repo, "scorecard.yml", mainBranchSha),
+  dependencyReview: awaitWorkflowStatus(repo, "dependency-review.yml", mainBranchSha),
+};
+write("security-workflows.json", securityWorkflows);
+const directReview = awaitDirectReviewArtifact(repo, exactCiRuns.filter((run) => run.status === "completed" && run.conclusion === "success")[0], mainBranchSha);
+write("direct-review-index.json", directReview.index);
+if (directReview.evidence) write("github-direct-review-evidence.json", directReview.evidence);
 
 const headSha = git(["rev-parse", "HEAD"]);
 write("summary.json", {
@@ -96,6 +106,8 @@ write("summary.json", {
   mainBranchSha,
   exactHeadCiRuns: exactCiRuns,
   releaseRunId: releaseRun?.id ?? null,
+  securityWorkflows,
+  directReviewArtifact: directReview.index,
   limitations: [
     ...(repositoryRaw?.permissions?.admin === true ? [] : ["BLOCKED_BY_GITHUB_PERMISSION"]),
     "Administrative settings are reported as returned by the authenticated API.",
@@ -176,9 +188,61 @@ function awaitReleaseRunSummary(run, targetRepo) {
   };
 }
 function api(endpoint) {
-  const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true });
+  const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
   if (result.status !== 0) return null;
   try { return JSON.parse(result.stdout); } catch { return null; }
+}
+
+function awaitWorkflowStatus(targetRepo, workflowFile, expectedSha) {
+  const runs = api("repos/" + targetRepo + "/actions/workflows/" + workflowFile + "/runs?per_page=100");
+  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
+  const run = candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
+  if (!run) return { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "SECURITY_RUN_UNAVAILABLE" };
+  return {
+    status: run.status ?? "unknown",
+    outcome: run.conclusion ?? "unknown",
+    runId: run.id ?? null,
+    commitSha: run.head_sha ?? null,
+    htmlUrl: run.html_url ?? null,
+    reasonCode: null,
+  };
+}
+
+function awaitDirectReviewArtifact(targetRepo, ciRun, expectedSha) {
+  const artifactName = expectedSha ? `uads-direct-review-${expectedSha}` : null;
+  if (!ciRun || !artifactName) {
+    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_UNAVAILABLE", runId: ciRun?.id ?? null, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+  }
+  const artifacts = api("repos/" + targetRepo + "/actions/runs/" + ciRun.id + "/artifacts");
+  const artifact = (artifacts?.artifacts ?? []).find((item) => item.name === artifactName);
+  if (!artifact) {
+    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_NOT_FOUND", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+  }
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "uads-direct-review-"));
+  try {
+    const downloaded = spawnSync("gh", ["run", "download", String(ciRun.id), "--repo", targetRepo, "--name", artifactName, "--dir", temp], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
+    if (downloaded.status !== 0) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_DOWNLOAD_FAILED", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    const evidencePath = findFile(temp, "github-direct-review-evidence.json");
+    if (!evidencePath) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_FILE_MISSING", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    const evidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
+    return { index: { status: "available", reasonCode: null, runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: ["github-direct-review-evidence.json"], artifactId: artifact.id, expired: artifact.expired ?? null }, evidence };
+  } catch {
+    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_UNREADABLE", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+}
+
+function findFile(directory, filename) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const candidate = path.join(directory, entry.name);
+    if (entry.isFile() && entry.name === filename) return candidate;
+    if (entry.isDirectory()) {
+      const nested = findFile(candidate, filename);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 function optional(endpoint) {
   const value = api(endpoint);

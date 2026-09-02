@@ -17,6 +17,7 @@ This repository is the public open-source UADS product. The latest release is [v
 - Context routing, repository map, dependency/impact map
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
+- GitHub Direct Review Evidence with exact-SHA CI artifact and release cross-checks
 - Staged implementation roadmap
 
 Normative detail: [`docs/`](docs/).
@@ -87,7 +88,7 @@ Review bundles and validation evidence are written **outside** the project:
 | `adapters/` | Cursor / Codex / generic adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, and model-routing contracts |
 | `docs/` | Architecture Freeze v0.2 |
-| `scripts/` | Install, review, validate |
+| `scripts/` | Install, GitHub audit/direct-review, release, review, validate |
 
 ## License
 

@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { computeProjectFingerprint } from "../../dist/lib/fingerprint.js";
 import { createReviewBundle } from "../../dist/lib/review-bundle.js";
 import { ensureWorkspace } from "../../dist/lib/workspace.js";
+const { IMMUTABLE_TAG_TARGETS } = await import("../../dist/release/semver.js");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const version = process.argv[2] ?? "0.8.0";
@@ -38,6 +39,8 @@ const release = readJson(path.join(githubDir, "release-v" + version + ".json"));
 const ci = readJson(path.join(githubDir, "ci-final.json"));
 const releaseRun = readJson(path.join(githubDir, "release-run-v" + version + ".json"));
 const tags = readJson(path.join(githubDir, "tags.json"));
+const directReviewIndex = readJson(path.join(githubDir, "direct-review-index.json"));
+const directReviewFinal = readOptionalJson(path.join(releaseDir, "github-direct-review-evidence-final.json"));
 const checksums = readChecksums(path.join(releaseDir, "SHA256SUMS.txt"));
 const assets = [];
 for (const artifact of manifest.artifacts ?? []) {
@@ -53,10 +56,14 @@ const manifestSha = sha256File(path.join(releaseDir, "release-manifest.json"));
 if (checksums.get("release-manifest.json") !== manifestSha) {
   fail("release manifest checksum is missing or invalid");
 }
-const v070Tag = tags.find((tag) => tag.name === "v0.7.0");
-const v070TargetSha = v070Tag?.targetCommitSha ?? null;
-if (v070TargetSha !== "bdfec142ee0b94593a6d0372fb1eb95409ef391d") {
-  fail("historical v0.7.0 tag target preservation check failed");
+const historicalTagChecks = Object.entries(IMMUTABLE_TAG_TARGETS)
+  .filter(([tagName]) => tagName !== "v" + version)
+  .map(([tagName, expectedSha]) => {
+    const observedSha = tags.find((tag) => tag.name === tagName)?.targetCommitSha ?? null;
+    return { tag: tagName, targetSha: observedSha, expectedSha, unchanged: observedSha === expectedSha };
+  });
+if (historicalTagChecks.some((item) => !item.unchanged)) {
+  fail("historical tag target preservation check failed");
 }
 writeJson(path.join(releaseDir, "verification-summary.json"), {
   schema: "uads.release-verification-summary",
@@ -73,14 +80,19 @@ writeJson(path.join(releaseDir, "verification-summary.json"), {
   releaseRunStatus: releaseRun.status ?? null,
   releaseRunConclusion: releaseRun.conclusion ?? null,
   releaseTagTargetSha: release.targetCommitSha ?? null,
+  directReview: {
+    schemaVersion: directReviewFinal?.schemaVersion ?? null,
+    commitSha: directReviewFinal?.commitSha ?? null,
+    finalVerdict: directReviewFinal?.finalVerdict ?? null,
+    evidenceContractDigest: directReviewFinal?.evidenceContractDigest ?? null,
+    actionsArtifact: directReviewIndex,
+  },
   assets,
   manifestSha256: manifestSha,
   attestation: findAttestationStep(releaseRun),
   historicalTagPreservation: {
-    tag: "v0.7.0",
-    targetSha: v070TargetSha,
-    expectedSha: "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
-    unchanged: v070TargetSha === "bdfec142ee0b94593a6d0372fb1eb95409ef391d",
+    checks: historicalTagChecks,
+    unchanged: historicalTagChecks.every((item) => item.unchanged),
   },
   validation: {
     version: validation.version,
@@ -117,6 +129,9 @@ function findAttestationStep(run) {
 }
 function readJson(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch (error) { fail("invalid JSON: " + file); }
+}
+function readOptionalJson(file) {
+  try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return null; }
 }
 function readChecksums(file) {
   const values = new Map();
