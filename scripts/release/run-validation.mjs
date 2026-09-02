@@ -41,7 +41,7 @@ for (const [id, args] of commands) {
   const result = runNpm(args, { cwd: root, stdio: "inherit" });
   const entry = {
     id,
-    command: `npm ${args.join(" ")}`,
+    command: `npm ${args.map(redactCommandArgument).join(" ")}`,
     startedAt,
     endedAt: new Date().toISOString(),
     durationMs: Date.now() - started,
@@ -79,6 +79,13 @@ function writeReport(commandsRun, destination) {
     },
   };
   fs.writeFileSync(path.resolve(destination), `${JSON.stringify(report, null, 2)}\n`);
+}
+
+function redactCommandArgument(value) {
+  if (typeof value !== "string" || !path.isAbsolute(value)) return value;
+  const relative = path.relative(root, value);
+  if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) return relative.split(path.sep).join("/");
+  return "<absolute-path>";
 }
 
 function git(args) {
