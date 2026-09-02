@@ -137,7 +137,8 @@ function verifyDirectReview(file, expectedSha, expectedVersion, bindingFile) {
     if (validateDirectReviewEvidence(evidence, root).length > 0) return false;
     if (evidence.commitSha !== expectedSha || evidence.version !== expectedVersion || evidence.finalVerdict !== "PASS") return false;
     if (bindingFile) {
-      const binding = JSON.parse(fs.readFileSync(path.resolve(bindingFile), "utf8"));
+      const rawBinding = JSON.parse(fs.readFileSync(path.resolve(bindingFile), "utf8"));
+      const binding = createCiBinding(rawBinding, expectedSha, "KayzenRoot/uads");
       if (evidence.provenance?.sourceRunId !== binding.runId || (binding.runAttempt && evidence.provenance?.sourceRunAttempt !== binding.runAttempt)) return false;
     }
     return true;
