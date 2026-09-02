@@ -24,6 +24,7 @@ const releaseRun = (releaseRuns?.workflow_runs ?? [])
   .sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0] ?? null;
 const directReviewRuns = api("repos/" + repo + "/actions/workflows/direct-review.yml/runs?per_page=100");
 const exactDirectReviewRuns = (directReviewRuns?.workflow_runs ?? []).filter((run) => run.head_sha === mainBranchSha).map(summarizeRun);
+const exactSuccessfulDirectReviewRuns = exactDirectReviewRuns.filter((run) => run.status === "completed" && run.conclusion === "success");
 
 write("repository.json", {
   full_name: repositoryRaw?.full_name ?? repo,
@@ -94,8 +95,8 @@ const securityWorkflows = {
   dependencyReview: awaitWorkflowStatus(repo, "dependency-review.yml", mainBranchSha),
 };
 write("security-workflows.json", securityWorkflows);
-const directReviewRun = exactDirectReviewRuns.length === 1 ? exactDirectReviewRuns[0] : null;
-const directReview = awaitDirectReviewArtifact(repo, directReviewRun, mainBranchSha, exactDirectReviewRuns.length);
+const directReviewRun = exactSuccessfulDirectReviewRuns.length === 1 ? exactSuccessfulDirectReviewRuns[0] : null;
+const directReview = awaitDirectReviewArtifact(repo, directReviewRun, mainBranchSha, exactSuccessfulDirectReviewRuns.length);
 write("direct-review-index.json", directReview.index);
 if (directReview.evidence) write("github-direct-review-evidence.json", directReview.evidence);
 
@@ -109,6 +110,7 @@ write("summary.json", {
   mainBranchSha,
   exactHeadCiRuns: exactCiRuns,
   exactDirectReviewRuns,
+  exactSuccessfulDirectReviewRuns,
   releaseRunId: releaseRun?.id ?? null,
   securityWorkflows,
   directReviewArtifact: directReview.index,
@@ -233,7 +235,7 @@ function awaitDirectReviewArtifact(targetRepo, directRun, expectedSha, exactRunC
     const evidencePath = findFile(temp, "github-direct-review-evidence.json");
     if (!evidencePath) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_FILE_MISSING", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
     const evidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
-    return { index: { status: "available", reasonCode: null, runId: directRun.id, sourceCiRunId: evidence.provenance?.sourceRunId ?? null, sourceCiRunAttempt: evidence.provenance?.sourceRunAttempt ?? null, name: artifactName, commitSha: expectedSha, files: ["github-direct-review-evidence.json", "github-direct-review-evidence.json.sha256"], artifactId: artifact.id, size: artifact.size ?? null, digest: artifact.digest ?? null, expired: artifact.expired ?? null }, evidence };
+    return { index: { status: "available", reasonCode: null, runId: directRun.id, sourceCiRunId: evidence.provenance?.sourceRunId ?? null, sourceCiRunAttempt: evidence.provenance?.sourceRunAttempt ?? null, name: artifactName, commitSha: expectedSha, files: ["github-direct-review-evidence.json", "github-direct-review-evidence.json.sha256"], artifactId: artifact.id, size: artifact.size_in_bytes ?? artifact.size ?? null, digest: artifact.digest ?? null, expired: artifact.expired ?? null }, evidence };
   } catch {
     return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_UNREADABLE", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
   } finally {
