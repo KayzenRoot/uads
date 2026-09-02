@@ -140,36 +140,37 @@ jobs:
           set -o pipefail
           npm pack --dry-run 2>&1 | tee "$RUNNER_TEMP/uads-packaging.log"
 
-      - name: Generate GitHub Direct Review Evidence
-        id: direct_review
+      - name: Generate exact-SHA CI gate receipt
+        id: ci_gate_receipt
         if: always()
         env:
-          UADS_DIRECT_REVIEW_STEPS: >-
+          UADS_CI_JOB_NAME: Foundation checks
+          UADS_CI_GATE_STEPS: >-
             {"install":"${{ steps.install.outcome }}","lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","action-pins":"${{ steps.action_pins.outcome }}","tests":"${{ steps.tests.outcome }}","eval-orchestrator":"${{ steps.eval_orchestrator.outcome }}","eval-execution":"${{ steps.eval_execution.outcome }}","eval-context":"${{ steps.eval_context.outcome }}","eval-fault":"${{ steps.eval_fault.outcome }}","eval-cost":"${{ steps.eval_cost.outcome }}","eval-model-routing":"${{ steps.eval_model_routing.outcome }}","skills-validation":"${{ steps.skills_validation.outcome }}","validate":"${{ steps.validate.outcome }}","npm-audit":"${{ steps.npm_audit.outcome }}","packaging":"${{ steps.packaging.outcome }}"}
           UADS_COMPARISON_BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha || '' }}
         shell: bash
         run: |
-          node scripts/github/generate-direct-review-evidence.mjs \
-            --output "$RUNNER_TEMP/github-direct-review-evidence.json" \
+          node scripts/github/generate-ci-gate-receipt.mjs \
+            --output "$RUNNER_TEMP/uads-ci-gate-receipt.json" \
             --log-dir "$RUNNER_TEMP"
 
-      - name: Validate GitHub Direct Review Evidence
-        id: direct_review_validation
+      - name: Validate exact-SHA CI gate receipt
+        id: ci_gate_receipt_validation
         if: always()
         shell: bash
         run: |
-          node scripts/github/validate-direct-review.mjs \
-            --file "$RUNNER_TEMP/github-direct-review-evidence.json" \
+          node scripts/github/validate-ci-gate-receipt.mjs \
+            --file "$RUNNER_TEMP/uads-ci-gate-receipt.json" \
             --expected-sha "$GITHUB_SHA" \
-            --expected-ci-run-id "$GITHUB_RUN_ID" \
-            --expected-version "$(node -p "require('./package.json').version")"
+            --expected-run-id "$GITHUB_RUN_ID" \
+            --expected-run-attempt "$GITHUB_RUN_ATTEMPT"
 
-      - name: Upload GitHub Direct Review Evidence
-        id: direct_review_artifact
+      - name: Upload exact-SHA CI gate receipt
+        id: ci_gate_receipt_artifact
         if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: uads-direct-review-${{ github.sha }}
-          path: ${{ runner.temp }}/github-direct-review-evidence.json
+          name: uads-ci-gate-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/uads-ci-gate-receipt.json
           retention-days: 90
           if-no-files-found: error

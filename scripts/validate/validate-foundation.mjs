@@ -37,6 +37,7 @@ const requiredFiles = [
   ".github/dependabot.yml",
   ".github/release.yml",
   ".github/workflows/ci.yml",
+  ".github/workflows/direct-review.yml",
   ".github/workflows/codeql.yml",
   ".github/workflows/dependency-review.yml",
   ".github/workflows/release.yml",
@@ -83,6 +84,8 @@ const requiredFiles = [
   "schemas/runtime-capability-snapshot.schema.json",
   "schemas/model-execution-plan.schema.json",
   "schemas/github-direct-review-evidence.schema.json",
+  "schemas/ci-gate-receipt.schema.json",
+  "schemas/github-review-index.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
   "evals/execution/x1-frontend-happy.json",
@@ -95,6 +98,7 @@ const requiredFiles = [
   "evals/fault/fl18-postfix-live-drift.json",
   "src/eval/fault.ts",
   "src/eval/model-routing.ts",
+  "src/github/review-index.ts",
   "evals/model-routing/cases.json",
   "src/kernel/fault-localization.ts",
   "agents/uads-repo-inspector.md",
@@ -124,6 +128,11 @@ const requiredFiles = [
   "scripts/github/generate-direct-review-evidence.mjs",
   "scripts/github/validate-direct-review.mjs",
   "scripts/github/finalize-direct-review-evidence.mjs",
+  "scripts/github/ci-gate-receipt-runtime.mjs",
+  "scripts/github/generate-ci-gate-receipt.mjs",
+  "scripts/github/validate-ci-gate-receipt.mjs",
+  "scripts/github/publish-direct-review-evidence.mjs",
+  "scripts/github/validate-direct-review-standalone.mjs",
   "schemas/validation-summary.schema.json",
   "schemas/release-manifest.schema.json",
   "schemas/release-validation-report.schema.json",
@@ -160,6 +169,7 @@ runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 runNpmGate(["run", "validate:direct-review"]);
+runNpmGate(["run", "validate:ci-receipt"]);
 
 const cli = path.join(root, "dist", "cli.js");
 for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) {

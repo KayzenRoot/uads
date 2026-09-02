@@ -10,6 +10,8 @@ const { createDirectReviewEvidence, validateDirectReviewEvidence } = await impor
 const file = valueOf("--file");
 const expectedSha = valueOf("--expected-sha");
 const expectedRunId = valueOf("--expected-ci-run-id");
+const expectedSourceRunId = valueOf("--expected-source-run-id");
+const expectedSourceRunAttempt = valueOf("--expected-source-run-attempt");
 const expectedVersion = valueOf("--expected-version");
 const evidence = file ? readJson(path.resolve(file)) : fixture();
 const errors = [];
@@ -22,6 +24,8 @@ try {
 errors.push(...validateDirectReviewEvidence(evidence, root));
 if (expectedSha && evidence?.commitSha !== expectedSha.toLowerCase()) errors.push("expected-commit-sha-mismatch");
 if (expectedRunId && evidence?.workflow?.runId !== Number(expectedRunId)) errors.push("expected-ci-run-id-mismatch");
+if (expectedSourceRunId && evidence?.provenance?.sourceRunId !== Number(expectedSourceRunId)) errors.push("expected-source-run-id-mismatch");
+if (expectedSourceRunAttempt && evidence?.provenance?.sourceRunAttempt !== Number(expectedSourceRunAttempt)) errors.push("expected-source-run-attempt-mismatch");
 if (expectedVersion && evidence?.version !== expectedVersion) errors.push("expected-version-mismatch");
 
 const result = { ok: errors.length === 0, file: file ? path.basename(file) : "built-in-fixture", verdict: evidence?.finalVerdict ?? null, errors };

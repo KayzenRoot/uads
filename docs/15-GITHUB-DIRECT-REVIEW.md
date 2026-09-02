@@ -2,21 +2,21 @@
 
 UADS records a machine-readable, sanitized proof of the exact GitHub Actions run used for a release. The proof is generated on the runner from GitHub-provided identity fields, the runner's git tree, stable step outcomes, and bounded parsers for test/evaluation/audit output.
 
-## CI contract
+## Two-stage CI contract
 
-`.github/workflows/ci.yml` assigns stable IDs to every required gate. Each command streams to the GitHub log while `pipefail` and `tee` capture parser input under the runner temporary directory. A final `if: always()` step runs `scripts/github/generate-direct-review-evidence.mjs`, emits the exact markers `UADS_DIRECT_REVIEW_BEGIN` and `UADS_DIRECT_REVIEW_END`, and writes `github-direct-review-evidence.json`.
-
-The JSON is validated by `npm run validate:direct-review` and uploaded as the pinned `actions/upload-artifact` artifact:
+`.github/workflows/ci.yml` assigns stable IDs to every required gate. Each command streams to the GitHub log while `pipefail` and `tee` capture only bounded parser input under the runner temporary directory. `if: always()` finalization emits `uads-ci-gate-receipt.json` even when a required gate fails, and uploads the sanitized receipt as the pinned artifact:
 
 ```text
-uads-direct-review-<40-character-commit-sha>
+uads-ci-gate-receipt-<40-character-commit-sha>
 ```
 
-The retention target is 90 days. Raw command output is not included in the artifact. Counts are recorded only when a bounded parser proves them; otherwise the value is `null` and a `COUNT_PARSE_UNAVAILABLE:*` reason code is emitted.
+The receipt is bound to the repository, `main` ref, exact SHA/tree, CI run/attempt, Foundation job and stable gate outcomes. It contains no source snapshot, `.env`, credentials, host paths, or raw logs. The retention target is 90 days. Counts are recorded only when a bounded parser proves them; otherwise the value is `null` and a `COUNT_PARSE_UNAVAILABLE:*` reason code is emitted.
+
+`.github/workflows/direct-review.yml` is triggered with `workflow_run` after CI completes. Its privileged publisher runs only for a completed `push` to `main`; it checks out the exact source SHA, requires exactly one receipt artifact, queries the source run and Foundation job/steps, rejects mismatched or ambiguous identity, and emits the canonical `github-direct-review-evidence.json` between the stable markers `UADS_DIRECT_REVIEW_BEGIN` and `UADS_DIRECT_REVIEW_END`. A failed source CI may therefore produce schema-valid `FAIL` evidence while the evidence-publication workflow itself succeeds.
 
 ## Release contract
 
-The release workflow downloads the artifact for the exact successful CI binding before release validation. The release package includes the exact-CI derivative `github-direct-review-evidence.json`. After publishing, `scripts/github/finalize-direct-review-evidence.mjs` adds GitHub security-workflow, tag, release-run, asset, and identity cross-checks as `github-direct-review-evidence-final.json` with a separate `.sha256` file.
+The release workflow locates exactly one successful Direct Review workflow for the final SHA and downloads its artifact by workflow/artifact identity before release validation. The release package includes the exact canonical `github-direct-review-evidence.json` and the checksummed `github-review-index.json`. After publishing, `scripts/github/finalize-direct-review-evidence.mjs` adds GitHub security-workflow, tag, release-run, asset, and identity cross-checks as `github-direct-review-evidence-final.json` with a separate `.sha256` file.
 
 The final derivative cross-checks, when available, are required to agree:
 
@@ -30,8 +30,8 @@ directReview.commitSha
 = validation report commit
 ```
 
-Missing or contradictory identity is `INCOMPLETE` or a validation failure; it is never silently converted into `PASS`. Release notes derive their Review Evidence block from the validated JSON, not from hand-entered counts or SHAs.
+The canonical evidence uses `workflow.runId` for the Direct Review workflow and `provenance.sourceRunId/sourceRunAttempt` for the source CI. The review index exposes both identities, the evidence file SHA-256, exact security statuses, release run, tag target and release asset table of contents. Missing or contradictory identity is `INCOMPLETE` or a validation failure; it is never silently converted into `PASS`. Release notes derive their Review Evidence block from the validated JSON/index, not from hand-entered counts or SHAs.
 
 ## Reviewer path
 
-An independent reviewer can inspect the release assets, `github-direct-review-evidence-final.json`, its checksum, `release-manifest.json`, `SHA256SUMS.txt`, and the pinned GitHub Actions artifact. `npm run review:release -- 0.8.0` also audits the repository state and places the canonical evidence in the external Review ZIP. Historical tag checks are data-driven and compare every known prior tag target; tags are never moved or recreated.
+An independent reviewer can start with the final main SHA, open its exact CI run, follow the Direct Review workflow and its artifact, inspect the marker block, then follow CodeQL/Scorecard, the annotated tag, release assets and the generated Review Evidence block. A local ZIP is not required for ordinary approval when this chain is coherent. `npm run review:release -- 0.8.0` remains the deeper offline path and cross-checks the same canonical evidence. Historical tag checks are data-driven and compare every known prior tag target; tags are never moved or recreated.

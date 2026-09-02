@@ -42,19 +42,29 @@ jobs:
         run: gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --commit "$GITHUB_SHA" --json databaseId,status,conclusion,headSha,name,event,url,createdAt,updatedAt > tmp/ci-binding.json
       - name: Validate exact CI binding
         run: node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/ci-binding.json','utf8')); if(!a.some(x=>x.name==='CI'&&x.headSha===process.env.GITHUB_SHA&&x.status==='completed'&&x.conclusion==='success')) process.exit(1)"
-      - name: Download exact CI direct-review artifact
+      - name: Locate exact successful Direct Review workflow run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ci_run_id="$(node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/ci-binding.json','utf8')); const x=a.find(v=>v.name==='CI'&&v.headSha===process.env.GITHUB_SHA&&v.status==='completed'&&v.conclusion==='success'); if(!x) process.exit(1); process.stdout.write(String(x.databaseId))")"
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow direct-review.yml --branch main --commit "$GITHUB_SHA" --json databaseId,status,conclusion,headSha,name,event,url,createdAt,updatedAt > tmp/direct-review-runs.json
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/direct-review-runs.json','utf8')).filter(x=>x.name==='UADS Direct Review Evidence'&&x.headSha===process.env.GITHUB_SHA&&x.status==='completed'&&x.conclusion==='success'); if(a.length!==1) { console.error('expected exactly one successful Direct Review workflow run, found '+a.length); process.exit(1); } fs.writeFileSync('tmp/direct-review-run.json', JSON.stringify(a[0], null, 2));"
+      - name: Download exact Direct Review artifact by run identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          direct_review_run_id="$(node -e "const fs=require('fs'); process.stdout.write(String(JSON.parse(fs.readFileSync('tmp/direct-review-run.json','utf8')).databaseId))")"
           mkdir -p tmp/direct-review
-          gh run download "$ci_run_id" --repo "$GITHUB_REPOSITORY" --name "uads-direct-review-$GITHUB_SHA" --dir tmp/direct-review
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$direct_review_run_id/artifacts?per_page=100" > tmp/direct-review-artifacts.json
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('tmp/direct-review-artifacts.json','utf8')).artifacts.filter(x=>x.name==='uads-direct-review-'+process.env.GITHUB_SHA&&!x.expired); if(a.length!==1){console.error('expected exactly one unexpired exact Direct Review artifact, found '+a.length); process.exit(1)}; fs.writeFileSync('tmp/direct-review-artifact.json', JSON.stringify(a[0], null, 2));"
+          gh run download "$direct_review_run_id" --repo "$GITHUB_REPOSITORY" --name "uads-direct-review-$GITHUB_SHA" --dir tmp/direct-review
           test -f tmp/direct-review/github-direct-review-evidence.json
       - name: Run complete release validation
         run: npm run release:validate -- --output tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --direct-review tmp/direct-review/github-direct-review-evidence.json
       - name: Verify release metadata and provenance
         run: npm run release:verify -- "${{ inputs.version }}" --ci-binding tmp/ci-binding.json --direct-review tmp/direct-review/github-direct-review-evidence.json
       - name: Build release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: npm run release:build -- "${{ inputs.version }}" --output release --validation-report tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --direct-review tmp/direct-review/github-direct-review-evidence.json --repo "$GITHUB_REPOSITORY"
       - name: Attest release artifacts when supported
         id: attest
@@ -81,6 +91,7 @@ jobs:
             --validation-report release/validation-report.json \
             --output release/github-direct-review-evidence-final.json \
             --checksum-output release/github-direct-review-evidence-final.json.sha256 \
+            --review-index release/github-review-index.json \
             --repo "$GITHUB_REPOSITORY"
           gh release upload "v${{ inputs.version }}" \
             release/github-direct-review-evidence-final.json \
@@ -89,11 +100,12 @@ jobs:
           npm run validate:direct-review -- \
             --file release/github-direct-review-evidence-final.json \
             --expected-sha "$GITHUB_SHA" \
-            --expected-ci-run-id "$(node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('release/ci-binding.json','utf8')); process.stdout.write(String(a.runId))")" \
+            --expected-source-run-id "$(node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('release/ci-binding.json','utf8')); process.stdout.write(String(a.runId))")" \
+            --expected-source-run-attempt "$(node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('release/github-direct-review-evidence-final.json','utf8')); process.stdout.write(String(a.provenance.sourceRunAttempt))")" \
             --expected-version "${{ inputs.version }}"
       - name: Verify release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "v${{ inputs.version }}" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName,targetCommitish,assets
-          gh release view "v${{ inputs.version }}" --repo "$GITHUB_REPOSITORY" --json assets | node -e "let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{const n=JSON.parse(s).assets.map(x=>x.name); for(const x of ['github-direct-review-evidence.json','github-direct-review-evidence-final.json','github-direct-review-evidence-final.json.sha256']) if(!n.includes(x)) process.exit(1)})"
+          gh release view "v${{ inputs.version }}" --repo "$GITHUB_REPOSITORY" --json assets | node -e "let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{const n=JSON.parse(s).assets.map(x=>x.name); for(const x of ['github-direct-review-evidence.json','github-review-index.json','github-direct-review-evidence-final.json','github-direct-review-evidence-final.json.sha256']) if(!n.includes(x)) process.exit(1)})"

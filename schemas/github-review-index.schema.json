@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KayzenRoot/uads/schemas/github-review-index.schema.json",
+  "title": "UADS canonical GitHub review index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "repository", "version", "commitSha", "gitTreeSha", "ciRunId", "ciRunAttempt", "directReviewRunId", "directReviewArtifactName", "directReviewEvidenceSha256", "codeqlRunId", "codeqlStatus", "scorecardRunId", "scorecardStatus", "releaseRunId", "tag", "expectedTagTargetSha", "releaseAssetNames"],
+  "properties": {
+    "schema": { "const": "uads.github-review-index" }, "schemaVersion": { "const": "0.8.0" },
+    "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" },
+    "commitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }, "gitTreeSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "ciRunId": { "type": ["integer", "null"], "minimum": 1 }, "ciRunAttempt": { "type": ["integer", "null"], "minimum": 1 },
+    "directReviewRunId": { "type": ["integer", "null"], "minimum": 1 },
+    "directReviewArtifactName": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 },
+    "directReviewEvidenceSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "codeqlRunId": { "type": ["integer", "null"], "minimum": 1 }, "codeqlStatus": { "type": "string", "enum": ["success", "failure", "cancelled", "skipped", "pending", "unavailable", "not-evaluated-here", "unknown"] },
+    "scorecardRunId": { "type": ["integer", "null"], "minimum": 1 }, "scorecardStatus": { "type": "string", "enum": ["success", "failure", "cancelled", "skipped", "pending", "unavailable", "not-evaluated-here", "unknown"] },
+    "releaseRunId": { "type": ["integer", "null"], "minimum": 1 }, "tag": { "type": "string", "pattern": "^v[0-9]" }, "expectedTagTargetSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+    "releaseAssetNames": { "type": "array", "maxItems": 128, "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 } }
+  }
+}

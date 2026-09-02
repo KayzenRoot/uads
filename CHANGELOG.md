@@ -7,6 +7,7 @@ All notable changes to UADS (NexLabs) are documented here.
 ### Added
 
 - Strict GitHub Direct Review Evidence schema, bounded parsers, exact-SHA Actions artifact generation, CI log markers, release derivatives, and adversarial validation.
+- Two-stage CI gate receipts and post-CI canonical Direct Review publication with exact run/attempt cross-checks and checksummed GitHub review index.
 
 ### Security / Supply Chain
 

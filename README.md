@@ -17,7 +17,7 @@ This repository is the public open-source UADS product. The latest release is [v
 - Context routing, repository map, dependency/impact map
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
-- GitHub Direct Review Evidence with exact-SHA CI artifact and release cross-checks
+- Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap
 
 Normative detail: [`docs/`](docs/).

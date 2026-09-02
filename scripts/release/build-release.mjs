@@ -8,6 +8,7 @@ import { createReleaseManifest, checksumFile, assertReleaseTextSafe } from "../.
 import { createCiBinding, assertCiBinding } from "../../dist/release/ci-binding.js";
 import { assertSchema } from "../../dist/lib/json-schema.js";
 import { validateDirectReviewEvidence } from "../../dist/github/direct-review.js";
+import { createGithubReviewIndex } from "../../dist/github/review-index.js";
 import { runNpm } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -73,14 +74,45 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
-if (validateDirectReviewEvidence(directReview, root).length > 0 || directReview.finalVerdict !== "PASS" || directReview.commitSha !== commit || directReview.version !== version || directReview.workflow?.runId !== ciBinding.runId) {
+if (validateDirectReviewEvidence(directReview, root).length > 0 || directReview.finalVerdict !== "PASS" || directReview.commitSha !== commit || directReview.version !== version || directReview.provenance?.sourceRunId !== ciBinding.runId || (ciBinding.runAttempt && directReview.provenance?.sourceRunAttempt !== ciBinding.runAttempt)) {
   fail("direct review evidence is not a successful exact-SHA CI proof");
 }
+const codeqlStatus = githubWorkflowStatus(repository, "codeql.yml", commit);
+if (fs.existsSync(path.join(root, ".github", "workflows", "codeql.yml")) && codeqlStatus.status !== "success") fail("exact-SHA CodeQL is not completed successfully");
+const scorecardStatus = githubWorkflowStatus(repository, "scorecard.yml", commit);
 const directReviewOutput = path.join(output, "github-direct-review-evidence.json");
 fs.copyFileSync(path.resolve(directReviewPath), directReviewOutput);
 assertReleaseTextSafe(fs.readFileSync(directReviewOutput, "utf8"));
 
-const artifactPaths = [expectedPackagePath, sbomPath, validationPath, ciBindingOutput, directReviewOutput];
+const reviewIndexOutput = path.join(output, "github-review-index.json");
+const reviewIndex = createGithubReviewIndex({
+  repository,
+  version,
+  commitSha: directReview.commitSha,
+  gitTreeSha: directReview.gitTreeSha,
+  ciRunId: directReview.provenance?.sourceRunId ?? ciBinding.runId,
+  ciRunAttempt: directReview.provenance?.sourceRunAttempt ?? ciBinding.runAttempt ?? null,
+  directReviewRunId: directReview.workflow?.runId ?? null,
+  directReviewArtifactName: directReview.artifact?.name ?? null,
+  directReviewEvidenceSha256: sha256File(directReviewOutput),
+  codeqlRunId: codeqlStatus.runId ?? directReview.securityWorkflows?.codeql?.runId ?? null,
+  codeqlStatus: codeqlStatus.status ?? reviewStatus(directReview.securityWorkflows?.codeql),
+  scorecardRunId: scorecardStatus.runId ?? directReview.securityWorkflows?.scorecard?.runId ?? null,
+  scorecardStatus: scorecardStatus.status ?? reviewStatus(directReview.securityWorkflows?.scorecard),
+  releaseRunId: positiveOrNull(process.env.GITHUB_RUN_ID),
+  tag: `v${version}`,
+  expectedTagTargetSha: commit,
+  releaseAssetNames: [
+    `uads-${version}.tgz`, `uads-${version}.spdx.json`, "validation-report.json", "ci-binding.json",
+    "github-direct-review-evidence.json", "github-review-index.json", "release-manifest.json", "SHA256SUMS.txt",
+    "github-direct-review-evidence-final.json", "github-direct-review-evidence-final.json.sha256",
+  ],
+});
+assertSchema("github-review-index.schema.json", reviewIndex, root);
+fs.writeFileSync(reviewIndexOutput, `${JSON.stringify(reviewIndex, null, 2)}\n`, "utf8");
+assertReleaseTextSafe(fs.readFileSync(reviewIndexOutput, "utf8"));
+
+const artifactPaths = [expectedPackagePath, sbomPath, validationPath, ciBindingOutput, directReviewOutput, reviewIndexOutput];
 const artifacts = artifactPaths.map((artifactPath) => ({
   name: path.basename(artifactPath),
   size: fs.statSync(artifactPath).size,
@@ -123,6 +155,28 @@ function git(args) {
 
 function sha256File(file) {
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function positiveOrNull(value) {
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+function reviewStatus(value) {
+  const status = value?.status;
+  return ["success", "failure", "cancelled", "skipped", "pending", "unavailable", "not-evaluated-here", "unknown"].includes(status) ? status : "unknown";
+}
+
+function githubWorkflowStatus(targetRepo, workflowFile, expectedSha) {
+  const result = spawnSync("gh", ["api", `repos/${targetRepo}/actions/workflows/${workflowFile}/runs?per_page=100&head_sha=${expectedSha}`], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
+  if (result.status !== 0) return { status: null, runId: null };
+  let data;
+  try { data = JSON.parse(result.stdout); } catch { return { status: null, runId: null }; }
+  const candidates = (data.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
+  const run = candidates.filter((item) => item.status === "completed").sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0] ?? candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
+  if (!run) return { status: "unavailable", runId: null };
+  if (run.status !== "completed") return { status: "pending", runId: positiveOrNull(run.id) };
+  return { status: ["success", "failure", "cancelled", "skipped"].includes(run.conclusion) ? run.conclusion : "unknown", runId: positiveOrNull(run.id) };
 }
 
 function fail(message) {

@@ -22,7 +22,7 @@ if (!tagSha) {
   run("git", ["push", "origin", `refs/tags/${tag}`]);
 }
 const assets = fs.readdirSync(path.resolve(artifactDir)).filter((name) => /\.(tgz|json|txt)$/.test(name)).sort();
-if (assets.length < 6 || !assets.includes("github-direct-review-evidence.json")) fail("release artifact directory is incomplete or lacks direct review evidence");
+if (assets.length < 7 || !assets.includes("github-direct-review-evidence.json") || !assets.includes("github-review-index.json")) fail("release artifact directory is incomplete or lacks direct review evidence/index");
 const existing = spawnSync("gh", ["release", "view", tag, "--repo", repo], { cwd: root, windowsHide: true }).status === 0;
 if (!existing) {
   const notes = releaseNotes(version);
@@ -63,7 +63,11 @@ function releaseNotes(version) {
   const directReviewPath = path.join(path.resolve(artifactDir), "github-direct-review-evidence.json");
   if (!fs.existsSync(directReviewPath)) fail("release direct review evidence is missing");
   const evidence = JSON.parse(fs.readFileSync(directReviewPath, "utf8"));
+  const indexPath = path.join(path.resolve(artifactDir), "github-review-index.json");
+  if (!fs.existsSync(indexPath)) fail("release GitHub review index is missing");
+  const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
   if (evidence.finalVerdict !== "PASS" || evidence.commitSha !== head) fail("release notes cannot be derived from a non-PASS direct review proof");
+  if (index.commitSha !== evidence.commitSha || index.version !== version || index.tag !== tag || index.directReviewRunId !== evidence.workflow?.runId || index.ciRunId !== evidence.provenance?.sourceRunId || index.directReviewArtifactName !== evidence.artifact?.name || (process.env.GITHUB_RUN_ID && index.releaseRunId !== Number(process.env.GITHUB_RUN_ID))) fail("release notes index is not bound to canonical direct review evidence");
   const validation = evidence.validation ?? {};
   const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting"]
     .map((name) => `${name}: ${formatSummary(validation[name])}`)
@@ -74,12 +78,15 @@ function releaseNotes(version) {
   const reviewBlock = [
     "### Review Evidence",
     `- Commit SHA: ${evidence.commitSha}`,
-    `- CI run ID + conclusion: ${evidence.workflow?.runId ?? "unknown"} + ${evidence.finalVerdict === "PASS" ? "success" : "unknown"}`,
+    `- CI run ID + conclusion: ${evidence.provenance?.sourceRunId ?? "unknown"} + ${evidence.finalVerdict === "PASS" ? "success" : "unknown"}`,
+    `- Direct-review workflow run ID: ${evidence.workflow?.runId ?? "unknown"}`,
     `- Test summary: ${validation.testFilesPassed ?? "unknown"} test files; ${validation.testsPassed ?? "unknown"} passed; ${validation.testsFailed ?? "unknown"} failed`,
     `- Eval summary: ${evals}`,
     `- npm audit: ${audit}`,
-    `- Release run ID: ${process.env.GITHUB_RUN_ID ?? "unknown-at-note-generation"}`,
-    "- Direct-review artifact: github-direct-review-evidence.json",
+    `- Release run ID: ${process.env.GITHUB_RUN_ID ?? index.releaseRunId ?? "unknown-at-note-generation"}`,
+    `- Direct-review artifact: ${evidence.artifact?.name ?? "unknown"}`,
+    `- Direct-review evidence SHA-256: ${index.directReviewEvidenceSha256 ?? "unknown"}`,
+    "- GitHub review index: github-review-index.json",
   ].join("\n");
   return `${section}\n\n${reviewBlock}`;
 }

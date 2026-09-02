@@ -10,6 +10,7 @@ const evidencePath = required("--ci-evidence");
 const manifestPath = required("--release-manifest");
 const bindingPath = required("--ci-binding");
 const validationPath = valueOf("--validation-report");
+const reviewIndexPath = valueOf("--review-index");
 const output = path.resolve(valueOf("--output") ?? path.join(root, "tmp", "release", "github-direct-review-evidence.json"));
 const checksumOutput = path.resolve(valueOf("--checksum-output") ?? `${output}.sha256`);
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY ?? "KayzenRoot/uads";
@@ -18,6 +19,7 @@ const manifest = readJson(manifestPath);
 const binding = readJson(bindingPath);
 const validation = validationPath ? readJson(validationPath) : null;
 const { computeDirectReviewDigest, validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
+const { validateGithubReviewIndex } = await import("../../dist/github/review-index.js");
 const { assertSchema } = await import("../../dist/lib/json-schema.js");
 
 const version = manifest.version ?? base.version;
@@ -71,7 +73,8 @@ const derivative = {
     generatedByScript: "scripts/github/finalize-direct-review-evidence.mjs",
     evidenceContractDigest: "",
     sourceRunSha: base.commitSha ?? null,
-    sourceRunId: base.workflow?.runId ?? null,
+    sourceRunId: base.provenance?.sourceRunId ?? base.workflow?.runId ?? null,
+    sourceRunAttempt: base.provenance?.sourceRunAttempt ?? base.workflow?.runAttempt ?? null,
   },
   finalVerdict: base.finalVerdict === "FAIL"
     ? "FAIL"
@@ -80,6 +83,15 @@ const derivative = {
       : "INCOMPLETE",
   reasonCodes: [...reasons].sort(),
 };
+if (reviewIndexPath) {
+  const reviewIndex = readJson(reviewIndexPath);
+  try { validateGithubReviewIndex(reviewIndex); } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+  const canonicalFileSha = crypto.createHash("sha256").update(fs.readFileSync(evidencePath)).digest("hex");
+  if (reviewIndex.commitSha !== derivative.commitSha || reviewIndex.gitTreeSha !== derivative.gitTreeSha || reviewIndex.ciRunId !== derivative.provenance.sourceRunId || reviewIndex.ciRunAttempt !== derivative.provenance.sourceRunAttempt || reviewIndex.directReviewRunId !== derivative.workflow.runId || reviewIndex.directReviewArtifactName !== base.artifact?.name || reviewIndex.directReviewEvidenceSha256 !== canonicalFileSha || reviewIndex.releaseRunId !== releaseRunId || reviewIndex.expectedTagTargetSha !== tagTargetSha || reviewIndex.tag !== tag) {
+    fail("GitHub review index is not bound to canonical direct-review/release identity");
+  }
+  if (!reviewIndex.releaseAssetNames?.includes(path.basename(reviewIndexPath)) || !reviewIndex.releaseAssetNames.includes(path.basename(output)) || !reviewIndex.releaseAssetNames.includes(path.basename(checksumOutput))) fail("GitHub review index release asset list is incomplete");
+}
 const digest = computeDirectReviewDigest(derivative);
 derivative.provenance.evidenceContractDigest = digest;
 derivative.evidenceContractDigest = digest;

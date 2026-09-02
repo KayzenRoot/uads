@@ -22,6 +22,8 @@ const releaseRuns = api("repos/" + repo + "/actions/workflows/release.yml/runs?p
 const releaseRun = (releaseRuns?.workflow_runs ?? [])
   .filter((run) => run.head_sha === mainBranchSha)
   .sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0] ?? null;
+const directReviewRuns = api("repos/" + repo + "/actions/workflows/direct-review.yml/runs?per_page=100");
+const exactDirectReviewRuns = (directReviewRuns?.workflow_runs ?? []).filter((run) => run.head_sha === mainBranchSha).map(summarizeRun);
 
 write("repository.json", {
   full_name: repositoryRaw?.full_name ?? repo,
@@ -92,7 +94,8 @@ const securityWorkflows = {
   dependencyReview: awaitWorkflowStatus(repo, "dependency-review.yml", mainBranchSha),
 };
 write("security-workflows.json", securityWorkflows);
-const directReview = awaitDirectReviewArtifact(repo, exactCiRuns.filter((run) => run.status === "completed" && run.conclusion === "success")[0], mainBranchSha);
+const directReviewRun = exactDirectReviewRuns.length === 1 ? exactDirectReviewRuns[0] : null;
+const directReview = awaitDirectReviewArtifact(repo, directReviewRun, mainBranchSha, exactDirectReviewRuns.length);
 write("direct-review-index.json", directReview.index);
 if (directReview.evidence) write("github-direct-review-evidence.json", directReview.evidence);
 
@@ -105,6 +108,7 @@ write("summary.json", {
   finalCommitSha: headSha,
   mainBranchSha,
   exactHeadCiRuns: exactCiRuns,
+  exactDirectReviewRuns,
   releaseRunId: releaseRun?.id ?? null,
   securityWorkflows,
   directReviewArtifact: directReview.index,
@@ -208,26 +212,30 @@ function awaitWorkflowStatus(targetRepo, workflowFile, expectedSha) {
   };
 }
 
-function awaitDirectReviewArtifact(targetRepo, ciRun, expectedSha) {
+function awaitDirectReviewArtifact(targetRepo, directRun, expectedSha, exactRunCount) {
   const artifactName = expectedSha ? `uads-direct-review-${expectedSha}` : null;
-  if (!ciRun || !artifactName) {
-    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_UNAVAILABLE", runId: ciRun?.id ?? null, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+  if (exactRunCount !== 1 || !directRun || !artifactName) {
+    return { index: { status: exactRunCount > 1 ? "ambiguous" : "unavailable", reasonCode: exactRunCount > 1 ? "DIRECT_REVIEW_RUN_AMBIGUOUS" : "DIRECT_REVIEW_ARTIFACT_UNAVAILABLE", runId: directRun?.id ?? null, name: artifactName, commitSha: expectedSha, files: [], sourceCiRunId: directRun?.sourceCiRunId ?? null }, evidence: null };
   }
-  const artifacts = api("repos/" + targetRepo + "/actions/runs/" + ciRun.id + "/artifacts");
-  const artifact = (artifacts?.artifacts ?? []).find((item) => item.name === artifactName);
+  const artifacts = api("repos/" + targetRepo + "/actions/runs/" + directRun.id + "/artifacts?per_page=100");
+  const matches = (artifacts?.artifacts ?? []).filter((item) => item.name === artifactName && item.expired !== true);
+  if (matches.length !== 1) {
+    return { index: { status: matches.length > 1 ? "ambiguous" : "unavailable", reasonCode: matches.length > 1 ? "DIRECT_REVIEW_ARTIFACT_AMBIGUOUS" : "DIRECT_REVIEW_ARTIFACT_NOT_FOUND", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+  }
+  const artifact = matches[0];
   if (!artifact) {
-    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_NOT_FOUND", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_NOT_FOUND", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
   }
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "uads-direct-review-"));
   try {
-    const downloaded = spawnSync("gh", ["run", "download", String(ciRun.id), "--repo", targetRepo, "--name", artifactName, "--dir", temp], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
-    if (downloaded.status !== 0) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_DOWNLOAD_FAILED", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    const downloaded = spawnSync("gh", ["run", "download", String(directRun.id), "--repo", targetRepo, "--name", artifactName, "--dir", temp], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
+    if (downloaded.status !== 0) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_ARTIFACT_DOWNLOAD_FAILED", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
     const evidencePath = findFile(temp, "github-direct-review-evidence.json");
-    if (!evidencePath) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_FILE_MISSING", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    if (!evidencePath) return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_FILE_MISSING", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
     const evidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
-    return { index: { status: "available", reasonCode: null, runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: ["github-direct-review-evidence.json"], artifactId: artifact.id, expired: artifact.expired ?? null }, evidence };
+    return { index: { status: "available", reasonCode: null, runId: directRun.id, sourceCiRunId: evidence.provenance?.sourceRunId ?? null, sourceCiRunAttempt: evidence.provenance?.sourceRunAttempt ?? null, name: artifactName, commitSha: expectedSha, files: ["github-direct-review-evidence.json", "github-direct-review-evidence.json.sha256"], artifactId: artifact.id, size: artifact.size ?? null, digest: artifact.digest ?? null, expired: artifact.expired ?? null }, evidence };
   } catch {
-    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_UNREADABLE", runId: ciRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
+    return { index: { status: "unavailable", reasonCode: "DIRECT_REVIEW_EVIDENCE_UNREADABLE", runId: directRun.id, name: artifactName, commitSha: expectedSha, files: [] }, evidence: null };
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

@@ -5,6 +5,7 @@ export const DIRECT_REVIEW_SCHEMA_VERSION = "0.8.0" as const;
 export const DIRECT_REVIEW_ARTIFACT_RETENTION_DAYS = 90;
 
 export type DirectReviewOutcome = "success" | "failure" | "cancelled" | "skipped" | "unknown";
+export type DirectReviewSecurityStatus = DirectReviewOutcome | "pending" | "unavailable" | "not-evaluated-here";
 export type DirectReviewVerdict = "PASS" | "FAIL" | "INCOMPLETE" | "BLOCKED";
 
 export type DirectReviewSummary = {
@@ -20,7 +21,7 @@ export type DirectReviewGate = {
 };
 
 export type DirectReviewWorkflowStatus = {
-  status: DirectReviewOutcome;
+  status: DirectReviewSecurityStatus;
   outcome: DirectReviewOutcome;
   runId: number | null;
   commitSha: string | null;
@@ -96,6 +97,7 @@ export type DirectReviewEvidence = {
     evidenceContractDigest: string;
     sourceRunSha: string | null;
     sourceRunId: number | null;
+    sourceRunAttempt: number | null;
   };
   finalVerdict: DirectReviewVerdict;
   reasonCodes: string[];
@@ -288,7 +290,7 @@ export function createDirectReviewEvidence(input: {
   artifactName?: string | null;
   artifactRetentionDays?: number | null;
   generatedAt?: string;
-  generatedByScript?: "generator" | "finalizer";
+  generatedByScript?: "generator" | "publisher" | "finalizer";
 }): DirectReviewEvidence {
   const logs = input.logs ?? {};
   const parsedSteps = parseStepOutcomes(input.stepOutcomes ?? {}).outcomes;
@@ -327,6 +329,7 @@ export function createDirectReviewEvidence(input: {
   };
   const artifactName = input.artifactName && safePath(input.artifactName) ? input.artifactName : null;
   const allRequiredSuccess = requiredGates.every((gate) => gate.outcome === "success");
+  const hasKnownFailure = requiredGates.some((gate) => gate.outcome === "failure" || gate.outcome === "cancelled");
   const hasUnknown = requiredGates.some((gate) => gate.outcome === "unknown");
   const identityProven = Boolean(repository && commitSha && safeSha(input.gitTreeSha) && runId && workflow.htmlUrl);
   if (!identityProven) reasons.push("IDENTITY_UNPROVEN");
@@ -334,9 +337,11 @@ export function createDirectReviewEvidence(input: {
     ? "INCOMPLETE"
     : allRequiredSuccess
     ? "PASS"
-    : hasUnknown
-      ? "INCOMPLETE"
-      : "FAIL";
+    : hasKnownFailure
+      ? "FAIL"
+      : hasUnknown
+        ? "INCOMPLETE"
+        : "FAIL";
   const base: Omit<DirectReviewEvidence, "evidenceContractDigest"> = {
     schema: DIRECT_REVIEW_SCHEMA,
     schemaVersion: DIRECT_REVIEW_SCHEMA_VERSION,
@@ -385,10 +390,13 @@ export function createDirectReviewEvidence(input: {
     provenance: {
       generatedByScript: input.generatedByScript === "finalizer"
         ? "scripts/github/finalize-direct-review-evidence.mjs"
+        : input.generatedByScript === "publisher"
+          ? "scripts/github/publish-direct-review-evidence.mjs"
         : "scripts/github/generate-direct-review-evidence.mjs",
       evidenceContractDigest: "",
       sourceRunSha: commitSha,
       sourceRunId: runId,
+      sourceRunAttempt: workflow.runAttempt,
     },
     finalVerdict,
     reasonCodes: [...new Set(reasons)].sort(),
@@ -406,7 +414,7 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   if (evidence.commitSha !== null && evidence.commitSha !== undefined && !safeSha(evidence.commitSha)) errors.push("commit-sha-invalid");
   if (evidence.gitTreeSha !== null && evidence.gitTreeSha !== undefined && !safeSha(evidence.gitTreeSha)) errors.push("tree-sha-invalid");
   if (evidence.repository !== null && evidence.repository !== undefined && !safeRepository(evidence.repository)) errors.push("repository-invalid");
-  if (evidence.provenance?.generatedByScript !== "scripts/github/generate-direct-review-evidence.mjs" && evidence.provenance?.generatedByScript !== "scripts/github/finalize-direct-review-evidence.mjs") errors.push("generator-script-invalid");
+  if (evidence.provenance?.generatedByScript !== "scripts/github/generate-direct-review-evidence.mjs" && evidence.provenance?.generatedByScript !== "scripts/github/publish-direct-review-evidence.mjs" && evidence.provenance?.generatedByScript !== "scripts/github/finalize-direct-review-evidence.mjs") errors.push("generator-script-invalid");
   const digest = typeof evidence.evidenceContractDigest === "string" ? evidence.evidenceContractDigest : "";
   if (!/^[0-9a-f]{64}$/i.test(digest)) errors.push("evidence-digest-invalid");
   if (digest) {
@@ -415,6 +423,8 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   }
   const identityProven = Boolean(safeRepository(evidence.repository ?? undefined) && safeSha(evidence.commitSha ?? undefined) && safeSha(evidence.gitTreeSha ?? undefined) && safeRunId(evidence.workflow?.runId) && safeUrl(evidence.workflow?.htmlUrl ?? undefined));
   if (evidence.finalVerdict === "PASS" && !identityProven) errors.push("identity-unproven");
+  const sourceIdentityProven = Boolean(safeSha(evidence.provenance?.sourceRunSha ?? undefined) && safeRunId(evidence.provenance?.sourceRunId ?? undefined) && safeRunAttempt(evidence.provenance?.sourceRunAttempt ?? undefined));
+  if (evidence.finalVerdict === "PASS" && !sourceIdentityProven) errors.push("source-run-identity-unproven");
   if (evidence.finalVerdict === "PASS" && evidence.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
   void schemaRoot;
   return errors;

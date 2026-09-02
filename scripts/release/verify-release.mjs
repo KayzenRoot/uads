@@ -138,7 +138,7 @@ function verifyDirectReview(file, expectedSha, expectedVersion, bindingFile) {
     if (evidence.commitSha !== expectedSha || evidence.version !== expectedVersion || evidence.finalVerdict !== "PASS") return false;
     if (bindingFile) {
       const binding = JSON.parse(fs.readFileSync(path.resolve(bindingFile), "utf8"));
-      if (evidence.workflow?.runId !== binding.runId || evidence.provenance?.sourceRunId !== binding.runId) return false;
+      if (evidence.provenance?.sourceRunId !== binding.runId || (binding.runAttempt && evidence.provenance?.sourceRunAttempt !== binding.runAttempt)) return false;
     }
     return true;
   } catch {

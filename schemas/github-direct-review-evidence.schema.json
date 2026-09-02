@@ -108,7 +108,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["status", "outcome", "runId", "commitSha", "htmlUrl", "reasonCode"],
       "properties": {
-        "status": { "$ref": "#/$defs/outcome" },
+        "status": { "enum": ["success", "failure", "cancelled", "skipped", "unknown", "pending", "unavailable", "not-evaluated-here"] },
         "outcome": { "$ref": "#/$defs/outcome" },
         "runId": { "type": ["integer", "null"], "minimum": 1 },
         "commitSha": { "$ref": "#/$defs/shaOrNull" },
@@ -149,12 +149,13 @@
     },
     "provenance": {
       "type": "object", "additionalProperties": false,
-      "required": ["generatedByScript", "evidenceContractDigest", "sourceRunSha", "sourceRunId"],
+      "required": ["generatedByScript", "evidenceContractDigest", "sourceRunSha", "sourceRunId", "sourceRunAttempt"],
       "properties": {
-        "generatedByScript": { "enum": ["scripts/github/generate-direct-review-evidence.mjs", "scripts/github/finalize-direct-review-evidence.mjs"] },
+        "generatedByScript": { "enum": ["scripts/github/generate-direct-review-evidence.mjs", "scripts/github/publish-direct-review-evidence.mjs", "scripts/github/finalize-direct-review-evidence.mjs"] },
         "evidenceContractDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "sourceRunSha": { "$ref": "#/$defs/shaOrNull" },
-        "sourceRunId": { "type": ["integer", "null"], "minimum": 1 }
+        "sourceRunId": { "type": ["integer", "null"], "minimum": 1 },
+        "sourceRunAttempt": { "type": ["integer", "null"], "minimum": 1 }
       }
     }
   }

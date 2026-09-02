@@ -1,0 +1,77 @@
+name: UADS Direct Review Evidence
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: direct-review-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish canonical evidence
+    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact source CI SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download exact source CI gate receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/uads-source-receipt"
+          gh run download "$SOURCE_CI_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "uads-ci-gate-receipt-$SOURCE_CI_SHA" --dir "$RUNNER_TEMP/uads-source-receipt"
+          test -f "$RUNNER_TEMP/uads-source-receipt/uads-ci-gate-receipt.json"
+          node scripts/github/validate-ci-gate-receipt.mjs \
+            --file "$RUNNER_TEMP/uads-source-receipt/uads-ci-gate-receipt.json" \
+            --expected-sha "$SOURCE_CI_SHA" \
+            --expected-run-id "$SOURCE_CI_RUN_ID" \
+            --expected-run-attempt "${{ github.event.workflow_run.run_attempt }}"
+
+      - name: Publish canonical Direct Review Evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_CI_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          node scripts/github/publish-direct-review-evidence.mjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --receipt "$RUNNER_TEMP/uads-source-receipt/uads-ci-gate-receipt.json" \
+            --output "$RUNNER_TEMP/github-direct-review-evidence.json" \
+            --checksum-output "$RUNNER_TEMP/github-direct-review-evidence.json.sha256" \
+            --source-run-id "$SOURCE_CI_RUN_ID" \
+            --source-run-attempt "$SOURCE_CI_RUN_ATTEMPT"
+
+      - name: Validate canonical Direct Review Evidence
+        run: |
+          node scripts/github/validate-direct-review-standalone.mjs \
+            --file "$RUNNER_TEMP/github-direct-review-evidence.json" \
+            --expected-sha "${{ github.event.workflow_run.head_sha }}" \
+            --expected-source-run-id "${{ github.event.workflow_run.id }}" \
+            --expected-source-run-attempt "${{ github.event.workflow_run.run_attempt }}" \
+            --expected-version "$(node -p "require('./package.json').version")" \
+            --expected-direct-run-id "$GITHUB_RUN_ID"
+
+      - name: Upload canonical Direct Review Evidence
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: uads-direct-review-${{ github.event.workflow_run.head_sha }}
+          path: |
+            ${{ runner.temp }}/github-direct-review-evidence.json
+            ${{ runner.temp }}/github-direct-review-evidence.json.sha256
+          retention-days: 90
+          if-no-files-found: error

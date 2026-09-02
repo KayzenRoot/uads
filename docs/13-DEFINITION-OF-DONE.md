@@ -133,4 +133,11 @@ Complete the correction only when all are true:
 - Release validation, build, notes, and the external Review ZIP consume exact direct-review evidence and cross-check commit, CI, tag, manifest, validation, and release identities
 - Parser uncertainty is explicit (`null` plus `COUNT_PARSE_UNAVAILABLE:*`); it cannot fabricate a PASS or a count
 - CI, CodeQL, OpenSSF Scorecard, Dependency Review applicability, npm audit, packaging, release run, assets, and limitations are recorded
+
+## Two-stage GitHub Direct Review correction
+
+- Source CI emits one exact-SHA `uads-ci-gate-receipt-<SHA>` artifact with stable gate outcomes even when a required Foundation gate fails
+- The privileged `workflow_run` Direct Review publisher runs only for `push` to `main`, checks out the exact source SHA, and rejects forged, ambiguous, stale, or mismatched receipts
+- Canonical evidence is published by the dedicated Direct Review workflow with the stable `UADS_DIRECT_REVIEW_BEGIN` / `UADS_DIRECT_REVIEW_END` markers; its publication health is separate from the source verdict
+- The release consumes the exact canonical Direct Review artifact and includes checksummed `github-direct-review-evidence.json` and `github-review-index.json`; index pointers cross-check CI run/attempt, Direct Review run, tag, release run, assets, and evidence SHA-256
 - Existing historical tag targets remain unchanged and no immutable tag is moved or recreated

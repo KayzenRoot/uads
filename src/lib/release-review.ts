@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { assertCiBinding } from "../release/ci-binding.js";
+import { validateGithubReviewIndex } from "../github/review-index.js";
 
 export const CANONICAL_GITHUB_FILES = [
   "github/repository.json",
@@ -29,6 +30,7 @@ export const DIRECT_REVIEW_RELEASE_FILES = [
   "release/github-direct-review-evidence.json",
   "release/github-direct-review-evidence-final.json",
   "release/github-direct-review-evidence-final.json.sha256",
+  "release/github-review-index.json",
 ] as const;
 
 type JsonMap = Map<string, string> | Record<string, string>;
@@ -102,6 +104,7 @@ export function validateCanonicalReleaseEvidence(
   const directReview = requiresDirectReview(version) ? parse(files, "github/github-direct-review-evidence.json", errors) : null;
   const releaseDirectReview = requiresDirectReview(version) ? parse(files, "release/github-direct-review-evidence.json", errors) : null;
   const finalDirectReview = requiresDirectReview(version) ? parse(files, "release/github-direct-review-evidence-final.json", errors) : null;
+  const reviewIndex = requiresDirectReview(version) ? parse(files, "release/github-review-index.json", errors) : null;
   const projectPackageText = getFile(files, "project/package.json");
   const projectVersionText = getFile(files, "project/VERSION");
 
@@ -147,6 +150,7 @@ export function validateCanonicalReleaseEvidence(
       ["direct-review-commit-sha", stringAt(directReview, "commitSha")],
       ["release-direct-review-commit-sha", stringAt(releaseDirectReview, "commitSha")],
       ["final-direct-review-commit-sha", stringAt(finalDirectReview, "commitSha")],
+      ["review-index-commit-sha", stringAt(reviewIndex, "commitSha")],
     ] as Array<[string, string | null]> : []),
   ];
   for (const [label, value] of identities) {
@@ -187,7 +191,7 @@ export function validateCanonicalReleaseEvidence(
     "uads-" + version + ".spdx.json",
     "validation-report.json",
     "ci-binding.json",
-    ...(requiresDirectReview(version) ? ["github-direct-review-evidence.json"] : []),
+    ...(requiresDirectReview(version) ? ["github-direct-review-evidence.json", "github-review-index.json"] : []),
   ]) {
     if (!artifactNames.has(requiredArtifact)) {
       errors.push("release-artifact-missing:" + requiredArtifact);
@@ -205,7 +209,7 @@ export function validateCanonicalReleaseEvidence(
     errors.push("release-run-not-success");
   }
   if (requiresDirectReview(version)) {
-    validateDirectReviewIdentity(files, directReview, releaseDirectReview, finalDirectReview, binding, release, releaseRun, releaseManifest, validation, errors);
+    validateDirectReviewIdentity(files, directReview, releaseDirectReview, finalDirectReview, reviewIndex, binding, release, releaseRun, releaseManifest, validation, errors);
     if (!String(release?.body ?? "").includes("### Review Evidence")) errors.push("release-review-evidence-block-missing");
   }
   if (verification?.version !== version || verification?.tag !== expectedTag) {
@@ -225,20 +229,27 @@ function requiresDirectReview(version: string): boolean {
   return Number.isFinite(major) && Number.isFinite(minor) && (major > 0 || minor >= 8);
 }
 
-function validateDirectReviewIdentity(files: JsonMap, direct: any, releaseDirect: any, final: any, binding: any, release: any, releaseRun: any, manifest: any, validation: any, errors: string[]): void {
+function validateDirectReviewIdentity(files: JsonMap, direct: any, releaseDirect: any, final: any, reviewIndex: any, binding: any, release: any, releaseRun: any, manifest: any, validation: any, errors: string[]): void {
   for (const [label, item] of [["audit", direct], ["release", releaseDirect], ["final", final]] as const) {
     if (item?.finalVerdict !== "PASS") errors.push("direct-review-not-pass:" + label);
     if (item?.schema !== "uads.github-direct-review-evidence" || item?.schemaVersion !== "0.8.0") errors.push("direct-review-schema-mismatch:" + label);
   }
-  if (direct?.workflow?.runId !== binding?.runId || releaseDirect?.workflow?.runId !== binding?.runId || final?.workflow?.runId !== binding?.runId) errors.push("direct-review-ci-binding-run-mismatch");
+  try { validateGithubReviewIndex(reviewIndex); } catch { errors.push("github-review-index-invalid"); }
+  if (direct?.provenance?.sourceRunId !== binding?.runId || releaseDirect?.provenance?.sourceRunId !== binding?.runId || final?.provenance?.sourceRunId !== binding?.runId) errors.push("direct-review-ci-binding-run-mismatch");
+  if (binding?.runAttempt && (direct?.provenance?.sourceRunAttempt !== binding.runAttempt || releaseDirect?.provenance?.sourceRunAttempt !== binding.runAttempt || final?.provenance?.sourceRunAttempt !== binding.runAttempt)) errors.push("direct-review-ci-binding-attempt-mismatch");
   if (final?.release?.tag !== release?.tag_name || final?.release?.tagTargetSha !== release?.targetCommitSha || final?.release?.releaseRunId !== releaseRun?.id) errors.push("direct-review-release-identity-mismatch");
   if (final?.release?.version !== manifest?.version || releaseDirect?.version !== manifest?.version || final?.release?.ciBindingAsset !== "ci-binding.json") errors.push("direct-review-release-metadata-mismatch");
   if (final?.release?.directReviewArtifactName !== direct?.artifact?.name) errors.push("direct-review-artifact-name-mismatch");
+  if (reviewIndex?.ciRunId !== direct?.provenance?.sourceRunId || reviewIndex?.ciRunAttempt !== direct?.provenance?.sourceRunAttempt || reviewIndex?.directReviewRunId !== direct?.workflow?.runId || reviewIndex?.directReviewArtifactName !== direct?.artifact?.name) errors.push("github-review-index-run-identity-mismatch");
+  if (reviewIndex?.expectedTagTargetSha !== release?.targetCommitSha || reviewIndex?.tag !== release?.tag_name || reviewIndex?.releaseRunId !== releaseRun?.id) errors.push("github-review-index-release-identity-mismatch");
+  const directText = getFile(files, "github/github-direct-review-evidence.json");
+  if (!directText || reviewIndex?.directReviewEvidenceSha256 !== crypto.createHash("sha256").update(directText).digest("hex")) errors.push("github-review-index-evidence-digest-mismatch");
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json")) errors.push("direct-review-final-asset-not-indexed");
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json.sha256")) errors.push("direct-review-final-checksum-not-indexed");
+  if (final?.securityWorkflows?.codeql?.outcome !== "success") errors.push("direct-review-codeql-not-success");
   if (validation?.commit !== releaseDirect?.commitSha) errors.push("direct-review-validation-commit-mismatch");
   if (direct?.evidenceContractDigest !== releaseDirect?.evidenceContractDigest) errors.push("direct-review-exact-derivative-mismatch");
-  if (final?.provenance?.sourceRunSha !== direct?.commitSha || final?.provenance?.sourceRunId !== binding?.runId) errors.push("direct-review-source-provenance-mismatch");
+  if (final?.provenance?.sourceRunSha !== direct?.commitSha || final?.provenance?.sourceRunId !== binding?.runId || final?.provenance?.sourceRunAttempt !== direct?.provenance?.sourceRunAttempt) errors.push("direct-review-source-provenance-mismatch");
   const finalText = getFile(files, "release/github-direct-review-evidence-final.json");
   const finalChecksum = getFile(files, "release/github-direct-review-evidence-final.json.sha256");
   if (!finalText || !finalChecksum || !new RegExp(`^[0-9a-f]{64}  github-direct-review-evidence-final\\.json\\s*$`, "i").test(finalChecksum) || !finalChecksum.toLowerCase().startsWith(crypto.createHash("sha256").update(finalText).digest("hex"))) {
