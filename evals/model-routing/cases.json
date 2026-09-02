@@ -18,5 +18,7 @@
   { "id": "MR17", "name": "provider-neutral cache hints" },
   { "id": "MR18", "name": "sequential role fallback" },
   { "id": "MR19", "name": "malicious profile rejection" },
-  { "id": "MR20", "name": "stale plan invalidation" }
+  { "id": "MR20", "name": "stale plan invalidation" },
+  { "id": "MR21", "name": "host runtime subagent dispatch" },
+  { "id": "MR22", "name": "host runtime parallel dispatch with concurrency guard" }
 ]

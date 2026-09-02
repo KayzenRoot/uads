@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { unavailable, validateComparison } from "./comparison-runtime.mjs";
 
 export const CI_GATE_RECEIPT_SCHEMA = "uads.ci-gate-receipt";
 export const CI_GATE_RECEIPT_SCHEMA_VERSION = "0.8.0";
@@ -72,6 +73,15 @@ function safePath(value) {
 function sortedPaths(values) {
   if (!Array.isArray(values)) return null;
   return [...new Set(values.map(safePath).filter(Boolean))].sort((a, b) => a.localeCompare(b)).slice(0, 500);
+}
+
+function normalizeComparison(value, headSha) {
+  const candidate = value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : unavailable(null, headSha, "COMPARISON_METADATA_UNAVAILABLE");
+  return validateComparison(candidate, { expectedHeadSha: headSha }).length === 0
+    ? candidate
+    : unavailable(null, headSha, "COMPARISON_METADATA_INVALID");
 }
 
 export function emptySummary() {
@@ -233,12 +243,7 @@ export function createCiGateReceipt(input) {
     generatedAt: typeof input.generatedAt === "string" ? input.generatedAt : new Date().toISOString(),
     event: safeText(input.event, 80),
     workflow,
-    comparison: {
-      baseSha: safeSha(input.comparison?.baseSha),
-      headSha: safeSha(input.comparison?.headSha ?? commitSha),
-      changedFileCount: Number.isSafeInteger(input.comparison?.changedFileCount) ? input.comparison.changedFileCount : null,
-      changedPaths: sortedPaths(input.comparison?.changedPaths),
-    },
+    comparison: normalizeComparison(input.comparison, commitSha),
     requiredGates,
     validation: baseValidation(summaries, gates),
     provenance: {
@@ -286,7 +291,7 @@ export function createDirectReviewFromReceipt(receipt, input) {
     generatedAt: typeof input.generatedAt === "string" ? input.generatedAt : new Date().toISOString(),
     event: safeText(input.event ?? receipt.event, 80),
     workflow,
-    comparison: receipt.comparison,
+    comparison: input.comparison ?? receipt.comparison,
     requiredGates: receipt.requiredGates,
     validation: receipt.validation,
     securityWorkflows: input.securityWorkflows ?? {
@@ -319,6 +324,7 @@ export function validateReceiptDigest(value) {
   if (value.schema !== CI_GATE_RECEIPT_SCHEMA || value.schemaVersion !== CI_GATE_RECEIPT_SCHEMA_VERSION) errors.push("schema-version-mismatch");
   if (!/^[0-9a-f]{64}$/i.test(value.evidenceContractDigest ?? "") || computeContractDigest(value) !== value.evidenceContractDigest) errors.push("receipt-digest-mismatch");
   if (value.provenance?.evidenceContractDigest !== value.evidenceContractDigest) errors.push("receipt-provenance-digest-mismatch");
+  errors.push(...validateComparison(value.comparison, { expectedHeadSha: value.commitSha, requireComplete: value.finalVerdict === "PASS" && value.event === "push" }));
   if (value.finalVerdict === "PASS" && value.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
   return errors;
 }

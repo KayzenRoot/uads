@@ -132,6 +132,7 @@ const requiredFiles = [
   "scripts/github/generate-ci-gate-receipt.mjs",
   "scripts/github/validate-ci-gate-receipt.mjs",
   "scripts/github/publish-direct-review-evidence.mjs",
+  "scripts/github/comparison-runtime.mjs",
   "scripts/github/validate-direct-review-standalone.mjs",
   "schemas/validation-summary.schema.json",
   "schemas/release-manifest.schema.json",

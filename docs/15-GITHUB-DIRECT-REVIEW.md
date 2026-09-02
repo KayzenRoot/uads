@@ -12,6 +12,8 @@ uads-ci-gate-receipt-<40-character-commit-sha>
 
 The receipt is bound to the repository, `main` ref, exact SHA/tree, CI run/attempt, Foundation job and stable gate outcomes. It contains no source snapshot, `.env`, credentials, host paths, or raw logs. The retention target is 90 days. Counts are recorded only when a bounded parser proves them; otherwise the value is `null` and a `COUNT_PARSE_UNAVAILABLE:*` reason code is emitted.
 
+The comparison contract is computed with full Git history. A normal push has a validated base SHA, head SHA, exact changed-file count, lexicographically sorted sanitized paths (bounded to 500 display entries), a SHA-256 digest of the complete path set, and `changedPathsTruncated`. A shallow or otherwise unavailable comparison cannot be represented as an unexplained null: it carries `comparisonStatus` plus a bounded `comparisonReasonCode`. An all-zero initial-push base is explicitly `not-applicable`.
+
 `.github/workflows/direct-review.yml` is triggered with `workflow_run` after CI completes. Its privileged publisher runs only for a completed `push` to `main`; it checks out the exact source SHA, requires exactly one receipt artifact, queries the source run and Foundation job/steps, rejects mismatched or ambiguous identity, and emits the canonical `github-direct-review-evidence.json` between the stable markers `UADS_DIRECT_REVIEW_BEGIN` and `UADS_DIRECT_REVIEW_END`. A failed source CI may therefore produce schema-valid `FAIL` evidence while the evidence-publication workflow itself succeeds.
 
 ## Release contract
@@ -34,4 +36,4 @@ The canonical evidence uses `workflow.runId` for the Direct Review workflow and 
 
 ## Reviewer path
 
-An independent reviewer can start with the final main SHA, open its exact CI run, follow the Direct Review workflow and its artifact, inspect the marker block, then follow CodeQL/Scorecard, the annotated tag, release assets and the generated Review Evidence block. A local ZIP is not required for ordinary approval when this chain is coherent. `npm run review:release -- 0.8.0` remains the deeper offline path and cross-checks the same canonical evidence. Historical tag checks are data-driven and compare every known prior tag target; tags are never moved or recreated.
+An independent reviewer can start with the final main SHA, open its exact CI run, follow the Direct Review workflow and its artifact, inspect the marker block, then follow CodeQL/Scorecard, the annotated tag, release assets and the generated Review Evidence block. A local ZIP is not required for ordinary approval when this chain is coherent. `npm run review:release -- 0.8.1` remains the deeper offline path and cross-checks the same canonical evidence. Historical tag checks are data-driven and compare every known prior tag target; tags are never moved or recreated, including the historical `v0.8.0` tag.

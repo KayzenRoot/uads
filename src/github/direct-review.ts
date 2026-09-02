@@ -29,6 +29,17 @@ export type DirectReviewWorkflowStatus = {
   reasonCode: string | null;
 };
 
+export type DirectReviewComparison = {
+  baseSha: string | null;
+  headSha: string | null;
+  changedFileCount: number | null;
+  changedPaths: string[] | null;
+  changedPathsDigest: string | null;
+  changedPathsTruncated: boolean;
+  comparisonStatus: "complete" | "truncated" | "unavailable" | "not-applicable";
+  comparisonReasonCode: string | null;
+};
+
 export type DirectReviewEvidence = {
   schema: typeof DIRECT_REVIEW_SCHEMA;
   schemaVersion: typeof DIRECT_REVIEW_SCHEMA_VERSION;
@@ -48,12 +59,7 @@ export type DirectReviewEvidence = {
     startedAt: string | null;
     completedAt: string | null;
   };
-  comparison: {
-    baseSha: string | null;
-    headSha: string | null;
-    changedFileCount: number | null;
-    changedPaths: string[] | null;
-  };
+  comparison: DirectReviewComparison;
   requiredGates: DirectReviewGate[];
   validation: {
     testFilesPassed: number | null;
@@ -126,6 +132,7 @@ export const REQUIRED_DIRECT_REVIEW_GATES = [
 const SHA_RE = /^[0-9a-f]{40}$/i;
 const REPOSITORY_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const SAFE_PATH_RE = /^[A-Za-z0-9._/-]+$/;
+const COMPARISON_DIGEST_RE = /^[0-9a-f]{64}$/;
 
 export function emptySummary(): DirectReviewSummary {
   return { passed: null, failed: null, total: null };
@@ -248,6 +255,64 @@ function sortedUnique(values: string[] | null | undefined): string[] | null {
   return [...new Set(safe)].sort((a, b) => a.localeCompare(b)).slice(0, 500);
 }
 
+function comparisonDigest(paths: string[]): string {
+  return crypto.createHash("sha256").update(JSON.stringify(paths)).digest("hex");
+}
+
+function normalizeComparison(input: Partial<DirectReviewComparison> | undefined, commitSha: string | null): DirectReviewComparison {
+  const baseSha = safeSha(input?.baseSha);
+  const headSha = safeSha(input?.headSha ?? commitSha);
+  const changedPaths = sortedUnique(input?.changedPaths);
+  const changedFileCount = boundedInteger(input?.changedFileCount);
+  const explicitStatus = input?.comparisonStatus;
+  const inferredComplete = explicitStatus === undefined && baseSha !== null && headSha !== null && changedPaths !== null && changedFileCount === changedPaths.length;
+  const comparisonStatus = explicitStatus === "complete" || explicitStatus === "truncated" || explicitStatus === "unavailable" || explicitStatus === "not-applicable"
+    ? explicitStatus
+    : inferredComplete ? "complete" : "unavailable";
+  const completeLike = comparisonStatus === "complete" || comparisonStatus === "truncated";
+  return {
+    baseSha,
+    headSha,
+    changedFileCount: completeLike ? changedFileCount : null,
+    changedPaths: completeLike ? changedPaths : null,
+    changedPathsDigest: completeLike
+      ? COMPARISON_DIGEST_RE.test(input?.changedPathsDigest ?? "")
+        ? input?.changedPathsDigest ?? null
+        : changedPaths ? comparisonDigest(changedPaths) : null
+      : null,
+    changedPathsTruncated: comparisonStatus === "truncated",
+    comparisonStatus,
+    comparisonReasonCode: completeLike
+      ? null
+      : input?.comparisonReasonCode && /^[A-Z0-9_:-]{1,120}$/.test(input.comparisonReasonCode)
+        ? input.comparisonReasonCode
+        : comparisonStatus === "not-applicable" ? "COMPARISON_BASE_NOT_APPLICABLE" : "COMPARISON_METADATA_UNAVAILABLE",
+  };
+}
+
+function comparisonErrors(value: unknown, expectedHeadSha: string | null, requireComplete: boolean): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return ["comparison-invalid"];
+  const item = value as Partial<DirectReviewComparison>;
+  const errors: string[] = [];
+  if (!safeSha(item.baseSha) && item.baseSha !== null) errors.push("comparison-base-sha-invalid");
+  if (!safeSha(item.headSha) && item.headSha !== null) errors.push("comparison-head-sha-invalid");
+  if (expectedHeadSha !== null && item.headSha !== expectedHeadSha) errors.push("comparison-head-mismatch");
+  if (!["complete", "truncated", "unavailable", "not-applicable"].includes(item.comparisonStatus ?? "")) errors.push("comparison-status-invalid");
+  if (typeof item.changedPathsTruncated !== "boolean") errors.push("comparison-truncation-invalid");
+  if (item.comparisonReasonCode !== null && (typeof item.comparisonReasonCode !== "string" || !/^[A-Z0-9_:-]{1,120}$/.test(item.comparisonReasonCode))) errors.push("comparison-reason-invalid");
+  if (item.comparisonStatus === "complete" || item.comparisonStatus === "truncated") {
+    if (!Number.isSafeInteger(item.changedFileCount) || (item.changedFileCount ?? -1) < 0 || (item.changedFileCount ?? 1_000_001) > 1_000_000) errors.push("comparison-count-invalid");
+    if (!Array.isArray(item.changedPaths) || item.changedPaths.length > 500 || item.changedPaths.some((path) => typeof path !== "string" || safePath(path) === null)) errors.push("comparison-paths-invalid");
+    if (!COMPARISON_DIGEST_RE.test(item.changedPathsDigest ?? "")) errors.push("comparison-digest-invalid");
+    if (item.comparisonStatus === "complete" && (item.changedPathsTruncated !== false || item.changedFileCount !== item.changedPaths?.length || item.changedPathsDigest !== comparisonDigest(item.changedPaths ?? []))) errors.push("comparison-complete-inconsistent");
+    if (item.comparisonStatus === "truncated" && item.changedPathsTruncated !== true) errors.push("comparison-truncated-inconsistent");
+  } else if (item.changedFileCount !== null || item.changedPaths !== null || item.changedPathsDigest !== null || item.changedPathsTruncated !== false || !item.comparisonReasonCode) {
+    errors.push("comparison-unavailable-inconsistent");
+  }
+  if (requireComplete && item.comparisonStatus !== "complete" && item.comparisonStatus !== "truncated") errors.push("comparison-not-complete");
+  return [...new Set(errors)];
+}
+
 function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkflowStatus {
   const hasValue = value && Object.values(value).some((item) => item !== null && item !== undefined && item !== "");
   return {
@@ -353,12 +418,7 @@ export function createDirectReviewEvidence(input: {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     event: safeText(input.event, 80),
     workflow,
-    comparison: {
-      baseSha: safeSha(input.comparison?.baseSha),
-      headSha: safeSha(input.comparison?.headSha ?? commitSha),
-      changedFileCount: boundedInteger(input.comparison?.changedFileCount),
-      changedPaths: sortedUnique(input.comparison?.changedPaths),
-    },
+    comparison: normalizeComparison(input.comparison, commitSha),
     requiredGates,
     validation: {
       ...vitest,
@@ -414,6 +474,7 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   if (evidence.commitSha !== null && evidence.commitSha !== undefined && !safeSha(evidence.commitSha)) errors.push("commit-sha-invalid");
   if (evidence.gitTreeSha !== null && evidence.gitTreeSha !== undefined && !safeSha(evidence.gitTreeSha)) errors.push("tree-sha-invalid");
   if (evidence.repository !== null && evidence.repository !== undefined && !safeRepository(evidence.repository)) errors.push("repository-invalid");
+  errors.push(...comparisonErrors(evidence.comparison, safeSha(evidence.commitSha ?? undefined), evidence.finalVerdict === "PASS" && evidence.event === "push"));
   if (evidence.provenance?.generatedByScript !== "scripts/github/generate-direct-review-evidence.mjs" && evidence.provenance?.generatedByScript !== "scripts/github/publish-direct-review-evidence.mjs" && evidence.provenance?.generatedByScript !== "scripts/github/finalize-direct-review-evidence.mjs") errors.push("generator-script-invalid");
   const digest = typeof evidence.evidenceContractDigest === "string" ? evidence.evidenceContractDigest : "";
   if (!/^[0-9a-f]{64}$/i.test(digest)) errors.push("evidence-digest-invalid");

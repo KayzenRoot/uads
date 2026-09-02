@@ -153,6 +153,14 @@ function runCase(id: string): void {
     const common = { plan, projectId: order.projectId, workOrderId: order.workOrderId, workOrderDigest: computeWorkOrderRoutingDigest(order), registryDigest: registry.registryDigest, runtimeIdentityDigest: runtimeSnapshot.identityDigest, policyDigest: plan.policyDigest, changeDigest: null };
     assertEval(isModelExecutionPlanCurrent(common), "fresh plan was rejected");
     assertEval(!isModelExecutionPlanCurrent({ ...common, runtimeIdentityDigest: capableRuntime({ usageTelemetry: false }).identityDigest }), "stale runtime plan remained current");
+  } else if (id === "MR21") {
+    const result = route([profile("host-dispatch", "economy", { supports: { ...profile("nested", "economy").supports, toolCalling: false, structuredOutput: false, promptCache: false, explicitCache: false, persistentContext: false, usageTelemetry: false, vision: false } })], workOrder(), runtime({ modelSelection: true, subagents: true, parallelAgents: false }));
+    assertEval(result.status === "SELECTED" && result.execution.roleDispatch === "subagents", "host runtime subagent capability was incorrectly gated by model supports");
+  } else if (id === "MR22") {
+    const unconstrained = route([profile("host-parallel", "economy", { constraints: { maxConcurrency: null } })], workOrder(), runtime({ modelSelection: true, subagents: false, parallelAgents: true }));
+    assertEval(unconstrained.status === "SELECTED" && unconstrained.execution.parallel === true, "host runtime parallel capability was not selected");
+    const constrained = route([profile("serial-only", "economy", { constraints: { maxConcurrency: 1 } })], workOrder(), runtime({ modelSelection: true, subagents: false, parallelAgents: true }));
+    assertEval(constrained.status === "SELECTED" && constrained.execution.parallel === false, "maxConcurrency=1 did not disable parallel execution");
   } else {
     throw new Error(`unknown model-routing eval case ${id}`);
   }

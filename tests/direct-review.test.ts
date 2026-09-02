@@ -97,7 +97,9 @@ describe("GitHub direct review evidence", () => {
     });
     expect(item.commitSha).toBeNull();
     expect(item.artifact.name).toBeNull();
-    expect(item.comparison.changedPaths).toEqual(["src/github/direct-review.ts"]);
+    expect(item.comparison.changedPaths).toBeNull();
+    expect(item.comparison.comparisonStatus).toBe("unavailable");
+    expect(item.comparison.comparisonReasonCode).toBe("COMPARISON_METADATA_UNAVAILABLE");
     expect(item.workflow.htmlUrl).toBeNull();
     expect(item.finalVerdict).toBe("INCOMPLETE");
     expect(JSON.stringify(item)).not.toMatch(/Users|secret|evil\.example/i);

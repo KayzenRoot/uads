@@ -42,12 +42,16 @@
     },
     "comparison": {
       "type": "object", "additionalProperties": false,
-      "required": ["baseSha", "headSha", "changedFileCount", "changedPaths"],
+      "required": ["baseSha", "headSha", "changedFileCount", "changedPaths", "changedPathsDigest", "changedPathsTruncated", "comparisonStatus", "comparisonReasonCode"],
       "properties": {
         "baseSha": { "$ref": "#/$defs/shaOrNull" },
         "headSha": { "$ref": "#/$defs/shaOrNull" },
         "changedFileCount": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
-        "changedPaths": { "type": ["array", "null"], "maxItems": 500, "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 } }
+        "changedPaths": { "type": ["array", "null"], "maxItems": 500, "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 } },
+        "changedPathsDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "changedPathsTruncated": { "type": "boolean" },
+        "comparisonStatus": { "enum": ["complete", "truncated", "unavailable", "not-applicable"] },
+        "comparisonReasonCode": { "type": ["string", "null"], "pattern": "^[A-Z0-9_:-]{1,120}$" }
       }
     },
     "gate": {

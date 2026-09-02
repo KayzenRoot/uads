@@ -119,9 +119,9 @@ Complete only when all are true:
 - Quality floor is risk/scope-aware, escalation is monotonic, fallbacks preserve the floor, and context/output/hard-budget limits fail closed
 - Plan identities bind Work Order, change, registry, runtime, policy, and Context Pack layer digests; dispatch recomputes stale plans
 - `uads models list|status|explain|route|register` and `uads capabilities status|explain` work without provider calls
-- Runtime fallback metadata records sequential execution, role cycling, and null telemetry when unproven
-- Model routing evals MR1–MR20 and adversarial tests pass; existing orchestrator, execution, context, fault, and cost gates remain green
-- Documentation, review summaries, release evidence, and 0.8.0 package metadata are updated only after the complete validation matrix passes
+- Runtime fallback metadata records sequential execution, role cycling, and null telemetry when unproven; host/runtime ownership for subagents and parallel agents is explicit
+- Model routing evals MR1–MR22 and adversarial tests pass; existing orchestrator, execution, context, fault, and cost gates remain green
+- Documentation, review summaries, release evidence, and 0.8.1 package metadata are updated only after the complete validation matrix passes
 
 ## GitHub Direct Review Evidence correction
 
@@ -141,3 +141,5 @@ Complete the correction only when all are true:
 - Canonical evidence is published by the dedicated Direct Review workflow with the stable `UADS_DIRECT_REVIEW_BEGIN` / `UADS_DIRECT_REVIEW_END` markers; its publication health is separate from the source verdict
 - The release consumes the exact canonical Direct Review artifact and includes checksummed `github-direct-review-evidence.json` and `github-review-index.json`; index pointers cross-check CI run/attempt, Direct Review run, tag, release run, assets, and evidence SHA-256
 - Existing historical tag targets remain unchanged and no immutable tag is moved or recreated
+- Ordinary push comparisons are computed from full history with exact base/head/count, a complete changed-path-set digest, bounded/sanitized paths, truncation metadata, and an explicit unavailable/not-applicable reason when comparison cannot apply
+- The corrected package/release version is 0.8.1; historical v0.8.0 remains immutable

@@ -10,7 +10,7 @@ import { ensureWorkspace } from "../../dist/lib/workspace.js";
 const { IMMUTABLE_TAG_TARGETS } = await import("../../dist/release/semver.js");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const version = process.argv[2] ?? "0.8.0";
+const version = process.argv[2] ?? JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
 const origin = git(["config", "--get", "remote.origin.url"]) ?? repo;
 const fingerprint = computeProjectFingerprint({ originUrl: origin, repoRoot: root });

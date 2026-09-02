@@ -16,7 +16,7 @@
 - Evidence-bearing Model Execution Plans bound to Work Order, change, registry, runtime, policy, and Context Pack layer identities
 - CLI: `models list|status|explain|route|register` and `capabilities status|explain`
 - Global/sidecar persistence with zero project footprint, conservative runtime fallbacks, and no provider API invocation
-- Model routing evals MR1–MR20 and adversarial registry/runtime tests
+- Model routing evals MR1–MR22 and adversarial registry/runtime tests
 
 ## In scope (Prompt 005)
 

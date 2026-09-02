@@ -27,6 +27,29 @@ export const RUNTIME_CAPABILITY_KEYS: readonly ModelCapability[] = [
   "visionInput",
 ];
 
+/** Capabilities supplied by the host/runtime rather than by an individual model. */
+export const HOST_RUNTIME_ONLY_CAPABILITIES = ["subagents", "parallelAgents"] as const;
+/** Capabilities that are usable only when both the model and runtime prove support. */
+export const MODEL_RUNTIME_INTERSECTION_CAPABILITIES = [
+  "toolCalling",
+  "structuredOutput",
+  "promptCache",
+  "explicitCache",
+  "persistentContext",
+  "usageTelemetry",
+  "visionInput",
+] as const;
+/** Capabilities controlled by the router/runtime boundary. */
+export const ROUTER_RUNTIME_CONTROL_CAPABILITIES = ["modelSelection"] as const;
+
+export type CapabilityOwnership = "host-runtime" | "model-runtime-intersection" | "router-runtime-control";
+
+export function capabilityOwnership(capabilityName: ModelCapability): CapabilityOwnership {
+  if ((HOST_RUNTIME_ONLY_CAPABILITIES as readonly string[]).includes(capabilityName)) return "host-runtime";
+  if ((ROUTER_RUNTIME_CONTROL_CAPABILITIES as readonly string[]).includes(capabilityName)) return "router-runtime-control";
+  return "model-runtime-intersection";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -162,7 +185,10 @@ function modelSupports(profile: ModelProfile, capabilityName: ModelCapability): 
 }
 
 export function effectiveCapability(profile: ModelProfile, runtime: RuntimeCapabilitySnapshot, capabilityName: ModelCapability): boolean {
-  return modelSupports(profile, capabilityName) && runtime.capabilities[capabilityName] === true;
+  const runtimeProves = runtime.capabilities[capabilityName] === true;
+  if (capabilityOwnership(capabilityName) === "host-runtime") return runtimeProves;
+  if (capabilityOwnership(capabilityName) === "router-runtime-control") return runtimeProves;
+  return modelSupports(profile, capabilityName) && runtimeProves;
 }
 
 export function effectiveCapabilities(profile: ModelProfile, runtime: RuntimeCapabilitySnapshot): Record<ModelCapability, boolean> {

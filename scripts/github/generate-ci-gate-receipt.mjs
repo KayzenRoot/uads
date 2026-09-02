@@ -4,6 +4,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createCiGateReceipt } from "./ci-gate-receipt-runtime.mjs";
+import { deriveGitComparison } from "./comparison-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = path.resolve(valueOf("--output") ?? path.join(process.env.RUNNER_TEMP ?? path.join(root, "tmp"), "uads-ci-gate-receipt.json"));
@@ -13,8 +14,7 @@ const commitSha = safeSha(process.env.GITHUB_SHA);
 const runId = safeRunId(process.env.GITHUB_RUN_ID);
 const runAttempt = safeRunId(process.env.GITHUB_RUN_ATTEMPT);
 const packageJson = readJson(path.join(root, "package.json")) ?? {};
-const baseSha = safeSha(process.env.UADS_COMPARISON_BASE_SHA);
-const changedPaths = baseSha && commitSha ? gitChangedPaths(baseSha, commitSha) : null;
+const comparison = deriveGitComparison({ baseSha: process.env.UADS_COMPARISON_BASE_SHA ?? null, headSha: commitSha, cwd: root });
 const logs = Object.fromEntries([
   "tests", "eval-orchestrator", "eval-execution", "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "npm-audit",
 ].map((id) => [id, readLog(path.join(logRoot, `uads-${id}.log`))]));
@@ -35,7 +35,7 @@ const receipt = createCiGateReceipt({
     startedAt: process.env.UADS_RUN_STARTED_AT ?? null,
     completedAt: process.env.UADS_RUN_COMPLETED_AT ?? null,
   },
-  comparison: { baseSha, headSha: commitSha, changedFileCount: changedPaths?.length ?? null, changedPaths },
+  comparison,
   stepOutcomes: parseJson(process.env.UADS_CI_GATE_STEPS ?? "{}"),
   logs,
 });
@@ -71,9 +71,3 @@ function git(args) {
   try { return execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true, timeout: 10000 }).trim(); } catch { return null; }
 }
 function gitTreeSha(commit) { return safeSha(git(["rev-parse", `${commit}^{tree}`])); }
-function gitChangedPaths(base, head) {
-  const output = git(["diff", "--name-only", `${base}...${head}`]);
-  if (output === null) return null;
-  const paths = output.split(/\r?\n/).filter(Boolean).filter((item) => /^[A-Za-z0-9._/-]+$/.test(item) && !item.includes(".."));
-  return [...new Set(paths)].sort((a, b) => a.localeCompare(b)).slice(0, 500);
-}

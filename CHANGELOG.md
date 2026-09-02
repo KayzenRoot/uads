@@ -13,6 +13,24 @@ All notable changes to UADS (NexLabs) are documented here.
 
 - Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
 
+## [0.8.1] - 2026-09-02
+
+### Highlights
+
+- Corrected host/runtime capability ownership for subagent and parallel execution negotiation.
+- Added deterministic full-history Direct Review comparisons with exact counts, bounded paths, complete-set digests, truncation metadata, and explicit unavailable reasons.
+
+### Fixed
+
+- `subagents` and `parallelAgents` no longer require model-profile support when they are host/runtime capabilities; `maxConcurrency: 1` still forces sequential execution.
+- Direct Review Stage B now recalculates and validates the source comparison from the exact full-history checkout, preventing shallow-checkout null comparisons from becoming PASS evidence.
+- Preserved immutable historical tag `v0.8.0`; this correction is released as `v0.8.1`.
+
+### Verification
+
+- MR21/MR22 and Direct Review T6–T10 are included in the validation matrix.
+- The release is bound to the exact final commit, successful CI receipt, canonical Direct Review artifact, CodeQL/Scorecard status, checksums, and final Review ZIP.
+
 ## [0.8.0] - 2026-09-02
 
 ### Added
@@ -22,7 +40,7 @@ All notable changes to UADS (NexLabs) are documented here.
 - Conservative runtime intersection: unknown capabilities are unavailable; critical/high assurance work fails closed without a sufficient proven profile; empty non-critical routing is explicitly host-managed compatibility.
 - Monotonic failure/loop escalation, floor-preserving fallbacks, explicit preference floor protection, cache-layer digest hints, and sequential/role-cycling runtime fallbacks.
 - CLI commands `models list|status|explain|route|register` and `capabilities status|explain`.
-- MR1–MR20 model-routing evaluation suite and adversarial tests for schema closure, duplicate/corrupt state, path/secret safety, stale identity, and no provider HTTP invocation.
+- MR1–MR22 model-routing evaluation suite and adversarial tests for schema closure, duplicate/corrupt state, path/secret safety, stale identity, and no provider HTTP invocation.
 
 ### Changed
 

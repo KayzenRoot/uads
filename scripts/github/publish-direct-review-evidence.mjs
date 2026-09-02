@@ -11,6 +11,7 @@ import {
   safeSha,
   validateReceiptDigest,
 } from "./ci-gate-receipt-runtime.mjs";
+import { deriveGitComparison, validateComparison } from "./comparison-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY;
@@ -39,6 +40,12 @@ const headSha = safeSha(git(["rev-parse", "HEAD"]));
 if (headSha !== receipt.commitSha) fail("checked out source SHA does not match receipt");
 const treeSha = safeSha(git(["rev-parse", "HEAD^{tree}"]));
 if (treeSha !== receipt.gitTreeSha) fail("checked out source tree SHA does not match receipt");
+const comparison = deriveGitComparison({ baseSha: receipt.comparison?.baseSha ?? null, headSha: receipt.commitSha, cwd: root });
+const comparisonErrors = validateComparison(comparison, {
+  expectedHeadSha: receipt.commitSha,
+  requireComplete: receipt.finalVerdict === "PASS" && receipt.event === "push",
+});
+if (comparisonErrors.length) fail(`canonical comparison is invalid: ${comparisonErrors.join(",")}`);
 
 const directRunId = numberOrNull(process.env.GITHUB_RUN_ID);
 const directRunAttempt = numberOrNull(process.env.GITHUB_RUN_ATTEMPT);
@@ -52,6 +59,7 @@ const directEvidence = createDirectReviewFromReceipt(receipt, {
   sourceRunId,
   sourceRunAttempt,
   sourceRunSha: receipt.commitSha,
+  comparison,
   workflow: {
     runId: directRunId,
     runAttempt: directRunAttempt,

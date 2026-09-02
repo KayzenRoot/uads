@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { deriveGitComparison } from "./comparison-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = path.resolve(valueOf("--output") ?? path.join(process.env.RUNNER_TEMP ?? path.join(root, "tmp"), "github-direct-review-evidence.json"));
@@ -15,8 +16,7 @@ const runAttempt = safeRunId(process.env.GITHUB_RUN_ATTEMPT);
 const stepInput = parseJson(process.env.UADS_DIRECT_REVIEW_STEPS ?? "{}");
 const packageJson = readJson(path.join(root, "package.json"));
 const version = typeof packageJson?.version === "string" ? packageJson.version : "0.0.0";
-const baseSha = safeSha(process.env.UADS_COMPARISON_BASE_SHA);
-const changedPaths = baseSha && commitSha ? gitChangedPaths(baseSha, commitSha) : null;
+const comparison = deriveGitComparison({ baseSha: process.env.UADS_COMPARISON_BASE_SHA ?? null, headSha: commitSha, cwd: root });
 const logs = Object.fromEntries([
   "tests",
   "eval-orchestrator",
@@ -45,7 +45,7 @@ const evidence = createDirectReviewEvidence({
     startedAt: process.env.UADS_RUN_STARTED_AT ?? null,
     completedAt: process.env.UADS_RUN_COMPLETED_AT ?? null,
   },
-  comparison: { baseSha, headSha: commitSha, changedFileCount: changedPaths?.length ?? null, changedPaths },
+  comparison,
   stepOutcomes: stepInput === null ? "malformed" : stepInput,
   logs,
   artifactName: commitSha ? `uads-direct-review-${commitSha}` : "uads-direct-review-unknown",
@@ -101,11 +101,4 @@ function git(args) {
 
 function gitTreeSha(commit) {
   return safeSha(git(["rev-parse", `${commit}^{tree}`]));
-}
-
-function gitChangedPaths(base, head) {
-  const output = git(["diff", "--name-only", `${base}...${head}`]);
-  if (output === null) return null;
-  const paths = output.split(/\r?\n/).filter(Boolean).filter((item) => /^[A-Za-z0-9._/-]+$/.test(item) && !item.includes(".."));
-  return [...new Set(paths)].sort((a, b) => a.localeCompare(b)).slice(0, 500);
 }

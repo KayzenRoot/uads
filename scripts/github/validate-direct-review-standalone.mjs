@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeContractDigest } from "./ci-gate-receipt-runtime.mjs";
+import { validateComparison as validateComparisonValue } from "./comparison-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const file = valueOf("--file");
@@ -29,6 +30,7 @@ function validate(item) {
   extra(item, top, errors);
   if (item.schema !== "uads.github-direct-review-evidence" || item.schemaVersion !== "0.8.0") errors.push("schema-version-mismatch");
   if (!sha(item.commitSha) || !sha(item.gitTreeSha) || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(item.repository ?? "")) errors.push("identity-invalid");
+  errors.push(...validateComparisonValue(item.comparison, { expectedHeadSha: item.commitSha, requireComplete: item.finalVerdict === "PASS" && item.event === "push" }));
   if (!workflow(item.workflow, errors) || !item.provenance || !sha(item.provenance.sourceRunSha) || !positive(item.provenance.sourceRunId) || !positive(item.provenance.sourceRunAttempt)) errors.push("provenance-invalid");
   if (!Array.isArray(item.requiredGates) || item.requiredGates.length !== 16 || item.requiredGates.some((gate) => !gate || typeof gate.id !== "string" || !outcome(gate.outcome) || gate.required !== true)) errors.push("required-gates-invalid");
   validation(item.validation, errors);

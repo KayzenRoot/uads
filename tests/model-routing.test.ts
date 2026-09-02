@@ -328,6 +328,20 @@ describe("provider-neutral model router and runtime negotiation", () => {
     expect(isModelExecutionPlanCurrent({ ...common, registryDigest: createModelProfileRegistry([profile("economy", "economy"), profile("extra", "economy")]).registryDigest })).toBe(false);
   });
 
+  it("MR21 uses proven host/runtime subagent support independently of model supports", () => {
+    const hostOnly = profile("host-only-subagents", "economy", { supports: { ...profile("nested", "economy").supports, toolCalling: false, structuredOutput: false, promptCache: false, explicitCache: false, persistentContext: false, usageTelemetry: false, vision: false } });
+    const plan = route([hostOnly], workOrder(), runtime({ modelSelection: true, subagents: true, parallelAgents: false }));
+    expect(plan.status).toBe("SELECTED");
+    expect(plan.execution.roleDispatch).toBe("subagents");
+  });
+
+  it("MR22 uses host/runtime parallel support and enforces maxConcurrency=1", () => {
+    const parallel = route([profile("parallel-host", "economy", { constraints: { maxConcurrency: null } })], workOrder(), runtime({ modelSelection: true, subagents: false, parallelAgents: true }));
+    expect(parallel.execution.parallel).toBe(true);
+    const serial = route([profile("serial-host", "economy", { constraints: { maxConcurrency: 1 } })], workOrder(), runtime({ modelSelection: true, subagents: false, parallelAgents: true }));
+    expect(serial.execution.parallel).toBe(false);
+  });
+
   it("keeps explicit preference from lowering the quality floor", () => {
     const order = workOrder({ tokenBudget: { ...workOrder().tokenBudget, capabilityClass: "balanced" } });
     const plan = route([profile("economy", "economy"), profile("strong", "strong")], order, capableRuntime(), { preferredCapabilityClass: "economy" } as Parameters<typeof routeModel>[0]);

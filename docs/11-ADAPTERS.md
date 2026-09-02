@@ -12,6 +12,8 @@ Invoke `skills/uads-orchestrator/SKILL.md` plus the CLI (`inspect`, `plan`, `dis
 
 Model/runtime negotiation is also adapter-shaped. An adapter may publish a proven `RuntimeCapabilitySnapshot` and model profiles through the global registry boundary. It must not persist credentials, fetch provider catalogs automatically, execute profile input as code, or claim a capability that it cannot prove. Unknown capabilities remain unavailable; the router never calls a model provider.
 
+Capability ownership is explicit: `subagents` and `parallelAgents` come from the host/runtime, model-backed capabilities require the model/runtime intersection, and `modelSelection` is a router/runtime control. A model profile therefore cannot disable a proven host execution primitive, while a runtime snapshot cannot make an unsupported model feature appear available.
+
 
 ## Codex / generic
 

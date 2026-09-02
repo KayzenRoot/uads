@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { REQUIRED_GATES, validateReceiptDigest, computeContractDigest } from "./ci-gate-receipt-runtime.mjs";
+import { validateComparison as validateComparisonValue } from "./comparison-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const file = valueOf("--file");
@@ -29,7 +30,7 @@ function validate(item) {
   if (!shaOrNull(item.commitSha) || !shaOrNull(item.gitTreeSha)) errors.push("identity-sha-invalid");
   if (!item.repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(item.repository)) errors.push("repository-invalid");
   validateWorkflow(item.workflow, errors);
-  validateComparison(item.comparison, errors);
+  validateComparison(item.comparison, errors, item.commitSha);
   if (!Array.isArray(item.requiredGates) || item.requiredGates.length !== REQUIRED_GATES.length) errors.push("required-gates-count-invalid");
   else {
     const seen = new Set();
@@ -50,9 +51,8 @@ function validateWorkflow(item, errors) {
   if (!item || extra(item, ["runId", "runAttempt", "workflowName", "jobName", "htmlUrl", "startedAt", "completedAt"], "workflow", errors)) return;
   if (!number(item.runId) || !number(item.runAttempt) || typeof item.workflowName !== "string" || typeof item.jobName !== "string" || !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(item.htmlUrl)) errors.push("workflow-identity-invalid");
 }
-function validateComparison(item, errors) {
-  if (!item || extra(item, ["baseSha", "headSha", "changedFileCount", "changedPaths"], "comparison", errors)) return;
-  if (!shaOrNull(item.baseSha) || !shaOrNull(item.headSha) || (item.changedFileCount !== null && !Number.isSafeInteger(item.changedFileCount)) || (item.changedPaths !== null && (!Array.isArray(item.changedPaths) || item.changedPaths.some((p) => typeof p !== "string" || !/^[A-Za-z0-9._/-]+$/.test(p) || p.includes(".."))))) errors.push("comparison-invalid");
+function validateComparison(item, errors, expectedHeadSha) {
+  errors.push(...validateComparisonValue(item, { expectedHeadSha }));
 }
 function validateValidation(item, errors) {
   const keys = ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "npmAudit", "packaging"];
@@ -74,7 +74,7 @@ function valueOf(name) { const index = process.argv.indexOf(name); return index 
 function fixture() {
   const sha = "a".repeat(40);
   const gates = Object.fromEntries(REQUIRED_GATES.map((id) => [id, "success"]));
-  const base = { schema: "uads.ci-gate-receipt", schemaVersion: "0.8.0", repository: "KayzenRoot/uads", branch: "main", commitSha: sha, gitTreeSha: sha, version: "0.8.0", generatedAt: "2026-09-02T00:00:00.000Z", event: "push", workflow: { runId: 1, runAttempt: 1, workflowName: "CI", jobName: "Foundation checks", htmlUrl: "https://github.com/KayzenRoot/uads/actions/runs/1", startedAt: null, completedAt: null }, comparison: { baseSha: null, headSha: sha, changedFileCount: null, changedPaths: null }, requiredGates: REQUIRED_GATES.map((id) => ({ id, outcome: "success", required: true })), validation: { testFilesPassed: null, testsPassed: null, testsFailed: null, ...Object.fromEntries(["orchestrator", "execution", "context", "fault", "cost", "modelRouting"].map((key) => [key, { passed: null, failed: null, total: null }])), npmAudit: { outcome: "success", highOrGreaterVulnerabilities: 0 }, packaging: { outcome: "success" } }, provenance: { generatedByScript: "scripts/github/generate-ci-gate-receipt.mjs", evidenceContractDigest: "", sourceRunSha: sha, sourceRunId: 1, sourceRunAttempt: 1 }, finalVerdict: "PASS", reasonCodes: [], evidenceContractDigest: "" };
+  const base = { schema: "uads.ci-gate-receipt", schemaVersion: "0.8.0", repository: "KayzenRoot/uads", branch: "main", commitSha: sha, gitTreeSha: sha, version: "0.8.0", generatedAt: "2026-09-02T00:00:00.000Z", event: "push", workflow: { runId: 1, runAttempt: 1, workflowName: "CI", jobName: "Foundation checks", htmlUrl: "https://github.com/KayzenRoot/uads/actions/runs/1", startedAt: null, completedAt: null }, comparison: { baseSha: "b".repeat(40), headSha: sha, changedFileCount: 0, changedPaths: [], changedPathsDigest: "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945", changedPathsTruncated: false, comparisonStatus: "complete", comparisonReasonCode: null }, requiredGates: REQUIRED_GATES.map((id) => ({ id, outcome: "success", required: true })), validation: { testFilesPassed: null, testsPassed: null, testsFailed: null, ...Object.fromEntries(["orchestrator", "execution", "context", "fault", "cost", "modelRouting"].map((key) => [key, { passed: null, failed: null, total: null }])), npmAudit: { outcome: "success", highOrGreaterVulnerabilities: 0 }, packaging: { outcome: "success" } }, provenance: { generatedByScript: "scripts/github/generate-ci-gate-receipt.mjs", evidenceContractDigest: "", sourceRunSha: sha, sourceRunId: 1, sourceRunAttempt: 1 }, finalVerdict: "PASS", reasonCodes: [], evidenceContractDigest: "" };
   const digest = computeContractDigest(base);
   base.provenance.evidenceContractDigest = digest;
   base.evidenceContractDigest = digest;
