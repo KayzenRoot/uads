@@ -67,6 +67,10 @@ export type RoutingDecision = {
   domains: Array<{ id: string; reason: string }>;
   specialists: string[];
   assuranceSpecialists: string[];
+  specialistSelectionPlanId?: string;
+  specialistSelectionDigest?: string;
+  specialistRegistryDigest?: string;
+  specialistPolicyDigest?: string;
   gates: Array<{ id: string; reason: string }>;
   contextRadius: ContextRadius;
   contextReason: string;
@@ -98,6 +102,24 @@ export type WorkOrder = {
   affectedAreas: string[];
   specialists: string[];
   assuranceReviewers: string[];
+  specialistSelectionPlanId?: string;
+  specialistSelectionDigest?: string;
+  specialistRegistryDigest?: string;
+  specialistPolicyDigest?: string;
+  specialistAssignments?: Array<{
+    specialistId: string;
+    role: string;
+    objective: string;
+    coveredDomains: string[];
+    relevantAffectedAreas: string[];
+    relevantFiles: string[];
+    relevantGates: string[];
+    evidenceObligations: string[];
+    riskLevel: RiskLevel;
+    forbiddenScope: string[];
+    dependencyGroup: number;
+    parallelEligible: boolean;
+  }>;
   qualityGates: string[];
   contextRadius: ContextRadius;
   tokenBudget: {
@@ -177,6 +199,8 @@ export type ResumePacket = {
   modelRoutingStatus?: string | null;
   selectedProfileId?: string | null;
   modelSelectionMode?: string | null;
+  specialistSelectionPlanId?: string | null;
+  specialistSelectionStatus?: string | null;
 };
 
 export type ContextPlan = {

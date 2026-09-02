@@ -128,7 +128,7 @@ const manifest = createReleaseManifest({
   artifacts,
   validationReport: "validation-report.json",
   ciBinding: "ci-binding.json",
-  schemaVersion: "0.8.1",
+    schemaVersion: "0.9.0",
 });
 const manifestPath = path.join(output, "release-manifest.json");
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);

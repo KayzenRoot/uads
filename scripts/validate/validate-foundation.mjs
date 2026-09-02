@@ -85,6 +85,10 @@ const requiredFiles = [
   "schemas/model-execution-plan.schema.json",
   "schemas/github-direct-review-evidence.schema.json",
   "schemas/ci-gate-receipt.schema.json",
+  "schemas/specialist-profile.schema.json",
+  "schemas/specialist-registry.schema.json",
+  "schemas/specialist-registry-state.schema.json",
+  "schemas/specialist-selection-plan.schema.json",
   "schemas/github-review-index.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
@@ -98,6 +102,12 @@ const requiredFiles = [
   "evals/fault/fl18-postfix-live-drift.json",
   "src/eval/fault.ts",
   "src/eval/model-routing.ts",
+  "src/eval/specialist-routing.ts",
+  "evals/specialist-routing/cases.json",
+  "src/kernel/specialist-router.ts",
+  "src/kernel/specialist-registry.ts",
+  "src/kernel/specialist-catalog.ts",
+  "src/kernel/specialist-persist.ts",
   "src/github/review-index.ts",
   "evals/model-routing/cases.json",
   "src/kernel/fault-localization.ts",
@@ -167,6 +177,7 @@ runNpmGate(["run", "eval:context"]);
 runNpmGate(["run", "eval:fault"]);
 runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "eval:model-routing"]);
+runNpmGate(["run", "eval:specialist-routing"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 runNpmGate(["run", "validate:direct-review"]);
@@ -187,7 +198,7 @@ for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) 
     process.exit(1);
   }
   if (args[0] === "--help") {
-    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "models", "capabilities", "status", "resume", "review", "doctor"]) {
+    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "models", "capabilities", "specialists", "status", "resume", "review", "doctor"]) {
       if (!result.stdout.includes(command)) {
         process.stderr.write(`CLI help missing command: ${command}\n`);
         process.exit(1);

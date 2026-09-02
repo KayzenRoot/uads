@@ -109,6 +109,16 @@ export const SPECIALISTS: SpecialistDef[] = [
     expectedOutput: "performance check evidence",
   },
   {
+    id: "reliability-reviewer",
+    purpose: "Reliability and rollback assurance",
+    activation: "database, destructive, infrastructure, or reliability signals",
+    domains: ["reliability"],
+    mayImplement: false,
+    reviewOnly: true,
+    expectedInput: "dependencies + rollback evidence",
+    expectedOutput: "reliability review evidence",
+  },
+  {
     id: "checkpoint-manager",
     purpose: "Persist resume state",
     activation: "every plan",

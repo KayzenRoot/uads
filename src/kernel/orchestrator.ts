@@ -31,6 +31,10 @@ import { readCurrentContextPack } from "./intelligence-persist.js";
 import { routeAndPersistModelExecutionPlan } from "./model-persist.js";
 import { readCurrentModelExecutionPlan } from "./model-persist.js";
 import { resolveProjectContext } from "./project-context.js";
+import { loadSpecialistRegistry } from "./specialist-registry.js";
+import { persistSpecialistSelectionPlan, readCurrentSpecialistSelectionPlan } from "./specialist-persist.js";
+import { selectSpecialistPlan } from "./specialist-router.js";
+import type { SpecialistRoutingInput, SpecialistSelectionPlan } from "./specialist-types.js";
 import type {
   Checkpoint,
   ContextPlan,
@@ -68,6 +72,7 @@ export type PlanResult = {
   map: RepositoryMap;
   mapReused: boolean;
   modelPlan: ModelExecutionPlan;
+  specialistPlan: SpecialistSelectionPlan;
 };
 
 export function runPlan(input: {
@@ -142,6 +147,32 @@ export function planFromIntake(input: {
     outOfScope: scope.outOfScope,
     recommendations: scope.recommendations,
   });
+  const specialistRegistry = loadSpecialistRegistry(input.paths, input.schemaRoot);
+  const specialistDependencies = [
+    "inspect before edit",
+    "implement only NECESSARY scope",
+    `${IMPLEMENTER_ROLE} is not the sole final reviewer`,
+  ];
+  const specialistRoutingInput: SpecialistRoutingInput = {
+    projectId: input.projectId,
+    workOrderId,
+    objective: input.intake.objective,
+    constraints: input.intake.constraints,
+    inScope: scoped.necessary,
+    outOfScope: scope.outOfScope,
+    acceptanceCriteria: input.intake.acceptanceCriteria,
+    domains: domainIds,
+    scopeClass: scope.scopeClass,
+    riskLevel: risk.level,
+    riskSignals: input.intake.riskSignals,
+    affectedAreas: input.intake.affectedAreas,
+    gates: gates.map((gate) => gate.id),
+    requiredEvidence: gates.map((gate) => gateEvidence(gate.id)),
+    dependencyInfo: specialistDependencies,
+    gateContractDigest: sha256Hex(JSON.stringify(gates)),
+    registry: specialistRegistry,
+  };
+  let specialistPlan = selectSpecialistPlan(specialistRoutingInput);
   const warnings: string[] = [];
   if (input.intake.classifier === "fallback-text") {
     warnings.push("intake used conservative fallback-text classifier, not host semantic interpretation");
@@ -161,16 +192,18 @@ export function planFromIntake(input: {
     riskLevel: risk.level,
     riskReasons: risk.reasons,
     domains,
-    specialists: specialists.specialists,
-    assuranceSpecialists: specialists.assurance,
+    specialists: specialistPlan.selected.map((item) => item.specialistId),
+    assuranceSpecialists: specialistPlan.assurance.map((item) => item.specialistId),
+    specialistSelectionPlanId: specialistPlan.selectionPlanId,
+    specialistSelectionDigest: specialistPlan.selectionDigest,
+    specialistRegistryDigest: specialistPlan.registryDigest,
+    specialistPolicyDigest: specialistPlan.policyDigest,
     gates,
     contextRadius: context.radius,
     contextReason: context.reason,
     capabilityClass,
     orderConstraints: [
-      "inspect before edit",
-      "implement only NECESSARY scope",
-      `${IMPLEMENTER_ROLE} is not the sole final reviewer`,
+      ...specialistDependencies,
     ],
     stopConditions: [
       "missing required evidence",
@@ -180,8 +213,9 @@ export function planFromIntake(input: {
     warnings,
   };
 
-  const nextAction =
-    "Execute only NECESSARY scope with selected specialists, collect required evidence, then independent review.";
+  const nextAction = specialistPlan.status === "BLOCKED"
+    ? `Routing blocked: ${specialistPlan.blockedReasonCodes.join(", ") || "unmet specialist coverage"}. Resolve the selection plan before dispatch.`
+    : "Execute only NECESSARY scope with selected specialists, collect required evidence, then independent review.";
 
   const workOrder: WorkOrder = {
     schema: "uads.work-order",
@@ -190,7 +224,7 @@ export function planFromIntake(input: {
     projectId: input.projectId,
     title: titleFromObjective(input.intake.objective),
     objective: input.intake.objective,
-    status: "planned",
+    status: specialistPlan.status === "BLOCKED" ? "blocked" : "planned",
     createdAt: now,
     updatedAt: now,
     intakeRef: `intake:${sha256Hex(input.intake.objective).slice(0, 12)}`,
@@ -203,8 +237,13 @@ export function planFromIntake(input: {
     riskReasons: risk.reasons,
     domains: domainIds,
     affectedAreas: input.intake.affectedAreas,
-    specialists: specialists.specialists,
-    assuranceReviewers: specialists.assurance,
+    specialists: specialistPlan.selected.map((item) => item.specialistId),
+    assuranceReviewers: specialistPlan.assurance.map((item) => item.specialistId),
+    specialistSelectionPlanId: specialistPlan.selectionPlanId,
+    specialistSelectionDigest: specialistPlan.selectionDigest,
+    specialistRegistryDigest: specialistPlan.registryDigest,
+    specialistPolicyDigest: specialistPlan.policyDigest,
+    specialistAssignments: specialistPlan.assignments,
     qualityGates: gates.map((gate) => gate.id),
     contextRadius: context.radius,
     tokenBudget: {
@@ -252,10 +291,10 @@ export function planFromIntake(input: {
     createdAt: now,
     updatedAt: now,
     phase: "plan",
-    status: "in_progress",
+    status: specialistPlan.status === "BLOCKED" ? "blocked" : "in_progress",
     completedSteps: ["intake", "classify", "plan"],
     nextAction,
-    blockers: [],
+    blockers: [...specialistPlan.unmetCoverage, ...specialistPlan.conflicts],
     evidenceRefs: [],
     repositoryMapDigest: input.map.digest,
     contextPlanRef: "sidecar://context/plan.json",
@@ -298,6 +337,44 @@ export function planFromIntake(input: {
         },
         schemaRoot: input.schemaRoot,
       });
+      specialistPlan = selectSpecialistPlan({
+        ...specialistRoutingInput,
+        impactDigest: intel.pack.indexDigest,
+      });
+      persisted = persistPlan({
+        paths: input.paths,
+        workOrder: {
+          ...persisted.workOrder,
+          status: specialistPlan.status === "BLOCKED" ? "blocked" : persisted.workOrder.status,
+          specialists: specialistPlan.selected.map((item) => item.specialistId),
+          assuranceReviewers: specialistPlan.assurance.map((item) => item.specialistId),
+          specialistSelectionPlanId: specialistPlan.selectionPlanId,
+          specialistSelectionDigest: specialistPlan.selectionDigest,
+          specialistRegistryDigest: specialistPlan.registryDigest,
+          specialistPolicyDigest: specialistPlan.policyDigest,
+          specialistAssignments: specialistPlan.assignments,
+          nextAction: specialistPlan.status === "BLOCKED"
+            ? `Routing blocked: ${specialistPlan.blockedReasonCodes.join(", ") || "unmet specialist coverage"}. Resolve the selection plan before dispatch.`
+            : persisted.workOrder.nextAction,
+        },
+        decision: {
+          ...persisted.decision,
+          specialists: specialistPlan.selected.map((item) => item.specialistId),
+          assuranceSpecialists: specialistPlan.assurance.map((item) => item.specialistId),
+          specialistSelectionPlanId: specialistPlan.selectionPlanId,
+          specialistSelectionDigest: specialistPlan.selectionDigest,
+          specialistRegistryDigest: specialistPlan.registryDigest,
+          specialistPolicyDigest: specialistPlan.policyDigest,
+        },
+        checkpoint: {
+          ...persisted.checkpoint,
+          status: specialistPlan.status === "BLOCKED" ? "blocked" : persisted.checkpoint.status,
+          blockers: [...specialistPlan.unmetCoverage, ...specialistPlan.conflicts],
+        },
+        contextPlan: persisted.contextPlan,
+        schemaRoot: input.schemaRoot,
+      });
+      persistSpecialistSelectionPlan(input.paths, specialistPlan, input.schemaRoot);
     } catch {
       // Planning remains valid if intelligence cannot yet be built.
     }
@@ -312,6 +389,7 @@ export function planFromIntake(input: {
     failureSignals: { loopDetected: failure.loopDetected },
     schemaRoot: input.schemaRoot,
   });
+  persistSpecialistSelectionPlan(input.paths, specialistPlan, input.schemaRoot);
 
   return {
     workOrder: persisted.workOrder,
@@ -321,6 +399,7 @@ export function planFromIntake(input: {
     map: input.map,
     mapReused: input.mapReused,
     modelPlan,
+    specialistPlan,
   };
 }
 
@@ -426,5 +505,9 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     modelRoutingStatus: modelPlan?.status ?? null,
     selectedProfileId: modelPlan?.selectedProfileId ?? null,
     modelSelectionMode: modelPlan?.selectionMode ?? null,
+    specialistSelectionPlanId: workOrder?.specialistSelectionPlanId ?? null,
+    specialistSelectionStatus: (() => {
+      try { return readCurrentSpecialistSelectionPlan(ctx.paths, schemaRoot)?.status ?? null; } catch { return "blocked-corrupt-or-unavailable"; }
+    })(),
   };
 }

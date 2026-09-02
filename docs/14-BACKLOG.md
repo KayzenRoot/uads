@@ -21,3 +21,6 @@ Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that 
 - Formal waiver UX for selected gates
 
 If a change is useful but not required for the current DoD, add it here rather than expanding `src/`.
+# Specialist routing backlog boundaries
+
+Out of scope for Prompt 009: live marketplace/catalog discovery, provider APIs or credentials, vendor pricing, a full 30+ specialist catalog, dashboard/telemetry UI, UGAS/game-assets integration, and Prompt 010 work. Future work may add explicitly reviewed profiles, richer adapter negotiation, and dashboard presentation without changing the fail-closed registry and selection identity contract.

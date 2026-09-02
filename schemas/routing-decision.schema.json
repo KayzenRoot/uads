@@ -56,6 +56,10 @@
     },
     "specialists": { "type": "array", "items": { "type": "string" } },
     "assuranceSpecialists": { "type": "array", "items": { "type": "string" } },
+    "specialistSelectionPlanId": { "type": "string", "pattern": "^sp_[a-f0-9]{16}$" },
+    "specialistSelectionDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistRegistryDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistPolicyDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "gates": {
       "type": "array",
       "items": {

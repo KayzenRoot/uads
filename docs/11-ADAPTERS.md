@@ -29,3 +29,6 @@ Capability ownership is explicit: `subagents` and `parallelAgents` come from the
 ## Contract
 
 Adapters must not dump UADS state into the project to “make the host happy.” If a host requires an in-repo file, it is an explicit opt-in and a freeze exception.
+# Specialist delegation contract
+
+Adapters may invoke the lean `agents/uads-*.md` descriptors selected by the sidecar Specialist Selection Plan. The kernel emits role-specific assignments with objective, relevant affected areas/files/gates, evidence obligations, risk, forbidden scope, dependency group, and parallel eligibility. Adapters must not invent profiles, call providers from the kernel, execute approval-gated actions, or treat a stale/blocked plan as dispatch authorization.

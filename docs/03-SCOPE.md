@@ -74,3 +74,8 @@ Every Work Order is classified before expansion:
 - `architectural` — public contracts, core architecture, storage/auth architecture
 
 Only **NECESSARY** work enters the current Work Order. IMPORTANT/FUTURE items are recommendations. OUT_OF_SCOPE stays excluded. Execution classifies changed paths as in-scope, supporting, out-of-scope, or sensitive.
+# Specialist scope boundary (Prompt 009)
+
+The built-in catalog contains 11 core roles and 14 domain profiles. Security, performance, and reliability assurance remain distinct from implementation and support. UGAS and game-assets are explicitly outside this catalog and do not receive automatic integration or project footprint.
+
+Selection uses a bounded minimum-sufficient greedy algorithm. It covers only domains, affected areas, risk signals, gates, dependencies, and evidence obligations present in the Work Order. Missing required coverage blocks dispatch rather than causing an unrelated specialist expansion.

@@ -71,6 +71,9 @@ export type DirectReviewEvidence = {
     fault: DirectReviewSummary;
     cost: DirectReviewSummary;
     modelRouting: DirectReviewSummary;
+    specialistRouting: DirectReviewSummary;
+    specialistPolicyDigest: string | null;
+    builtinSpecialistCatalogDigest: string | null;
     npmAudit: {
       outcome: DirectReviewOutcome;
       highOrGreaterVulnerabilities: number | null;
@@ -123,6 +126,7 @@ export const REQUIRED_DIRECT_REVIEW_GATES = [
   "eval-fault",
   "eval-cost",
   "eval-model-routing",
+  "eval-specialist-routing",
   "skills-validation",
   "validate",
   "npm-audit",
@@ -351,6 +355,8 @@ export function createDirectReviewEvidence(input: {
   stepOutcomes?: Record<string, unknown>;
   logs?: Partial<Record<string, string>>;
   securityWorkflows?: Partial<DirectReviewEvidence["securityWorkflows"]>;
+  specialistPolicyDigest?: string | null;
+  builtinSpecialistCatalogDigest?: string | null;
   release?: Partial<DirectReviewEvidence["release"]>;
   artifactName?: string | null;
   artifactRetentionDays?: number | null;
@@ -376,6 +382,7 @@ export function createDirectReviewEvidence(input: {
     fault: parseEvalSummary(logs["eval-fault"] ?? ""),
     cost: parseEvalSummary(logs["eval-cost"] ?? ""),
     modelRouting: parseEvalSummary(logs["eval-model-routing"] ?? ""),
+    specialistRouting: parseEvalSummary(logs["eval-specialist-routing"] ?? ""),
   };
   for (const [id, summary] of Object.entries(evals)) {
     if (summary.passed === null || summary.failed === null || summary.total === null) reasons.push(`COUNT_PARSE_UNAVAILABLE:${id.toUpperCase()}`);
@@ -428,6 +435,9 @@ export function createDirectReviewEvidence(input: {
       fault: evals.fault,
       cost: evals.cost,
       modelRouting: evals.modelRouting,
+      specialistRouting: evals.specialistRouting,
+      specialistPolicyDigest: input.specialistPolicyDigest ?? null,
+      builtinSpecialistCatalogDigest: input.builtinSpecialistCatalogDigest ?? null,
       npmAudit: { outcome: parsedSteps["npm-audit"] ?? npmAudit.outcome, highOrGreaterVulnerabilities: npmAudit.highOrGreaterVulnerabilities },
       packaging: { outcome: parsedSteps.packaging ?? "unknown" },
     },

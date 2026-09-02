@@ -121,7 +121,7 @@ Complete only when all are true:
 - `uads models list|status|explain|route|register` and `uads capabilities status|explain` work without provider calls
 - Runtime fallback metadata records sequential execution, role cycling, and null telemetry when unproven; host/runtime ownership for subagents and parallel agents is explicit
 - Model routing evals MR1–MR22 and adversarial tests pass; existing orchestrator, execution, context, fault, and cost gates remain green
-- Documentation, review summaries, release evidence, and 0.8.1 package metadata are updated only after the complete validation matrix passes
+- Documentation, review summaries, release evidence, and 0.9.0 package metadata are updated only after the complete validation matrix passes
 
 ## GitHub Direct Review Evidence correction
 
@@ -142,4 +142,11 @@ Complete the correction only when all are true:
 - The release consumes the exact canonical Direct Review artifact and includes checksummed `github-direct-review-evidence.json` and `github-review-index.json`; index pointers cross-check CI run/attempt, Direct Review run, tag, release run, assets, and evidence SHA-256
 - Existing historical tag targets remain unchanged and no immutable tag is moved or recreated
 - Ordinary push comparisons are computed from full history with exact base/head/count, a complete changed-path-set digest, bounded/sanitized paths, truncation metadata, and an explicit unavailable/not-applicable reason when comparison cannot apply
-- The corrected package/release version is 0.8.1; historical v0.8.0 remains immutable
+- The specialist-routing package/release version is 0.9.0; historical v0.8.0 and v0.8.1 remain immutable
+# Prompt 009 completion conditions
+
+- A valid global registry contains the built-in core and bounded domain catalog.
+- A deterministic selection plan is persisted outside the managed repository and bound to Work Order/routing/registry/policy identities.
+- Required domain and assurance coverage is present, or the plan is explicitly `BLOCKED` with stable reason codes.
+- Independent review is separate from implementation; security, performance, and reliability assurance are distinct.
+- SR1–SR20, adversarial tests, existing validation matrix, CI receipt, Direct Review, and release evidence all pass for the exact release commit.

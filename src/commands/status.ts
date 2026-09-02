@@ -13,6 +13,8 @@ import { loadModelProfileRegistry } from "../kernel/model-registry.js";
 import { readCurrentModelExecutionPlan } from "../kernel/model-persist.js";
 import { readRuntimeCapabilitySnapshot } from "../kernel/model-runtime.js";
 import { findPackageRoot } from "../lib/version.js";
+import { loadSpecialistRegistry } from "../kernel/specialist-registry.js";
+import { readCurrentSpecialistSelectionPlan } from "../kernel/specialist-persist.js";
 
 export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: string; json?: boolean } = {}): string {
   const git = readGitSummary(cwd);
@@ -64,6 +66,13 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     selectionMode: null as string | null,
     requiredCapabilityClass: null as string | null,
   };
+  let specialist = {
+    registryStatus: "unavailable",
+    profileCount: 0,
+    registryDigest: null as string | null,
+    selectionStatus: null as string | null,
+    selectionPlanId: null as string | null,
+  };
   try {
     const registry = loadModelProfileRegistry(paths, findPackageRoot());
     const runtime = readRuntimeCapabilitySnapshot(paths, "generic-runtime", findPackageRoot());
@@ -81,6 +90,13 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     };
   } catch {
     model.registryStatus = "blocked-corrupt-or-unavailable";
+  }
+  try {
+    const registry = loadSpecialistRegistry(paths, findPackageRoot());
+    const plan = readCurrentSpecialistSelectionPlan(paths, findPackageRoot());
+    specialist = { registryStatus: "valid", profileCount: registry.profiles.length, registryDigest: registry.registryDigest, selectionStatus: plan?.status ?? null, selectionPlanId: plan?.selectionPlanId ?? null };
+  } catch {
+    specialist.registryStatus = "blocked-corrupt-or-unavailable";
   }
 
   if (options.json) {
@@ -125,6 +141,11 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         selectedProfileId: model.selectedProfileId,
         modelSelectionMode: model.selectionMode,
         modelRequiredCapabilityClass: model.requiredCapabilityClass,
+        specialistRegistryStatus: specialist.registryStatus,
+        specialistProfileCount: specialist.profileCount,
+        specialistRegistryDigest: specialist.registryDigest,
+        specialistSelectionStatus: specialist.selectionStatus,
+        specialistSelectionPlanId: specialist.selectionPlanId,
       },
       null,
       2,
@@ -165,6 +186,10 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     `modelPlanId: ${model.modelPlanId ?? "(none)"}`,
     `selectedProfileId: ${model.selectedProfileId ?? "(none)"}`,
     `modelSelectionMode: ${model.selectionMode ?? "(none)"}`,
+    `specialistRegistryStatus: ${specialist.registryStatus}`,
+    `specialistProfileCount: ${specialist.profileCount}`,
+    `specialistSelectionStatus: ${specialist.selectionStatus ?? "(none)"}`,
+    `specialistSelectionPlanId: ${specialist.selectionPlanId ?? "(none)"}`,
     "",
   ].join("\n");
 }

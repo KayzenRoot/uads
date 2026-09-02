@@ -63,6 +63,7 @@ import {
   readWorkOrder,
 } from "./persist.js";
 import { resolveProjectContext } from "./project-context.js";
+import { assertSpecialistSelectionBoundToWorkOrder, SpecialistSelectionPersistenceError } from "./specialist-persist.js";
 import { assertSafeRelativeProjectPath } from "./safe-path.js";
 import { classifyChangedPath } from "./scope-guard.js";
 import { loadModelProfileRegistry } from "./model-registry.js";
@@ -372,6 +373,9 @@ function buildPacket(run: ExecutionRun, workOrder: WorkOrder): ExecutionPacket {
     contextCandidates: run.contextCandidates,
     specialists: workOrder.specialists,
     assuranceReviewers: workOrder.assuranceReviewers,
+    specialistSelectionPlanId: workOrder.specialistSelectionPlanId ?? null,
+    specialistSelectionDigest: workOrder.specialistSelectionDigest ?? null,
+    specialistAssignments: workOrder.specialistAssignments,
     selectedGates: run.selectedGates,
     acceptanceCriteria: workOrder.acceptanceCriteria,
     requiredEvidence: workOrder.requiredEvidence,
@@ -491,6 +495,17 @@ export function runDispatch(input: {
   }
   if (!routing || !contextPlan) {
     throw new InvalidOrchestrationStateError("routing decision or context plan missing");
+  }
+  if (workOrder.specialistSelectionPlanId) {
+    try {
+      assertSpecialistSelectionBoundToWorkOrder(ctx.paths, workOrder, schemaRoot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof SpecialistSelectionPersistenceError) {
+        throw new ExecutionBlockedError(`specialist routing state is unavailable: ${message}`, ["specialist selection missing, blocked, or stale"]);
+      }
+      throw error;
+    }
   }
 
   const dirty = isWorktreeDirty(ctx.repoRoot);
@@ -1730,6 +1745,8 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
   add("models/current-execution-plan.json", paths.currentModelRouting);
   add("models/registry.json", paths.modelRegistry);
   add("models/runtime-capabilities.json", path.join(paths.runtimeCapabilities, "generic-runtime.json"));
+  add("specialists/selection-plan.json", paths.currentSpecialistSelection);
+  add("specialists/registry-state.json", paths.specialistState);
   add("intelligence/index-state.json", path.join(paths.index, "index-state.json"));
   add("intelligence/current-pack.json", path.join(paths.context, "current-pack.json"));
   const run = (() => {

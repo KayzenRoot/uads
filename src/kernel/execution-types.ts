@@ -90,6 +90,22 @@ export type ExecutionPacket = {
   contextCandidates: string[];
   specialists: string[];
   assuranceReviewers: string[];
+  specialistSelectionPlanId?: string | null;
+  specialistSelectionDigest?: string | null;
+  specialistAssignments?: Array<{
+    specialistId: string;
+    role: string;
+    objective: string;
+    coveredDomains: string[];
+    relevantAffectedAreas: string[];
+    relevantFiles: string[];
+    relevantGates: string[];
+    evidenceObligations: string[];
+    riskLevel: RiskLevel;
+    forbiddenScope: string[];
+    dependencyGroup: number;
+    parallelEligible: boolean;
+  }>;
   selectedGates: string[];
   acceptanceCriteria: string[];
   requiredEvidence: string[];

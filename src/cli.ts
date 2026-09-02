@@ -32,6 +32,7 @@ import {
   runFailuresCommand,
 } from "./commands/failure.js";
 import { readUadsVersion } from "./lib/version.js";
+import { runSpecialistsExplainCommand, runSpecialistsListCommand, runSpecialistsSelectCommand, runSpecialistsStatusCommand } from "./commands/specialists.js";
 
 const program = new Command();
 
@@ -131,6 +132,30 @@ program
   .action((options: { json?: boolean }) => {
     process.stdout.write(runVerifyCommand({ json: options.json }));
   });
+
+const specialists = program.command("specialists").description("Global-first specialist registry and deterministic routing");
+specialists
+  .command("list")
+  .description("List registered specialist profiles without scanning the repository or contacting providers")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runSpecialistsListCommand({ json: options.json })); });
+specialists
+  .command("status")
+  .description("Show specialist registry and current selection state")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runSpecialistsStatusCommand({ json: options.json })); });
+specialists
+  .command("explain")
+  .description("Explain the persisted specialist selection and rejections")
+  .option("--work-order <id>", "Work Order id")
+  .option("--json", "JSON output")
+  .action((options: { workOrder?: string; json?: boolean }) => { process.stdout.write(runSpecialistsExplainCommand({ workOrderId: options.workOrder, json: options.json })); });
+specialists
+  .command("select")
+  .description("Recompute and persist the bounded specialist selection for a Work Order")
+  .option("--work-order <id>", "Work Order id")
+  .option("--json", "JSON output")
+  .action((options: { workOrder?: string; json?: boolean }) => { process.stdout.write(runSpecialistsSelectCommand({ workOrderId: options.workOrder, json: options.json })); });
 
 const evidence = program.command("evidence").description("Execution evidence ledger");
 evidence

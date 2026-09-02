@@ -42,3 +42,8 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 ## Future (not this increment)
 
 Provider API clients, vendor price catalogs, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis, and autonomous provider execution.
+# Specialist routing requirements (Prompt 009)
+
+Specialist delegation is global-first and sidecar-only. A normalized Work Order is bound to a deterministic Specialist Selection Plan containing the Work Order digest, routing digest, registry digest, policy digest, and optional change/impact/gate-contract digests. The plan must make selected coverage, assurance, evidence obligations, rejection reasons, conflicts, and dependency groups inspectable without exposing chain-of-thought.
+
+The registry is provider-neutral, schema-closed, bounded, and screened for secrets, host paths, commands, hooks, duplicates, unknown domains/functions, and unsafe implementation/review combinations. Disabled profiles are never selected; experimental profiles require explicit policy allowance and cannot silently satisfy critical assurance.

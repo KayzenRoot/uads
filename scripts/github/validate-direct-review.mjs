@@ -36,7 +36,7 @@ function fixture() {
   const sha = "a".repeat(40);
   const steps = Object.fromEntries([
     "install", "lint", "typecheck", "build", "action-pins", "tests", "eval-orchestrator", "eval-execution",
-    "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "skills-validation", "validate", "npm-audit", "packaging",
+    "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "skills-validation", "validate", "npm-audit", "packaging",
   ].map((id) => [id, "success"]));
   return createDirectReviewEvidence({
     repository: "KayzenRoot/uads",
@@ -56,6 +56,7 @@ function fixture() {
       "eval-fault": "18 passed, 0 failed, 18 total",
       "eval-cost": "cost eval 27/27",
       "eval-model-routing": "model routing eval 20/20",
+      "eval-specialist-routing": "specialist routing eval 20/20",
       "npm-audit": "found 0 vulnerabilities",
     },
     artifactName: `uads-direct-review-${sha}`,

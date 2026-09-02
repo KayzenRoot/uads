@@ -11,6 +11,8 @@ export type UadsPaths = {
   adapters: string;
   cache: string;
   registry: string;
+  specialistRegistry: string;
+  specialistState: string;
   modelRegistry: string;
   modelProfiles: string;
   registryState: string;
@@ -30,6 +32,9 @@ export type UadsPaths = {
   modelRouting: string;
   currentModelRouting: string;
   modelRoutingHistory: string;
+  specialistRouting: string;
+  currentSpecialistSelection: string;
+  specialistSelectionHistory: string;
   profile: string;
   currentState: string;
   repositoryMap: string;
@@ -58,6 +63,8 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     adapters: path.join(home, "adapters"),
     cache: path.join(home, "cache"),
     registry: path.join(home, "registry"),
+    specialistRegistry: path.join(home, "registry", "specialists", "registry.json"),
+    specialistState: path.join(home, "registry", "specialists", "state.json"),
     modelRegistry: path.join(home, "registry", "models", "profiles.json"),
     modelProfiles: path.join(home, "registry", "models", "profiles.json"),
     registryState: path.join(home, "registry", "registry-state.json"),
@@ -77,6 +84,9 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     modelRouting: path.join(workspace, "model-routing"),
     currentModelRouting: path.join(workspace, "model-routing", "current.json"),
     modelRoutingHistory: path.join(workspace, "model-routing", "history"),
+    specialistRouting: path.join(workspace, "specialist-routing"),
+    currentSpecialistSelection: path.join(workspace, "specialist-routing", "current.json"),
+    specialistSelectionHistory: path.join(workspace, "specialist-routing", "history"),
     profile: path.join(workspace, "profile.json"),
     currentState: path.join(workspace, "state", "current.json"),
     repositoryMap: path.join(workspace, "index", "repository-map.json"),
@@ -94,6 +104,7 @@ export function ensureGlobalLayout(uadsHome?: string): string {
     "cache",
     "registry",
     path.join("registry", "models"),
+    path.join("registry", "specialists"),
     path.join("registry", "runtime", "capabilities"),
     "workspaces",
   ]) {
@@ -122,6 +133,8 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.executionRuns,
     paths.modelRouting,
     paths.modelRoutingHistory,
+    paths.specialistRouting,
+    paths.specialistSelectionHistory,
     path.join(paths.context, "impact-reports"),
     path.join(paths.context, "packs"),
     path.join(paths.context, "diagnostic-packs"),

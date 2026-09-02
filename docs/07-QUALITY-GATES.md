@@ -26,3 +26,6 @@ Style-only frontend work does not require Web3 fuzzing. DeFi withdrawal requires
 A selected Work Order gate is PASS only with current-digest evidence that matches the gate contract (command gates: command + exit 0 + output digest; review gates: mapped reviewer APPROVED). FAIL/BLOCKED evidence on the current digest stays blocking even if a later PASS is recorded. Cache-reuse PASS is explicit (`source=cache-reuse`) and only allowed for eligible gates whose validity basis still matches. Unknown or unselected gate IDs cannot satisfy a selected gate. Corrupt evidence JSON fails closed.
 
 Model routing is a gate on execution selection, not a replacement for quality gates. A `BLOCKED` Model Execution Plan blocks dispatch; a selected profile does not make any test, review, security, financial, or release gate PASS. The router must retain the Work Order floor and proven runtime intersection across retries.
+# Specialist routing gate
+
+Prompt 009 adds `npm run eval:specialist-routing` with SR1–SR20. The gate covers core/domain/assurance selection, minimum sufficiency, security/performance/reliability separation, independence, bounded parallel groups, corrupt/duplicate/disabled/experimental registry behavior, and stale identity invalidation. CI and Direct Review must include `eval-specialist-routing` and its parsed pass/fail/total summary.

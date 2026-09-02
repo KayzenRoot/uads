@@ -6,7 +6,7 @@
 
 UADS is a pre-1.0, global-first autonomous software engineering orchestration framework for specialist delegation, independent review, evidence-based quality gates, context intelligence, and cost-aware execution.
 
-This repository is the public open-source UADS product. The latest release is [v0.8.1](https://github.com/KayzenRoot/uads/releases/tag/v0.8.1). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+This repository is the public open-source UADS product. The latest release is [v0.9.0](https://github.com/KayzenRoot/uads/releases/tag/v0.9.0). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -17,6 +17,7 @@ This repository is the public open-source UADS product. The latest release is [v
 - Context routing, repository map, dependency/impact map
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
+- Global specialist registry with 25 bounded built-in profiles, deterministic minimum-sufficient selection, independent assurance, and stale-plan binding
 - Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap
 
@@ -57,6 +58,9 @@ node dist/cli.js cache status --json
 node dist/cli.js cost status --json
 node dist/cli.js models status --json
 node dist/cli.js capabilities status --json
+node dist/cli.js specialists list --json
+node dist/cli.js specialists status --json
+node dist/cli.js specialists explain --json
 node dist/cli.js review
 ```
 
@@ -83,10 +87,10 @@ Review bundles and validation evidence are written **outside** the project:
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator, execution, context, fault, cost, and model-routing evals |
+| `evals/` | Orchestrator, execution, context, fault, cost, model-routing, and specialist-routing evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Cursor / Codex / generic adapters |
-| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, and model-routing contracts |
+| `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, model-routing, and specialist-routing contracts |
 | `docs/` | Architecture Freeze v0.2 |
 | `scripts/` | Install, GitHub audit/direct-review, release, review, validate |
 

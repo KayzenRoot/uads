@@ -134,5 +134,5 @@ function required(name) { const value = valueOf(name); if (!value) fail(`${name}
 function valueOf(name) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : null; }
 function numberOrNull(value) { const number = Number(value); return Number.isSafeInteger(number) && number > 0 ? number : null; }
 function formatTests(validation) { return `${validation.testFilesPassed ?? "unknown"} files; ${validation.testsPassed ?? "unknown"} passed; ${validation.testsFailed ?? "unknown"} failed`; }
-function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
+function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

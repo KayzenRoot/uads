@@ -35,6 +35,9 @@ function compileSchema(schemaFile: string, schemaRoot?: string): CompiledValidat
   }
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   applyAjvFormats(ajv);
+  if (schemaFile === "specialist-registry.schema.json") {
+    ajv.addSchema(loadJsonSchema("specialist-profile.schema.json", root));
+  }
   const validate = ajv.compile(loadJsonSchema(schemaFile, root)) as CompiledValidator;
   validators.set(key, validate);
   return validate;

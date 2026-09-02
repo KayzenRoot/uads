@@ -8,7 +8,7 @@ export const DIRECT_REVIEW_ARTIFACT_RETENTION_DAYS = 90;
 export const REQUIRED_GATES = [
   "install", "lint", "typecheck", "build", "action-pins", "tests",
   "eval-orchestrator", "eval-execution", "eval-context", "eval-fault",
-  "eval-cost", "eval-model-routing", "skills-validation", "validate",
+  "eval-cost", "eval-model-routing", "eval-specialist-routing", "skills-validation", "validate",
   "npm-audit", "packaging",
 ];
 
@@ -25,6 +25,7 @@ export const GATE_STEP_NAMES = {
   "eval-fault": "Fault eval",
   "eval-cost": "Cost eval",
   "eval-model-routing": "Model routing eval",
+  "eval-specialist-routing": "Specialist routing eval",
   "skills-validation": "Skills preflight",
   validate: "Validate foundation",
   "npm-audit": "Audit dependencies",
@@ -179,7 +180,7 @@ function summariesFromLogs(logs) {
   const vitest = parseVitestSummary(source.tests ?? "");
   const evals = Object.fromEntries([
     ["orchestrator", "eval-orchestrator"], ["execution", "eval-execution"], ["context", "eval-context"],
-    ["fault", "eval-fault"], ["cost", "eval-cost"], ["modelRouting", "eval-model-routing"],
+    ["fault", "eval-fault"], ["cost", "eval-cost"], ["modelRouting", "eval-model-routing"], ["specialistRouting", "eval-specialist-routing"],
   ].map(([name, log]) => [name, parseEvalSummary(source[log] ?? "")]));
   return {
     ...vitest,
@@ -188,7 +189,7 @@ function summariesFromLogs(logs) {
   };
 }
 
-function baseValidation(summary, steps) {
+function baseValidation(summary, steps, input) {
   return {
     testFilesPassed: summary.testFilesPassed,
     testsPassed: summary.testsPassed,
@@ -199,6 +200,9 @@ function baseValidation(summary, steps) {
     fault: summary.fault,
     cost: summary.cost,
     modelRouting: summary.modelRouting,
+    specialistRouting: summary.specialistRouting,
+    specialistPolicyDigest: typeof input?.specialistPolicyDigest === "string" && /^[0-9a-f]{64}$/i.test(input.specialistPolicyDigest) ? input.specialistPolicyDigest.toLowerCase() : null,
+    builtinSpecialistCatalogDigest: typeof input?.builtinSpecialistCatalogDigest === "string" && /^[0-9a-f]{64}$/i.test(input.builtinSpecialistCatalogDigest) ? input.builtinSpecialistCatalogDigest.toLowerCase() : null,
     npmAudit: { outcome: steps["npm-audit"] ?? summary.npmAudit.outcome, highOrGreaterVulnerabilities: summary.npmAudit.highOrGreaterVulnerabilities },
     packaging: { outcome: steps.packaging ?? "unknown" },
   };
@@ -245,7 +249,7 @@ export function createCiGateReceipt(input) {
     workflow,
     comparison: normalizeComparison(input.comparison, commitSha),
     requiredGates,
-    validation: baseValidation(summaries, gates),
+    validation: baseValidation(summaries, gates, input),
     provenance: {
       generatedByScript: "scripts/github/generate-ci-gate-receipt.mjs",
       evidenceContractDigest: "",

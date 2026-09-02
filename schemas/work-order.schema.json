@@ -68,6 +68,33 @@
     "affectedAreas": { "type": "array", "items": { "type": "string" } },
     "specialists": { "type": "array", "items": { "type": "string" } },
     "assuranceReviewers": { "type": "array", "items": { "type": "string" } },
+    "specialistSelectionPlanId": { "type": "string", "pattern": "^sp_[a-f0-9]{16}$" },
+    "specialistSelectionDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistRegistryDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistPolicyDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistAssignments": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["specialistId", "role", "objective", "coveredDomains", "relevantAffectedAreas", "relevantFiles", "relevantGates", "evidenceObligations", "riskLevel", "forbiddenScope", "dependencyGroup", "parallelEligible"],
+        "properties": {
+          "specialistId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,95}$" },
+          "role": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "objective": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "coveredDomains": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 64 } },
+          "relevantAffectedAreas": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 160 } },
+          "relevantFiles": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 240 } },
+          "relevantGates": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 96 } },
+          "evidenceObligations": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 160 } },
+          "riskLevel": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+          "forbiddenScope": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 240 } },
+          "dependencyGroup": { "type": "integer", "minimum": 1, "maximum": 8 },
+          "parallelEligible": { "type": "boolean" }
+        }
+      }
+    },
     "qualityGates": { "type": "array", "items": { "type": "string" } },
     "contextRadius": {
       "type": "string",

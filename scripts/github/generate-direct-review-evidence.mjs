@@ -25,6 +25,7 @@ const logs = Object.fromEntries([
   "eval-fault",
   "eval-cost",
   "eval-model-routing",
+  "eval-specialist-routing",
   "npm-audit",
 ].map((id) => [id, readLog(path.join(logRoot, `uads-${id}.log`))]));
 

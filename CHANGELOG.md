@@ -13,6 +13,23 @@ All notable changes to UADS (NexLabs) are documented here.
 
 - Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
 
+## [0.9.0] - 2026-09-02
+
+### Added
+
+- Global-first Specialist Registry with 25 bounded built-in profiles: 11 core roles, 14 domain specialists, and distinct security, performance, and reliability assurance.
+- Deterministic specialist selection plans with profile, registry, policy, Work Order, routing, impact, change, and gate-contract digests; minimum-sufficient greedy coverage; stable reason codes; rejection/conflict evidence; and bounded dependency/parallel groups.
+- Zero-project-footprint specialist sidecars under `~/.uads/registry/specialists/` and `~/.uads/workspaces/<project-id>/specialist-routing/`, plus `uads specialists list|status|explain|select`.
+- SR1–SR20 specialist-routing evaluation suite, adversarial registry/identity tests, and the required CI/Direct Review `eval-specialist-routing` gate.
+
+### Security / Scope
+
+- Specialist profiles are closed, bounded, deterministic, provider-neutral, and screened for secrets, absolute paths, commands, hooks, unknown fields, duplicate IDs, and unsafe combinations. Disabled/experimental profiles never silently satisfy required coverage; stale or cross-project selection state blocks dispatch.
+
+### Verification
+
+- The release is bound to exact-SHA CI, specialist-routing evidence and policy/catalog digests, independent Direct Review, CodeQL/Scorecard status, immutable release identity, checksums, and a privacy-minimized Review ZIP.
+
 ## [0.8.1] - 2026-09-02
 
 ### Highlights
