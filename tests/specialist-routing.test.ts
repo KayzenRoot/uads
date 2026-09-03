@@ -231,4 +231,187 @@ describe("specialist registry and deterministic routing", () => {
     expect(a.selectionPlanId).toBe(b.selectionPlanId);
     expect(a.selectionDigest).toBe(b.selectionDigest);
   });
+
+  it("uses generic verification roles for generic gate obligations", () => {
+    const plan = selectSpecialistPlan(
+      input({
+        domains: ["general"],
+        gates: ["unit-test"],
+        requiredEvidence: ["gate:unit-test"],
+      }),
+    );
+    expect(plan.status).toBe("SELECTED");
+    expect(plan.selected.map((item) => item.specialistId)).toContain("test-engineer");
+    expect(plan.selected.map((item) => item.specialistId)).not.toEqual(
+      expect.arrayContaining(["finance-math-specialist", "web3-contract-specialist"]),
+    );
+    expect(
+      plan.coveredObligations.find((item) => item.obligationId === "gate:unit-test")?.specialistId,
+    ).toBe("test-engineer");
+  });
+
+  it("requires the declared security and performance assurance roles", () => {
+    const security = selectSpecialistPlan(
+      input({
+        gates: ["security-review"],
+        requiredEvidence: ["gate:security-review"],
+      }),
+    );
+    expect(security.status).toBe("SELECTED");
+    expect(security.assurance.map((item) => item.specialistId)).toContain("security-reviewer");
+    expect(
+      security.coveredObligations.find((item) => item.obligationId === "gate:security-review")?.specialistId,
+    ).toBe("security-reviewer");
+
+    const performance = selectSpecialistPlan(
+      input({
+        gates: ["performance-check"],
+        requiredEvidence: ["gate:performance-check"],
+      }),
+    );
+    expect(performance.status).toBe("SELECTED");
+    expect(performance.assurance.map((item) => item.specialistId)).toContain("performance-reviewer");
+  });
+
+  it("routes gate-only Web3, architecture, and release obligations", () => {
+    const web3 = selectSpecialistPlan(
+      input({
+        gates: ["web3-fuzz", "web3-invariant"],
+        requiredEvidence: ["gate:web3-fuzz", "gate:web3-invariant"],
+      }),
+    );
+    expect(web3.status).toBe("SELECTED");
+    expect(web3.selected.map((item) => item.specialistId)).toContain("web3-contract-specialist");
+
+    const architecture = selectSpecialistPlan(
+      input({
+        gates: ["architecture-conformance"],
+        requiredEvidence: ["gate:architecture-conformance"],
+      }),
+    );
+    expect(architecture.status).toBe("SELECTED");
+    expect(architecture.selected.map((item) => item.specialistId)).toContain("software-architect");
+
+    const release = selectSpecialistPlan(
+      input({
+        gates: ["release-check"],
+        requiredEvidence: ["gate:release-check"],
+      }),
+    );
+    expect(release.status).toBe("SELECTED");
+    expect(release.selected.map((item) => item.specialistId)).toContain("release-specialist");
+  });
+
+  it("blocks unknown gates and unproven free-form evidence", () => {
+    const unknownGate = selectSpecialistPlan(
+      input({
+        gates: ["unknown-gate"],
+        requiredEvidence: ["gate:unknown-gate"],
+      }),
+    );
+    expect(unknownGate.status).toBe("BLOCKED");
+    expect(unknownGate.blockedReasonCodes).toContain("UNMET_REQUIRED_EVIDENCE");
+
+    const unknownEvidence = selectSpecialistPlan(
+      input({
+        requiredEvidence: ["an evidence producer that does not exist"],
+      }),
+    );
+    expect(unknownEvidence.status).toBe("BLOCKED");
+    expect(unknownEvidence.blockedReasonCodes).toContain("UNMET_REQUIRED_EVIDENCE");
+  });
+
+  it("fails closed when the only canonical obligation producer is disabled", () => {
+    const base = builtinSpecialistRegistry(ROOT);
+    const disabled = normalizeSpecialistProfile({
+      ...base.profiles.find((item) => item.specialistId === "finance-math-specialist")!,
+      status: "disabled",
+      profileDigest: undefined,
+    }, "user-config");
+    const registry = createSpecialistRegistry([
+      ...base.profiles.filter((item) => item.specialistId !== "finance-math-specialist"),
+      disabled,
+    ]);
+    const plan = selectSpecialistPlan({
+      ...input({
+        domains: ["general"],
+        gates: ["financial-numerical-validation"],
+        requiredEvidence: ["gate:financial-numerical-validation"],
+      }),
+      registry,
+    });
+    expect(plan.status).toBe("BLOCKED");
+    expect(plan.blockedReasonCodes).toContain("UNMET_REQUIRED_EVIDENCE");
+    expect(plan.selected.map((item) => item.specialistId)).not.toContain("finance-math-specialist");
+  });
+
+  it("does not use an experimental assurance profile for critical obligations", () => {
+    const base = builtinSpecialistRegistry(ROOT);
+    const experimental = normalizeSpecialistProfile({
+      ...base.profiles.find((item) => item.specialistId === "security-reviewer")!,
+      status: "experimental",
+      profileDigest: undefined,
+    }, "user-config");
+    const registry = createSpecialistRegistry([
+      ...base.profiles.filter((item) => item.specialistId !== "security-reviewer"),
+      experimental,
+    ]);
+    const plan = selectSpecialistPlan({
+      ...input({
+        riskLevel: "CRITICAL",
+        gates: ["security-review"],
+        requiredEvidence: ["gate:security-review"],
+      }),
+      registry,
+      allowExperimental: true,
+    });
+    expect(plan.status).toBe("BLOCKED");
+    expect(plan.blockedReasonCodes).toContain("SPECIALIST_EXPERIMENTAL_NOT_ALLOWED");
+  });
+
+  it("uses only exact affected-area and structured dependency signals", () => {
+    const base = builtinSpecialistRegistry(ROOT);
+    const areaProfile = normalizeSpecialistProfile({
+      ...base.profiles.find((item) => item.specialistId === "frontend-specialist")!,
+      specialistId: "ui-area-specialist",
+      activation: { affectedAreaAny: ["src/exact-ui"] },
+      coveredDomains: ["frontend"],
+      profileDigest: undefined,
+    }, "user-config");
+    const areaRegistry = createSpecialistRegistry([...base.profiles, areaProfile]);
+    const areaPlan = selectSpecialistPlan(input({
+      registry: areaRegistry,
+      domains: ["general"],
+      affectedAreas: ["src/exact-ui"],
+    }));
+    expect(areaPlan.selected.map((item) => item.specialistId)).toContain("ui-area-specialist");
+    expect(areaPlan.selected.find((item) => item.specialistId === "ui-area-specialist")?.reasonCodes).toContain("AFFECTED_AREA_MATCH");
+
+    const dependencyPlan = selectSpecialistPlan(input({
+      domains: ["general"],
+      dependencyInfo: ["this prose must not trigger routing"],
+      dependencySignals: { crossCutting: true, source: "host-structured" },
+    }));
+    expect(dependencyPlan.selected.map((item) => item.specialistId)).toContain("software-architect");
+    expect(dependencyPlan.selected.find((item) => item.specialistId === "software-architect")?.reasonCodes).toContain("DEPENDENCY_CROSS_CUTTING");
+  });
+
+  it("binds obligation coverage into the runtime selection identity", () => {
+    const current = input({
+      domains: ["general"],
+      gates: ["financial-numerical-validation"],
+      requiredEvidence: ["gate:financial-numerical-validation"],
+    });
+    const plan = selectSpecialistPlan(current);
+    const tampered = {
+      ...plan,
+      coveredObligations: plan.coveredObligations.map((item, index) =>
+        index === 0 ? { ...item, specialistId: "implementation-agent" } : item,
+      ),
+    };
+    expect(isSpecialistSelectionPlanCurrent(tampered, current)).toBe(false);
+    expect(plan.selectionDigest).not.toBe(
+      selectSpecialistPlan({ ...current, requiredEvidence: ["gate:unit-test"] }).selectionDigest,
+    );
+  });
 });

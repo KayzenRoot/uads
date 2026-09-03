@@ -105,6 +105,7 @@ const requiredFiles = [
   "src/eval/specialist-routing.ts",
   "evals/specialist-routing/cases.json",
   "src/kernel/specialist-router.ts",
+  "src/kernel/specialist-obligations.ts",
   "src/kernel/specialist-registry.ts",
   "src/kernel/specialist-catalog.ts",
   "src/kernel/specialist-persist.ts",

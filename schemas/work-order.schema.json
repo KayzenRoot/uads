@@ -64,6 +64,7 @@
       "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
     },
     "riskReasons": { "type": "array", "items": { "type": "string" } },
+    "constraints": { "type": "array", "items": { "type": "string" } },
     "domains": { "type": "array", "items": { "type": "string" } },
     "affectedAreas": { "type": "array", "items": { "type": "string" } },
     "specialists": { "type": "array", "items": { "type": "string" } },
@@ -72,6 +73,19 @@
     "specialistSelectionDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "specialistRegistryDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "specialistPolicyDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "specialistChangeDigest": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "specialistImpactDigest": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "specialistGateContractDigest": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "specialistRiskSignals": { "type": "array", "items": { "type": "string" } },
+    "specialistDependencySignals": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["crossCutting", "source"],
+      "properties": {
+        "crossCutting": { "type": "boolean" },
+        "source": { "enum": ["scope-classifier", "impact-report", "host-structured"] }
+      }
+    },
     "specialistAssignments": {
       "type": "array",
       "maxItems": 32,

@@ -13,6 +13,22 @@ All notable changes to UADS (NexLabs) are documented here.
 
 - Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
 
+## [0.9.1] - 2026-09-03
+
+### Highlights
+
+- Specialist gate and required-evidence obligations are now authoritative selection coverage, with inspectable required, covered, and unmet obligation records.
+- Dispatch and resume semantically revalidate Specialist Selection against the current Work Order, Routing Decision, registry, and Context/Impact identity.
+
+### Fixed
+
+- Gate-driven finance, Web3, migration/rollback, architecture, release, security, and performance routing now selects proven specialist coverage or fails closed.
+- Previously digest-only gate, affected-area, and dependency routing signals are operational only through deterministic contracts, exact tokens, and structured impact/dependency signals.
+
+### Verification
+
+- SR1–SR26 and the full validation matrix are required for the exact release SHA; v0.9.0 remains an immutable historical release.
+
 ## [0.9.0] - 2026-09-02
 
 ### Added

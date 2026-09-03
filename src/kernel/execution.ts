@@ -496,19 +496,39 @@ export function runDispatch(input: {
   if (!routing || !contextPlan) {
     throw new InvalidOrchestrationStateError("routing decision or context plan missing");
   }
-  if (workOrder.specialistSelectionPlanId) {
+  const dirty = isWorktreeDirty(ctx.repoRoot);
+  let currentSpecialistImpactDigest: string | null | undefined;
+  if (!dirty && (contextPlan.indexDigest !== null && contextPlan.indexDigest !== undefined || workOrder.specialistImpactDigest)) {
     try {
-      assertSpecialistSelectionBoundToWorkOrder(ctx.paths, workOrder, schemaRoot);
+      currentSpecialistImpactDigest = currentOrRefreshIndex({
+        repoRoot: ctx.repoRoot,
+        projectId: ctx.projectId,
+        paths: ctx.paths,
+        schemaRoot,
+      }).state.indexDigest;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (error instanceof SpecialistSelectionPersistenceError) {
-        throw new ExecutionBlockedError(`specialist routing state is unavailable: ${message}`, ["specialist selection missing, blocked, or stale"]);
-      }
-      throw error;
+      throw new ExecutionBlockedError(
+        `specialist Context/Impact state is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        ["current specialist impact identity is unavailable"],
+      );
     }
   }
+  try {
+    assertSpecialistSelectionBoundToWorkOrder(ctx.paths, workOrder, schemaRoot, {
+      routing,
+      contextPlan,
+      ...(currentSpecialistImpactDigest !== undefined ? { currentImpactDigest: currentSpecialistImpactDigest } : {}),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof SpecialistSelectionPersistenceError) {
+      throw new ExecutionBlockedError(`specialist routing state is unavailable: ${message}`, [
+        "specialist selection missing, blocked, stale, or cross-artifact mismatch",
+      ]);
+    }
+    throw error;
+  }
 
-  const dirty = isWorktreeDirty(ctx.repoRoot);
   const existing = readCurrentExecutionRun(ctx.paths, schemaRoot);
   if (dirty) {
     const blocked = existing && existing.workOrderId === workOrder.workOrderId

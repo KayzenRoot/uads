@@ -95,6 +95,9 @@ export function runSpecialistsExplainCommand(input: { cwd?: string; uadsHome?: s
       `selected: ${plan.selected.map((item) => `${item.specialistId}[${item.reasonCodes.join(",")}]`).join(", ")}`,
       `assurance: ${plan.assurance.map((item) => `${item.specialistId}[${item.reasonCodes.join(",")}]`).join(", ")}`,
       `unmetCoverage: ${plan.unmetCoverage.join(", ") || "(none)"}`,
+      `requiredObligations: ${plan.requiredObligations.length}`,
+      `coveredObligations: ${plan.coveredObligations.length}`,
+      `unmetObligations: ${plan.unmetObligations.map((item) => `${item.obligationId}[${item.reasonCode}]`).join(", ") || "(none)"}`,
       `conflicts: ${plan.conflicts.join(", ") || "(none)"}`,
       `parallelEligibleGroups: ${plan.dispatch.parallelEligibleGroups.map((group) => group.join(",")).join(" | ") || "(none)"}`,
       "rejections:",
@@ -121,8 +124,8 @@ export function runSpecialistsSelectCommand(input: { cwd?: string; uadsHome?: st
     if (checkpoint && decision && contextPlan) {
       persistPlan({
         paths: ctx.paths,
-        workOrder: { ...workOrder, status: plan.status === "BLOCKED" ? "blocked" : workOrder.status, specialists: plan.selected.map((item) => item.specialistId), assuranceReviewers: plan.assurance.map((item) => item.specialistId), specialistSelectionPlanId: plan.selectionPlanId, specialistSelectionDigest: plan.selectionDigest, specialistRegistryDigest: plan.registryDigest, specialistPolicyDigest: plan.policyDigest, specialistAssignments: plan.assignments },
-        decision: { ...decision, specialists: plan.selected.map((item) => item.specialistId), assuranceSpecialists: plan.assurance.map((item) => item.specialistId), specialistSelectionPlanId: plan.selectionPlanId, specialistSelectionDigest: plan.selectionDigest, specialistRegistryDigest: plan.registryDigest, specialistPolicyDigest: plan.policyDigest },
+        workOrder: { ...workOrder, status: plan.status === "BLOCKED" ? "blocked" : workOrder.status, specialists: plan.selected.map((item) => item.specialistId), assuranceReviewers: plan.assurance.map((item) => item.specialistId), specialistSelectionPlanId: plan.selectionPlanId, specialistSelectionDigest: plan.selectionDigest, specialistRegistryDigest: plan.registryDigest, specialistPolicyDigest: plan.policyDigest, specialistChangeDigest: plan.changeDigest, specialistImpactDigest: plan.impactDigest, specialistGateContractDigest: plan.gateContractDigest, specialistAssignments: plan.assignments },
+        decision: { ...decision, specialists: plan.selected.map((item) => item.specialistId), assuranceSpecialists: plan.assurance.map((item) => item.specialistId), specialistSelectionPlanId: plan.selectionPlanId, specialistSelectionDigest: plan.selectionDigest, specialistRegistryDigest: plan.registryDigest, specialistPolicyDigest: plan.policyDigest, specialistChangeDigest: plan.changeDigest, specialistImpactDigest: plan.impactDigest, specialistGateContractDigest: plan.gateContractDigest },
         checkpoint: { ...checkpoint, status: plan.status === "BLOCKED" ? "blocked" : checkpoint.status, blockers: [...plan.unmetCoverage, ...plan.conflicts] },
         contextPlan,
         schemaRoot,

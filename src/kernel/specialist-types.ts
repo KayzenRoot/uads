@@ -43,6 +43,47 @@ export type SpecialistActivation = {
   affectedAreaAny?: string[];
 };
 
+export type SpecialistDependencySignals = {
+  crossCutting: boolean;
+  source: "scope-classifier" | "impact-report" | "host-structured";
+};
+
+export type SpecialistObligationKind =
+  | "domain"
+  | "gate"
+  | "evidence"
+  | "assurance"
+  | "affected-area"
+  | "dependency";
+
+export type SpecialistObligation = {
+  obligationId: string;
+  kind: SpecialistObligationKind;
+  domainId: string | null;
+  gateId: string | null;
+  evidenceId: string | null;
+  affectedArea: string | null;
+  specialistId: string | null;
+};
+
+export type SpecialistObligationCoverage = {
+  obligationId: string;
+  gateId: string | null;
+  evidenceId: string | null;
+  specialistId: string;
+  reasonCode: string;
+  coverageKind: SpecialistObligationKind;
+};
+
+export type SpecialistUnmetObligation = {
+  obligationId: string;
+  gateId: string | null;
+  evidenceId: string | null;
+  specialistId: string | null;
+  reasonCode: string;
+  coverageKind: SpecialistObligationKind;
+};
+
 export type SpecialistProfile = {
   schema: "uads.specialist-profile";
   schemaVersion: typeof SPECIALIST_SCHEMA_VERSION;
@@ -128,6 +169,9 @@ export type SpecialistSelectionPlan = {
   assignments: SpecialistAssignment[];
   rejections: SpecialistRejection[];
   unmetCoverage: string[];
+  requiredObligations: SpecialistObligation[];
+  coveredObligations: SpecialistObligationCoverage[];
+  unmetObligations: SpecialistUnmetObligation[];
   conflicts: string[];
   dispatch: SpecialistDispatchPlan;
   status: "SELECTED" | "BLOCKED";
@@ -147,10 +191,12 @@ export type SpecialistRoutingInput = {
   scopeClass: ScopeClass;
   riskLevel: RiskLevel;
   riskSignals: string[];
+  riskReasons?: string[];
   affectedAreas: string[];
   gates: string[];
   requiredEvidence: string[];
   dependencyInfo?: string[];
+  dependencySignals?: SpecialistDependencySignals | null;
   changeDigest?: string | null;
   impactDigest?: string | null;
   gateContractDigest?: string | null;

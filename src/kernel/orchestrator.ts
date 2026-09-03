@@ -32,9 +32,20 @@ import { routeAndPersistModelExecutionPlan } from "./model-persist.js";
 import { readCurrentModelExecutionPlan } from "./model-persist.js";
 import { resolveProjectContext } from "./project-context.js";
 import { loadSpecialistRegistry } from "./specialist-registry.js";
-import { persistSpecialistSelectionPlan, readCurrentSpecialistSelectionPlan } from "./specialist-persist.js";
-import { selectSpecialistPlan } from "./specialist-router.js";
-import type { SpecialistRoutingInput, SpecialistSelectionPlan } from "./specialist-types.js";
+import {
+  assertSpecialistSelectionBoundToWorkOrder,
+  persistSpecialistSelectionPlan,
+  readCurrentSpecialistSelectionPlan,
+} from "./specialist-persist.js";
+import {
+  computeSpecialistGateContractDigest,
+  selectSpecialistPlan,
+} from "./specialist-router.js";
+import type {
+  SpecialistDependencySignals,
+  SpecialistRoutingInput,
+  SpecialistSelectionPlan,
+} from "./specialist-types.js";
 import type {
   Checkpoint,
   ContextPlan,
@@ -46,6 +57,16 @@ import type {
 } from "./types.js";
 import type { ModelExecutionPlan } from "./model-types.js";
 import { IMPLEMENTER_ROLE } from "./types.js";
+
+function dependencySignalsFromImpact(report: {
+  supportingContext: Array<{ relation: string }>;
+  possibleImpact: Array<{ relation: string }>;
+}): SpecialistDependencySignals | null {
+  const crossCutting = [...report.supportingContext, ...report.possibleImpact].some(
+    (item) => item.relation === "dependency" || item.relation === "dependent",
+  );
+  return crossCutting ? { crossCutting: true, source: "impact-report" } : null;
+}
 
 export function runInspect(input: { cwd?: string; uadsHome?: string; json?: boolean }): {
   map: RepositoryMap;
@@ -153,6 +174,10 @@ export function planFromIntake(input: {
     "implement only NECESSARY scope",
     `${IMPLEMENTER_ROLE} is not the sole final reviewer`,
   ];
+  const acceptanceCriteria =
+    input.intake.acceptanceCriteria.length > 0
+      ? input.intake.acceptanceCriteria
+      : ["Requested objective is met", "Selected gates have evidence", "Independent review completed if implementation occurred"];
   const specialistRoutingInput: SpecialistRoutingInput = {
     projectId: input.projectId,
     workOrderId,
@@ -160,16 +185,18 @@ export function planFromIntake(input: {
     constraints: input.intake.constraints,
     inScope: scoped.necessary,
     outOfScope: scope.outOfScope,
-    acceptanceCriteria: input.intake.acceptanceCriteria,
+    acceptanceCriteria,
     domains: domainIds,
     scopeClass: scope.scopeClass,
     riskLevel: risk.level,
     riskSignals: input.intake.riskSignals,
+    riskReasons: risk.reasons,
     affectedAreas: input.intake.affectedAreas,
     gates: gates.map((gate) => gate.id),
     requiredEvidence: gates.map((gate) => gateEvidence(gate.id)),
     dependencyInfo: specialistDependencies,
-    gateContractDigest: sha256Hex(JSON.stringify(gates)),
+    dependencySignals: null,
+    gateContractDigest: computeSpecialistGateContractDigest(gates),
     registry: specialistRegistry,
   };
   let specialistPlan = selectSpecialistPlan(specialistRoutingInput);
@@ -198,6 +225,11 @@ export function planFromIntake(input: {
     specialistSelectionDigest: specialistPlan.selectionDigest,
     specialistRegistryDigest: specialistPlan.registryDigest,
     specialistPolicyDigest: specialistPlan.policyDigest,
+    specialistChangeDigest: specialistPlan.changeDigest,
+    specialistImpactDigest: specialistPlan.impactDigest,
+    specialistGateContractDigest: specialistPlan.gateContractDigest,
+    specialistRiskSignals: input.intake.riskSignals,
+    specialistDependencySignals: specialistRoutingInput.dependencySignals ?? null,
     gates,
     contextRadius: context.radius,
     contextReason: context.reason,
@@ -235,6 +267,7 @@ export function planFromIntake(input: {
     recommendations: scope.recommendations,
     riskLevel: risk.level,
     riskReasons: risk.reasons,
+    constraints: input.intake.constraints,
     domains: domainIds,
     affectedAreas: input.intake.affectedAreas,
     specialists: specialistPlan.selected.map((item) => item.specialistId),
@@ -243,6 +276,11 @@ export function planFromIntake(input: {
     specialistSelectionDigest: specialistPlan.selectionDigest,
     specialistRegistryDigest: specialistPlan.registryDigest,
     specialistPolicyDigest: specialistPlan.policyDigest,
+    specialistChangeDigest: specialistPlan.changeDigest,
+    specialistImpactDigest: specialistPlan.impactDigest,
+    specialistGateContractDigest: specialistPlan.gateContractDigest,
+    specialistRiskSignals: input.intake.riskSignals,
+    specialistDependencySignals: specialistRoutingInput.dependencySignals ?? null,
     specialistAssignments: specialistPlan.assignments,
     qualityGates: gates.map((gate) => gate.id),
     contextRadius: context.radius,
@@ -253,10 +291,7 @@ export function planFromIntake(input: {
       expansionPolicy: "expand one radius level only when evidence shows missing context",
     },
     dependencies: decision.orderConstraints,
-    acceptanceCriteria:
-      input.intake.acceptanceCriteria.length > 0
-        ? input.intake.acceptanceCriteria
-        : ["Requested objective is met", "Selected gates have evidence", "Independent review completed if implementation occurred"],
+    acceptanceCriteria,
     requiredEvidence: gates.map((gate) => gateEvidence(gate.id)),
     stopConditions: decision.stopConditions,
     autonomyBoundary: boundary,
@@ -337,9 +372,11 @@ export function planFromIntake(input: {
         },
         schemaRoot: input.schemaRoot,
       });
+      const specialistDependencySignals = dependencySignalsFromImpact(intel.report);
       specialistPlan = selectSpecialistPlan({
         ...specialistRoutingInput,
         impactDigest: intel.pack.indexDigest,
+        dependencySignals: specialistDependencySignals,
       });
       persisted = persistPlan({
         paths: input.paths,
@@ -352,6 +389,11 @@ export function planFromIntake(input: {
           specialistSelectionDigest: specialistPlan.selectionDigest,
           specialistRegistryDigest: specialistPlan.registryDigest,
           specialistPolicyDigest: specialistPlan.policyDigest,
+          specialistChangeDigest: specialistPlan.changeDigest,
+          specialistImpactDigest: specialistPlan.impactDigest,
+          specialistGateContractDigest: specialistPlan.gateContractDigest,
+          specialistRiskSignals: specialistRoutingInput.riskSignals,
+          specialistDependencySignals: specialistDependencySignals,
           specialistAssignments: specialistPlan.assignments,
           nextAction: specialistPlan.status === "BLOCKED"
             ? `Routing blocked: ${specialistPlan.blockedReasonCodes.join(", ") || "unmet specialist coverage"}. Resolve the selection plan before dispatch.`
@@ -365,6 +407,11 @@ export function planFromIntake(input: {
           specialistSelectionDigest: specialistPlan.selectionDigest,
           specialistRegistryDigest: specialistPlan.registryDigest,
           specialistPolicyDigest: specialistPlan.policyDigest,
+          specialistChangeDigest: specialistPlan.changeDigest,
+          specialistImpactDigest: specialistPlan.impactDigest,
+          specialistGateContractDigest: specialistPlan.gateContractDigest,
+          specialistRiskSignals: specialistRoutingInput.riskSignals,
+          specialistDependencySignals: specialistDependencySignals,
         },
         checkpoint: {
           ...persisted.checkpoint,
@@ -457,6 +504,25 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     : null;
   const execution = loadExecutionView({ cwd, uadsHome: input.uadsHome });
   const contextPlan = readContextPlan(ctx.paths);
+  let specialistSelectionStatus: string | null = null;
+  let specialistSelectionBlocker: string | null = null;
+  if (workOrder) {
+    try {
+      if (!decision || !contextPlan) {
+        throw new Error("routing decision or context plan missing for specialist revalidation");
+      }
+      const specialistPlan = assertSpecialistSelectionBoundToWorkOrder(
+        ctx.paths,
+        workOrder,
+        schemaRoot,
+        { routing: decision, contextPlan },
+      );
+      specialistSelectionStatus = specialistPlan.status;
+    } catch (error) {
+      specialistSelectionStatus = "blocked-stale-or-mismatch";
+      specialistSelectionBlocker = `specialist selection revalidation failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
   const failure = readFailureStatusFields(ctx.paths);
   const cache = readCacheStatusCompact(ctx.paths, ctx.projectId);
   const cost = readCostStatusCompact(ctx.paths, ctx.projectId);
@@ -467,11 +533,15 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
       return null;
     }
   })();
+  const blockers = [
+    ...(execution.blockers.length > 0 ? execution.blockers : checkpoint.blockers),
+    ...(specialistSelectionBlocker ? [specialistSelectionBlocker] : []),
+  ];
   return {
     projectId: ctx.projectId,
     workOrderId: checkpoint.workOrderId,
     phase: checkpoint.phase,
-    status: execution.executionRunId ? String(execution.status) : checkpoint.status,
+    status: specialistSelectionBlocker ? "blocked" : execution.executionRunId ? String(execution.status) : checkpoint.status,
     objective: workOrder?.objective ?? null,
     completedSteps: checkpoint.completedSteps,
     scopeClass: workOrder?.scopeClass ?? decision?.scopeClass ?? null,
@@ -481,8 +551,12 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     repositoryMapDigest: checkpoint.repositoryMapDigest,
     contextPlanRef: checkpoint.contextPlanRef,
     evidenceRefs: checkpoint.evidenceRefs,
-    blockers: execution.blockers.length > 0 ? execution.blockers : checkpoint.blockers,
-    nextAction: execution.executionRunId ? execution.nextAction : checkpoint.nextAction,
+    blockers,
+    nextAction: specialistSelectionBlocker
+      ? "Specialist selection is stale or mismatched. Re-route the current Work Order before dispatch."
+      : execution.executionRunId
+        ? execution.nextAction
+        : checkpoint.nextAction,
     executionRunId: execution.executionRunId,
     attempt: execution.attempt,
     changeDigest: execution.changeDigest,
@@ -506,7 +580,7 @@ export function runResume(input: { cwd?: string; uadsHome?: string }): ResumePac
     selectedProfileId: modelPlan?.selectedProfileId ?? null,
     modelSelectionMode: modelPlan?.selectionMode ?? null,
     specialistSelectionPlanId: workOrder?.specialistSelectionPlanId ?? null,
-    specialistSelectionStatus: (() => {
+    specialistSelectionStatus: specialistSelectionStatus ?? (() => {
       try { return readCurrentSpecialistSelectionPlan(ctx.paths, schemaRoot)?.status ?? null; } catch { return "blocked-corrupt-or-unavailable"; }
     })(),
   };

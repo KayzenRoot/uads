@@ -1,3 +1,5 @@
+import type { SpecialistDependencySignals } from "./specialist-types.js";
+
 export const SCHEMA_VERSION = "0.2.0";
 
 export type ScopeClass = "trivial" | "local" | "cross-cutting" | "architectural";
@@ -71,6 +73,11 @@ export type RoutingDecision = {
   specialistSelectionDigest?: string;
   specialistRegistryDigest?: string;
   specialistPolicyDigest?: string;
+  specialistChangeDigest?: string | null;
+  specialistImpactDigest?: string | null;
+  specialistGateContractDigest?: string | null;
+  specialistRiskSignals?: string[];
+  specialistDependencySignals?: SpecialistDependencySignals | null;
   gates: Array<{ id: string; reason: string }>;
   contextRadius: ContextRadius;
   contextReason: string;
@@ -98,6 +105,7 @@ export type WorkOrder = {
   recommendations: string[];
   riskLevel: RiskLevel;
   riskReasons: string[];
+  constraints?: string[];
   domains: string[];
   affectedAreas: string[];
   specialists: string[];
@@ -106,6 +114,11 @@ export type WorkOrder = {
   specialistSelectionDigest?: string;
   specialistRegistryDigest?: string;
   specialistPolicyDigest?: string;
+  specialistChangeDigest?: string | null;
+  specialistImpactDigest?: string | null;
+  specialistGateContractDigest?: string | null;
+  specialistRiskSignals?: string[];
+  specialistDependencySignals?: SpecialistDependencySignals | null;
   specialistAssignments?: Array<{
     specialistId: string;
     role: string;

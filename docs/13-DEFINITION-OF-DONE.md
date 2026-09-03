@@ -142,11 +142,19 @@ Complete the correction only when all are true:
 - The release consumes the exact canonical Direct Review artifact and includes checksummed `github-direct-review-evidence.json` and `github-review-index.json`; index pointers cross-check CI run/attempt, Direct Review run, tag, release run, assets, and evidence SHA-256
 - Existing historical tag targets remain unchanged and no immutable tag is moved or recreated
 - Ordinary push comparisons are computed from full history with exact base/head/count, a complete changed-path-set digest, bounded/sanitized paths, truncation metadata, and an explicit unavailable/not-applicable reason when comparison cannot apply
-- The specialist-routing package/release version is 0.9.0; historical v0.8.0 and v0.8.1 remain immutable
+- Prompt 008 specialist-routing package/release version was 0.9.0; its historical tag remains immutable alongside v0.8.0 and v0.8.1
 # Prompt 009 completion conditions
 
 - A valid global registry contains the built-in core and bounded domain catalog.
 - A deterministic selection plan is persisted outside the managed repository and bound to Work Order/routing/registry/policy identities.
-- Required domain and assurance coverage is present, or the plan is explicitly `BLOCKED` with stable reason codes.
+- Required domain, gate, evidence, and assurance coverage is present, or the plan is explicitly `BLOCKED` with stable reason codes.
 - Independent review is separate from implementation; security, performance, and reliability assurance are distinct.
-- SR1–SR20, adversarial tests, existing validation matrix, CI receipt, Direct Review, and release evidence all pass for the exact release commit.
+- SR1–SR26, adversarial tests, semantic dispatch/resume revalidation, existing validation matrix, CI receipt, Direct Review, and release evidence all pass for the exact release commit.
+
+## Prompt 009 Correction 01 / v0.9.1
+
+- Canonical gate and required-evidence obligations participate in deterministic minimum-sufficient specialist selection; coverage is persisted as required, covered, and unmet machine-readable obligations.
+- Gate-only finance, Web3, migration/rollback, architecture, release, security, and performance work selects the required specialist or blocks with `UNMET_REQUIRED_EVIDENCE`.
+- Affected-area activation is exact-token only; dependency escalation requires a structured deterministic signal and never parses arbitrary prose or filenames.
+- Dispatch and resume reconstruct current specialist routing semantics and cross-check Work Order, Routing Decision, registry, Context/Impact identity, selected/assurance IDs, and assignments. Missing, stale, tampered, or divergent state fails closed.
+- The v0.9.0 historical release and tag remain immutable; v0.9.1 is published only from the exact final main SHA after CI, Direct Review, CodeQL/Scorecard, and release verification.

@@ -29,7 +29,7 @@ Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reser
 | cost | Token budget by capability class plus Cost Governor, ledger, and QPT snapshot |
 | cache | Evidence Cache validity, reuse policy, and derived current-digest evidence |
 | model routing | Provider-neutral Model Profiles, runtime capability intersection, deterministic Model Execution Plans |
-| specialist routing | Global Specialist Registry, deterministic coverage/assurance selection, bounded dispatch groups, selection identity and stale-plan guards |
+| specialist routing | Global Specialist Registry, deterministic domain/gate/evidence obligation coverage, independent assurance, bounded dispatch groups, semantic selection identity, and stale-plan guards |
 | risk | Structured-signal risk classification |
 | gates | Selected quality/security/performance gates |
 | state | Atomic sidecar checkpoints, execution runs, and resume packets |
@@ -107,7 +107,7 @@ USER REQUEST
 
 The Model Execution Plan is computed by capability floor first, then deterministic cost/latency tie-breaking. It carries registry/runtime/policy/change identities and is revalidated before dispatch. No model provider HTTP call is part of this data flow.
 
-The Specialist Selection Plan is computed by deterministic minimum-sufficient coverage first, then stable profile priority and ID tie-breaking. It carries profile-level role assignments, evidence obligations, forbidden scope, and dependency/parallel groups. Implementation and assurance are never dispatched as one parallel group; the current plan is checked against the Work Order and current registry before execution.
+The Specialist Selection Plan is computed by deterministic minimum-sufficient coverage first, then stable profile priority and ID tie-breaking. It carries machine-readable required/covered/unmet obligations, profile-level role assignments, evidence obligations, forbidden scope, and dependency/parallel groups. Canonical gate evidence comes from the gate registry; free-form evidence uses exact normalized producer matching or bounded aliases. Affected-area routing requires exact activation tokens, and dependency escalation requires a structured deterministic signal. Implementation and assurance are never dispatched as one parallel group; dispatch and resume reconstruct the current routing input and cross-check the Work Order, Routing Decision, registry, Context/Impact identity, selected IDs, assurance IDs, and assignments before execution.
 
 ## Freeze status
 
