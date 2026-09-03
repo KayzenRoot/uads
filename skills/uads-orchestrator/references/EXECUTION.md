@@ -22,4 +22,12 @@ Command PASS evidence requires `kind=command`, command text, exit 0, and a captu
 
 If isolated reviewer context is unavailable, do not fake approval; record BLOCKED. The implementation agent must not self-approve.
 
+Before host handoff, run `uads adapters prepare <adapter>`. This reconstructs
+and validates the current Work Order, Routing Decision, Specialist Selection
+Plan, Model Execution Plan, runtime capability identity, and Context/Impact
+identity before writing a sidecar-only Host Dispatch Bundle. A host adapter
+can narrow concurrency to sequential role cycling when subagents or parallel
+agents are not proven; it cannot broaden any UADS selection or quality
+obligation and does not call a model provider.
+
 Context expansion is one radius step (`uads context expand --reason ...`). C5 stays exceptional (`--approve-c5`). Expansion is not permission to edit unrelated areas.

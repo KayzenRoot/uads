@@ -6,7 +6,7 @@
 
 UADS is a pre-1.0, global-first autonomous software engineering orchestration framework for specialist delegation, independent review, evidence-based quality gates, context intelligence, and cost-aware execution.
 
-This repository is the public open-source UADS product. The latest release is [v0.9.1](https://github.com/KayzenRoot/uads/releases/tag/v0.9.1). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+This repository is the public open-source UADS product. The latest release is [v0.10.0](https://github.com/KayzenRoot/uads/releases/tag/v0.10.0). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -18,6 +18,7 @@ This repository is the public open-source UADS product. The latest release is [v
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
 - Global specialist registry with 25 bounded built-in profiles, deterministic domain/gate/evidence obligation coverage, independent assurance, and semantic stale-plan binding
+- Common Cursor/Codex/Generic Agent Skills adapters with ownership-safe global installation and sidecar-only Host Dispatch Bundles
 - Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap
 
@@ -61,6 +62,10 @@ node dist/cli.js capabilities status --json
 node dist/cli.js specialists list --json
 node dist/cli.js specialists status --json
 node dist/cli.js specialists explain --json
+node dist/cli.js adapters list --json
+node dist/cli.js adapters detect --json
+node dist/cli.js adapters status --json
+node dist/cli.js adapters prepare generic-agent-skills --json
 node dist/cli.js review
 ```
 
@@ -82,14 +87,16 @@ Review bundles and validation evidence are written **outside** the project:
 
 ## Layout
 
+Prompt 010 adds strict host adapter state and Host Dispatch Bundle contracts alongside the existing schemas.
+
 | Path | Role |
 | --- | --- |
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator, execution, context, fault, cost, model-routing, and specialist-routing evals |
+| `evals/` | Orchestrator, execution, context, fault, cost, model-routing, specialist-routing, and adapter evals |
 | `core/` | Reserved orchestrator modules |
-| `adapters/` | Cursor / Codex / generic adapters |
+| `adapters/` | Common Cursor / Codex / Generic Agent Skills host adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, model-routing, and specialist-routing contracts |
 | `docs/` | Architecture Freeze v0.2 |
 | `scripts/` | Install, GitHub audit/direct-review, release, review, validate |

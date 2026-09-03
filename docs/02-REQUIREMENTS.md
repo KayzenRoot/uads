@@ -29,6 +29,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F21 | Provider-neutral Model Execution Plan and runtime capability negotiation persist globally/sidecar with no provider API calls |
 | F22 | Model routing eval suite (`npm run eval:model-routing`) covers MR1–MR22 and fail-closed adversarial behavior |
 | F23 | Specialist selection derives deterministic domain, gate, evidence, assurance, affected-area, and structured dependency obligations; dispatch/resume reject stale or divergent specialist state |
+| F24 | Cursor, Codex, and Generic Agent Skills adapters detect, install, uninstall, and prepare identity-bound host dispatch bundles using global-only ownership-safe state |
 
 ## Non-functional
 

@@ -89,6 +89,8 @@ const requiredFiles = [
   "schemas/specialist-registry.schema.json",
   "schemas/specialist-registry-state.schema.json",
   "schemas/specialist-selection-plan.schema.json",
+  "schemas/host-adapter-state.schema.json",
+  "schemas/host-dispatch-bundle.schema.json",
   "schemas/github-review-index.schema.json",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
@@ -104,11 +106,23 @@ const requiredFiles = [
   "src/eval/model-routing.ts",
   "src/eval/specialist-routing.ts",
   "evals/specialist-routing/cases.json",
+  "src/eval/adapters.ts",
+  "evals/adapters/cases.json",
   "src/kernel/specialist-router.ts",
   "src/kernel/specialist-obligations.ts",
   "src/kernel/specialist-registry.ts",
   "src/kernel/specialist-catalog.ts",
   "src/kernel/specialist-persist.ts",
+  "src/adapters/host-adapter-types.ts",
+  "src/adapters/host-adapter.ts",
+  "src/adapters/host-adapter-registry.ts",
+  "src/adapters/host-adapter-detect.ts",
+  "src/adapters/host-adapter-install.ts",
+  "src/adapters/host-dispatch.ts",
+  "src/adapters/cursor-adapter.ts",
+  "src/adapters/codex-adapter.ts",
+  "src/adapters/generic-agent-skills-adapter.ts",
+  "src/commands/adapters.ts",
   "src/github/review-index.ts",
   "evals/model-routing/cases.json",
   "src/kernel/fault-localization.ts",
@@ -179,6 +193,7 @@ runNpmGate(["run", "eval:fault"]);
 runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "eval:specialist-routing"]);
+runNpmGate(["run", "eval:adapters"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 runNpmGate(["run", "validate:direct-review"]);
@@ -199,7 +214,7 @@ for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) 
     process.exit(1);
   }
   if (args[0] === "--help") {
-    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "models", "capabilities", "specialists", "status", "resume", "review", "doctor"]) {
+    for (const command of ["inspect", "plan", "dispatch", "verify", "finalize", "evidence", "assurance", "index", "impact", "context", "failure", "diagnose", "failures", "cache", "cost", "models", "capabilities", "specialists", "adapters", "status", "resume", "review", "doctor"]) {
       if (!result.stdout.includes(command)) {
         process.stderr.write(`CLI help missing command: ${command}\n`);
         process.exit(1);

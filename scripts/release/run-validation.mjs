@@ -26,6 +26,7 @@ const commands = [
   ["eval-cost", ["run", "eval:cost"]],
   ["eval-model-routing", ["run", "eval:model-routing"]],
   ["eval-specialist-routing", ["run", "eval:specialist-routing"]],
+  ["eval-adapters", ["run", "eval:adapters"]],
   ["skills-validation", ["run", "validate:skills"]],
   ["action-pin-validation", ["run", "validate:actions"]],
   ["direct-review-validation", ["run", "validate:direct-review", "--", ...(directReview ? ["--file", path.resolve(directReview), "--expected-sha", currentCommit, "--expected-version", packageJson.version] : [])]],

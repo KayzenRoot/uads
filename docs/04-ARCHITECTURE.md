@@ -30,6 +30,7 @@ Kernel implementation lives in `src/kernel/` (Prompt 002). `core/` remains reser
 | cache | Evidence Cache validity, reuse policy, and derived current-digest evidence |
 | model routing | Provider-neutral Model Profiles, runtime capability intersection, deterministic Model Execution Plans |
 | specialist routing | Global Specialist Registry, deterministic domain/gate/evidence obligation coverage, independent assurance, bounded dispatch groups, semantic selection identity, and stale-plan guards |
+| host adapters | Common Cursor/Codex/Generic Agent Skills contract, read-only detection, global ownership-safe resources, conservative runtime provenance, and sidecar Host Dispatch Bundles |
 | risk | Structured-signal risk classification |
 | gates | Selected quality/security/performance gates |
 | state | Atomic sidecar checkpoints, execution runs, and resume packets |
@@ -44,6 +45,9 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
   skills/
   agents/
   adapters/
+    cursor/state.json
+    codex/state.json
+    generic-agent-skills/state.json
   cache/
   registry/
     models/profiles.json
@@ -83,6 +87,9 @@ Foundation CLI lives in `src/` and implements fingerprint, sidecar paths, review
       specialist-routing/
         current.json
         history/
+      host-dispatch/
+        current.json
+        history/
       reviews/
 ```
 
@@ -108,6 +115,13 @@ USER REQUEST
 The Model Execution Plan is computed by capability floor first, then deterministic cost/latency tie-breaking. It carries registry/runtime/policy/change identities and is revalidated before dispatch. No model provider HTTP call is part of this data flow.
 
 The Specialist Selection Plan is computed by deterministic minimum-sufficient coverage first, then stable profile priority and ID tie-breaking. It carries machine-readable required/covered/unmet obligations, profile-level role assignments, evidence obligations, forbidden scope, and dependency/parallel groups. Canonical gate evidence comes from the gate registry; free-form evidence uses exact normalized producer matching or bounded aliases. Affected-area routing requires exact activation tokens, and dependency escalation requires a structured deterministic signal. Implementation and assurance are never dispatched as one parallel group; dispatch and resume reconstruct the current routing input and cross-check the Work Order, Routing Decision, registry, Context/Impact identity, selected IDs, assurance IDs, and assignments before execution.
+
+Prompt 010 adds a host boundary after this validation chain. `uads adapters
+prepare <adapter>` reconstructs the same current artifacts and writes only a
+sidecar Host Dispatch Bundle. Host adapters can narrow execution to sequential
+role cycling when subagents or parallel agents are unproven, but they cannot
+change kernel-selected specialists, gates, evidence, assurance, scope, token
+limits, or model quality.
 
 ## Freeze status
 

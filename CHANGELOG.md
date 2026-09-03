@@ -13,6 +13,25 @@ All notable changes to UADS (NexLabs) are documented here.
 
 - Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
 
+## [0.10.0] - 2026-09-03
+
+### Highlights
+
+- Added one provider-neutral runtime adapter contract with fixed Cursor, Codex, and Generic Agent Skills adapters.
+- Added deterministic read-only host detection, conservative adapter Runtime Capability Snapshots, ownership-safe global installation/uninstallation, and sidecar-only Host Dispatch Bundles.
+- Added `uads adapters list|detect|status|explain|install|uninstall|prepare`.
+
+### Fixed
+
+- Adapter preparation now reconstructs and validates current UADS Work Order, Routing Decision, Specialist Selection Plan, Model Execution Plan, runtime, Context/Impact, and execution identities before creating a bundle.
+- Unmanaged or modified host resources, traversal, symlink/junction escape, stale/tampered state, and cross-project replay fail closed without touching the managed project.
+- Unknown host capabilities no longer imply subagents or parallelism; Generic Agent Skills uses sequential role cycling and adapters can only narrow UADS execution.
+
+### Verification
+
+- AD1–AD22, 42 test files / 286 tests, all existing eval suites, `eval:adapters`, exact-SHA CI, Direct Review, CodeQL, Scorecard, checksums, SBOM, and release provenance are required for this release.
+- Historical [`v0.9.1`](https://github.com/KayzenRoot/uads/releases/tag/v0.9.1) and earlier tags remain immutable.
+
 ## [0.9.1] - 2026-09-03
 
 ### Highlights

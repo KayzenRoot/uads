@@ -74,6 +74,8 @@ import { readRuntimeCapabilitySnapshot } from "./model-runtime.js";
 import type { ModelExecutionPlan } from "./model-types.js";
 import type { Checkpoint, ContextPlan, ContextRadius, RepositoryMap, WorkOrder } from "./types.js";
 import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
+import { HOST_ADAPTER_IDS } from "../adapters/host-adapter-types.js";
+import { getHostAdapterStatePath } from "../adapters/host-adapter-install.js";
 
 export class ExecutionBlockedError extends Error {
   readonly code = "BLOCKED";
@@ -1767,6 +1769,11 @@ export function collectOrchestrationSnapshot(paths: UadsPaths): Array<{ name: st
   add("models/runtime-capabilities.json", path.join(paths.runtimeCapabilities, "generic-runtime.json"));
   add("specialists/selection-plan.json", paths.currentSpecialistSelection);
   add("specialists/registry-state.json", paths.specialistState);
+  add("host-dispatch/current.json", paths.currentHostDispatch);
+  for (const adapterId of HOST_ADAPTER_IDS) {
+    add(`adapters/${adapterId}/state.json`, getHostAdapterStatePath(adapterId, paths.home));
+    add(`models/host-runtime-${adapterId}.json`, path.join(paths.runtimeCapabilities, `host-${adapterId}.json`));
+  }
   add("intelligence/index-state.json", path.join(paths.index, "index-state.json"));
   add("intelligence/current-pack.json", path.join(paths.context, "current-pack.json"));
   const run = (() => {

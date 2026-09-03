@@ -158,3 +158,12 @@ Complete the correction only when all are true:
 - Affected-area activation is exact-token only; dependency escalation requires a structured deterministic signal and never parses arbitrary prose or filenames.
 - Dispatch and resume reconstruct current specialist routing semantics and cross-check Work Order, Routing Decision, registry, Context/Impact identity, selected/assurance IDs, and assignments. Missing, stale, tampered, or divergent state fails closed.
 - The v0.9.0 historical release and tag remain immutable; v0.9.1 is published only from the exact final main SHA after CI, Direct Review, CodeQL/Scorecard, and release verification.
+
+## Prompt 010 / v0.10.0
+
+- One common provider-neutral contract registers exactly Cursor, Codex, and Generic Agent Skills adapters.
+- Detection is read-only and capabilities are conservative Runtime Capability Snapshots with explicit adapter provenance; no provider API or arbitrary command execution exists.
+- Global installation/update/uninstall uses atomic ownership hashes, preserves unrelated resources, rejects unmanaged or modified files, and blocks traversal/symlink escape without touching the managed project.
+- `uads adapters prepare` validates current Work Order, Routing Decision, Specialist Selection Plan, Model Execution Plan, runtime, Context/Impact, and execution identity before writing a sidecar-only Host Dispatch Bundle.
+- Host fallback may serialize or use role cycling, but cannot add kernel-selected specialists, assurance, gates, evidence, scope, parallelism, or model quality.
+- T1–T30-equivalent tests, AD1–AD22, the complete validation matrix, exact-SHA GitHub evidence, and release assets pass before v0.10.0 publication; v0.9.1 and earlier tags remain immutable.

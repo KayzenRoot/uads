@@ -33,6 +33,15 @@ import {
 } from "./commands/failure.js";
 import { readUadsVersion } from "./lib/version.js";
 import { runSpecialistsExplainCommand, runSpecialistsListCommand, runSpecialistsSelectCommand, runSpecialistsStatusCommand } from "./commands/specialists.js";
+import {
+  runAdaptersDetectCommand,
+  runAdaptersExplainCommand,
+  runAdaptersInstallCommand,
+  runAdaptersListCommand,
+  runAdaptersPrepareCommand,
+  runAdaptersStatusCommand,
+  runAdaptersUninstallCommand,
+} from "./commands/adapters.js";
 
 const program = new Command();
 
@@ -124,6 +133,67 @@ capabilities
   .description("Explain effective runtime capability semantics")
   .option("--json", "JSON output")
   .action((options: { json?: boolean }) => { process.stdout.write(runCapabilitiesExplainCommand({ json: options.json })); });
+
+const adapters = program.command("adapters").description("Provider-neutral host adapters and dispatch preparation");
+adapters
+  .command("list")
+  .description("List the fixed Cursor, Codex, and Generic Agent Skills adapters")
+  .option("--json", "JSON output")
+  .action((options: { json?: boolean }) => { process.stdout.write(runAdaptersListCommand({ json: options.json })); });
+adapters
+  .command("detect")
+  .description("Detect a host adapter without creating directories or files")
+  .argument("[adapter]", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string | undefined, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersDetectCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("status")
+  .description("Show compact adapter support, ownership, and prepared-bundle status")
+  .argument("[adapter]", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string | undefined, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersStatusCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("explain")
+  .description("Explain one adapter's fixed target and conservative capabilities")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersExplainCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("install")
+  .description("Install only UADS-owned resources in a global host location")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersInstallCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("uninstall")
+  .description("Remove only unchanged UADS-owned host resources")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersUninstallCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("prepare")
+  .description("Prepare an identity-bound host dispatch bundle without invoking a provider")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersPrepareCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
 
 program
   .command("verify")

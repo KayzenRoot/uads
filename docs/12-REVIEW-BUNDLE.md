@@ -34,6 +34,7 @@ Validation evidence is stored in the sidecar (`.../evidence/`), never in git.
 - `evidence/validation-summary.json` and per-command outputs
 - `github/` and `release/` — optional canonical release evidence for an external release audit; generated from the global sidecar and never from repository-root staging directories
 - `orchestration/` — sanitized checkpoint/Work Order/routing/execution/evidence/review snapshot when present
+- `host-dispatch/current.json` and `adapters/<adapter>/state.json` — sanitized Host Dispatch Bundle and adapter ownership/capability summaries when present
 - `intelligence/` — sanitized index-state and current Context Pack metadata when present
 - `failures/` — sanitized failure/diagnosis/memory summaries when present (no raw `--input` logs)
 - `cache/cache-summary.json` and `cost/cost-summary.json` — counts, eligibility, budget/QPT summary (no raw cache output)
@@ -67,6 +68,11 @@ This is not a guarantee of complete secret detection.
 - `memory-bank/` (session state)
 - review output directories
 - absolute local paths in the shareable manifest
+
+Host adapter review data contains only fixed adapter IDs, status, relative
+resource names, content hashes, capability provenance, dispatch references,
+and identity digests. It excludes raw host homes, environment values,
+credentials, complete prompts, and arbitrary commands.
 
 ## Checksum and inspection
 

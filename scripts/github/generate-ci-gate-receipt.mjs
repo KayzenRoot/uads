@@ -16,7 +16,7 @@ const runAttempt = safeRunId(process.env.GITHUB_RUN_ATTEMPT);
 const packageJson = readJson(path.join(root, "package.json")) ?? {};
 const comparison = deriveGitComparison({ baseSha: process.env.UADS_COMPARISON_BASE_SHA ?? null, headSha: commitSha, cwd: root });
 const logs = Object.fromEntries([
-  "tests", "eval-orchestrator", "eval-execution", "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "npm-audit",
+  "tests", "eval-orchestrator", "eval-execution", "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "npm-audit",
 ].map((id) => [id, readLog(path.join(logRoot, `uads-${id}.log`))]));
 const specialistRouter = await import("../../dist/kernel/specialist-router.js");
 const specialistCatalog = await import("../../dist/kernel/specialist-catalog.js");

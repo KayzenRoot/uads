@@ -85,7 +85,7 @@
     },
     "validation": {
       "type": "object", "additionalProperties": false,
-      "required": ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "specialistPolicyDigest", "builtinSpecialistCatalogDigest", "npmAudit", "packaging"],
+      "required": ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "specialistPolicyDigest", "builtinSpecialistCatalogDigest", "npmAudit", "packaging"],
       "properties": {
         "testFilesPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
         "testsPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
@@ -97,6 +97,7 @@
         "cost": { "$ref": "#/$defs/summary" },
         "modelRouting": { "$ref": "#/$defs/summary" },
         "specialistRouting": { "$ref": "#/$defs/summary" },
+        "adapters": { "$ref": "#/$defs/summary" },
         "specialistPolicyDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "builtinSpecialistCatalogDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "npmAudit": {

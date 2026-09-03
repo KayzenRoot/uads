@@ -15,6 +15,8 @@ import { readRuntimeCapabilitySnapshot } from "../kernel/model-runtime.js";
 import { findPackageRoot } from "../lib/version.js";
 import { loadSpecialistRegistry } from "../kernel/specialist-registry.js";
 import { readCurrentSpecialistSelectionPlan } from "../kernel/specialist-persist.js";
+import { hostAdapterStatus } from "../adapters/host-dispatch.js";
+import { HOST_ADAPTER_IDS, type HostAdapterStatusSummary } from "../adapters/host-adapter-types.js";
 
 export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: string; json?: boolean } = {}): string {
   const git = readGitSummary(cwd);
@@ -98,6 +100,27 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
   } catch {
     specialist.registryStatus = "blocked-corrupt-or-unavailable";
   }
+  const adapters: HostAdapterStatusSummary[] = HOST_ADAPTER_IDS.map((adapterId) => {
+    try {
+      return hostAdapterStatus(
+        adapterId,
+        { uadsHome: options.uadsHome, projectId: fingerprint.projectId, paths },
+        findPackageRoot(),
+      );
+    } catch {
+      return {
+        adapterId,
+        support: "BLOCKED",
+        install: "NOT_INSTALLED",
+        ownership: "UNKNOWN",
+        version: null,
+        targetLabel: "unknown",
+        capabilityProof: "unknown",
+        preparedBundle: "stale",
+        reasonCodes: ["ADAPTER_STATE_UNAVAILABLE"],
+      };
+    }
+  });
 
   if (options.json) {
     return `${JSON.stringify(
@@ -146,6 +169,7 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
         specialistRegistryDigest: specialist.registryDigest,
         specialistSelectionStatus: specialist.selectionStatus,
         specialistSelectionPlanId: specialist.selectionPlanId,
+        adapters,
       },
       null,
       2,
@@ -190,6 +214,9 @@ export function runStatus(cwd: string = process.cwd(), options: { uadsHome?: str
     `specialistProfileCount: ${specialist.profileCount}`,
     `specialistSelectionStatus: ${specialist.selectionStatus ?? "(none)"}`,
     `specialistSelectionPlanId: ${specialist.selectionPlanId ?? "(none)"}`,
+    ...adapters.map((adapter) =>
+      `adapter:${adapter.adapterId} support=${adapter.support} install=${adapter.install} ownership=${adapter.ownership} prepared=${adapter.preparedBundle}`,
+    ),
     "",
   ].join("\n");
 }

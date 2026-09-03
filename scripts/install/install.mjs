@@ -207,6 +207,53 @@ if (!resolved) {
 verifyCli(prefix, resolved);
 
 const pathHint = process.platform === "win32" ? prefix : path.join(prefix, "bin");
+const adapterSummaries = [];
+
+try {
+  const detectPath = path.join(root, "dist", "adapters", "host-adapter-detect.js");
+  const installPath = path.join(root, "dist", "adapters", "host-adapter-install.js");
+  if (fs.existsSync(detectPath) && fs.existsSync(installPath)) {
+    const { detectHostAdapter } = await import(pathToFileURL(detectPath).href);
+    const { installHostAdapter } = await import(pathToFileURL(installPath).href);
+    const hostHome = process.env.UADS_CURSOR_HOME || process.env.CURSOR_USER_HOME;
+    const detection = detectHostAdapter("cursor", { hostHome });
+    if (detection.status === "SUPPORTED") {
+      const adapterState = installHostAdapter("cursor", {
+        uadsHome,
+        hostHome,
+        packageRoot: root,
+      });
+      adapterSummaries.push({
+        adapterId: "cursor",
+        support: detection.status,
+        install: adapterState.installStatus,
+        ownership: adapterState.ownershipStatus,
+      });
+      process.stdout.write(
+        `Cursor adapter agents: ${adapterState.resources.length} managed resource(s)\n`,
+      );
+    } else {
+      adapterSummaries.push({
+        adapterId: "cursor",
+        support: detection.status,
+        install: "NOT_INSTALLED",
+        ownership: "UNKNOWN",
+      });
+      process.stdout.write(`Cursor adapter not installed: host is ${detection.status}\n`);
+    }
+  }
+} catch (error) {
+  process.stderr.write(
+    `Cursor adapter optional install skipped: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
+  adapterSummaries.push({
+    adapterId: "cursor",
+    support: "BLOCKED",
+    install: "NOT_INSTALLED",
+    ownership: "UNKNOWN",
+  });
+}
+
 fs.writeFileSync(
   path.join(uadsHome, "install-manifest.json"),
   `${JSON.stringify(
@@ -218,6 +265,7 @@ fs.writeFileSync(
       cli: resolved.path,
       pathHint,
       node: process.version,
+      adapters: adapterSummaries,
       installedAt: new Date().toISOString(),
     },
     null,
@@ -229,27 +277,3 @@ process.stdout.write(`UADS global layout ready at ${uadsHome}\n`);
 process.stdout.write(`uads CLI installed via npm prefix ${prefix}\n`);
 process.stdout.write(`Add to PATH: ${pathHint}\n`);
 process.stdout.write("Zero project footprint: no project files were modified.\n");
-
-try {
-  const adapterPath = path.join(root, "dist", "adapters", "cursor-agents.js");
-  if (fs.existsSync(adapterPath)) {
-    const { installCursorAgents } = await import(pathToFileURL(adapterPath).href);
-    const cursorUserHome = process.env.CURSOR_USER_HOME || os.homedir();
-    const adapterResult = installCursorAgents({
-      uadsHome,
-      cursorUserHome,
-      packageRoot: root,
-    });
-    if (adapterResult.error) {
-      process.stderr.write(`${adapterResult.error}\n`);
-    } else {
-      process.stdout.write(
-        `Cursor adapter agents: ${adapterResult.installed.join(", ") || "(none)"}\n`,
-      );
-    }
-  }
-} catch (error) {
-  process.stderr.write(
-    `Cursor adapter optional install skipped: ${error instanceof Error ? error.message : String(error)}\n`,
-  );
-}

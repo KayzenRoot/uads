@@ -35,6 +35,9 @@ export type UadsPaths = {
   specialistRouting: string;
   currentSpecialistSelection: string;
   specialistSelectionHistory: string;
+  hostDispatch: string;
+  currentHostDispatch: string;
+  hostDispatchHistory: string;
   profile: string;
   currentState: string;
   repositoryMap: string;
@@ -87,6 +90,9 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     specialistRouting: path.join(workspace, "specialist-routing"),
     currentSpecialistSelection: path.join(workspace, "specialist-routing", "current.json"),
     specialistSelectionHistory: path.join(workspace, "specialist-routing", "history"),
+    hostDispatch: path.join(workspace, "host-dispatch"),
+    currentHostDispatch: path.join(workspace, "host-dispatch", "current.json"),
+    hostDispatchHistory: path.join(workspace, "host-dispatch", "history"),
     profile: path.join(workspace, "profile.json"),
     currentState: path.join(workspace, "state", "current.json"),
     repositoryMap: path.join(workspace, "index", "repository-map.json"),
@@ -135,6 +141,8 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.modelRoutingHistory,
     paths.specialistRouting,
     paths.specialistSelectionHistory,
+    paths.hostDispatch,
+    paths.hostDispatchHistory,
     path.join(paths.context, "impact-reports"),
     path.join(paths.context, "packs"),
     path.join(paths.context, "diagnostic-packs"),

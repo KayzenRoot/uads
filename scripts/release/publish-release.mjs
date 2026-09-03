@@ -69,7 +69,7 @@ function releaseNotes(version) {
   if (evidence.finalVerdict !== "PASS" || evidence.commitSha !== head) fail("release notes cannot be derived from a non-PASS direct review proof");
   if (index.commitSha !== evidence.commitSha || index.version !== version || index.tag !== tag || index.directReviewRunId !== evidence.workflow?.runId || index.ciRunId !== evidence.provenance?.sourceRunId || index.directReviewArtifactName !== evidence.artifact?.name || (process.env.GITHUB_RUN_ID && index.releaseRunId !== Number(process.env.GITHUB_RUN_ID))) fail("release notes index is not bound to canonical direct review evidence");
   const validation = evidence.validation ?? {};
-  const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting"]
+  const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters"]
     .map((name) => `${name}: ${formatSummary(validation[name])}`)
     .join("; ");
   const audit = validation.npmAudit?.outcome === "success"
