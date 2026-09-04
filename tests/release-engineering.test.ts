@@ -99,6 +99,7 @@ describe("release engineering", () => {
   it("16: release titles are version-aware and not globally hard-coded", () => {
     expect(releaseTitle("0.10.0")).toBe("UADS v0.10.0 - Runtime Adapters");
     expect(releaseTitle("0.10.1")).toBe("UADS v0.10.1 - Runtime Adapter Hardening");
-    expect(releaseTitle("0.10.1")).not.toContain("GitHub Release Engineering");
+    expect(releaseTitle("0.10.2")).toBe("UADS v0.10.2 - Adapter Root Identity Hardening");
+    expect(releaseTitle("0.10.2")).not.toContain("GitHub Release Engineering");
   });
 });

@@ -3,6 +3,7 @@ import path from "node:path";
 import { sha256Hex } from "../lib/hash.js";
 import type { HostAdapterDefinition, HostAdapterId, HostAdapterState } from "./host-adapter-types.js";
 import type { ResolvedHostTarget } from "./host-adapter-detect.js";
+import { computeRootIdentityDigest, resolveLegacyUserHome } from "./host-adapter-root.js";
 
 export type TargetClassification =
   | "NOT_INSTALLED"
@@ -29,6 +30,7 @@ export function resolveLegacyV010HostTarget(
   const targetRoot = path.resolve(userHome);
   const resourceRoot = path.join(targetRoot, definition.targetRelativeRoot);
   const manifestPath = path.join(targetRoot, definition.manifestRelativeTarget);
+  const sourceLabel = `${definition.targetLabel}-legacy-v010`;
   return {
     definition,
     hostHome: userHome,
@@ -36,7 +38,17 @@ export function resolveLegacyV010HostTarget(
     resourceRoot,
     manifestPath,
     source: "default",
-    rootLabel: `${definition.targetLabel}-legacy-v010`,
+    rootKind: "synthetic-user-home",
+    sourceClass: "default",
+    sourceLabel,
+    rootIdentityDigest: computeRootIdentityDigest({
+      adapterId: definition.adapterId,
+      rootKind: "synthetic-user-home",
+      sourceClass: "default",
+      sourceLabel,
+      isLegacyV010Target: true,
+    }),
+    rootLabel: sourceLabel,
     canCreateAdapterRoot: false,
     isLegacyV010Target: true,
   };
@@ -102,13 +114,9 @@ function ownershipReasons(target: ResolvedHostTarget, state: HostAdapterState): 
 }
 
 export function targetRootIdentityDigest(target: ResolvedHostTarget): string {
-  return sha256Hex(
-    JSON.stringify({
-      adapterId: target.definition.adapterId,
-      rootLabel: target.rootLabel,
-      isLegacyV010Target: Boolean(target.isLegacyV010Target),
-      manifestRelativeTarget: target.definition.manifestRelativeTarget,
-      targetRelativeRoot: target.definition.targetRelativeRoot,
-    }),
-  );
+  return target.rootIdentityDigest;
+}
+
+export function legacyUserHomeForTarget(target: ResolvedHostTarget): string {
+  return resolveLegacyUserHome(target);
 }

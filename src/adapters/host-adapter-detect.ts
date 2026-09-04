@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { computeRuntimeIdentityDigest } from "../kernel/model-runtime.js";
 import { MODEL_ROUTING_SCHEMA_VERSION, type RuntimeCapabilitySnapshot } from "../kernel/model-types.js";
@@ -7,6 +6,11 @@ import {
   builtinHostAdapterRegistry,
   getHostAdapterDefinition,
 } from "./host-adapter-registry.js";
+import {
+  computeRootIdentityDigest,
+  HostAdapterRootError,
+  resolveHostRootInput,
+} from "./host-adapter-root.js";
 import type {
   HostAdapterDefinition,
   HostAdapterDetection,
@@ -15,6 +19,7 @@ import type {
   HostAdapterRegistry,
 } from "./host-adapter-types.js";
 import { HOST_ADAPTER_CONTRACT_VERSION } from "./host-adapter-types.js";
+import type { HostRootKind, HostRootSourceClass } from "./host-adapter-root.js";
 
 export type ResolvedHostTargetSource = "default" | "explicit-override" | "environment";
 
@@ -25,38 +30,14 @@ export type ResolvedHostTarget = {
   resourceRoot: string;
   manifestPath: string;
   source: ResolvedHostTargetSource;
+  rootKind: HostRootKind;
+  sourceClass: HostRootSourceClass;
+  sourceLabel: string;
+  rootIdentityDigest: string;
   rootLabel: string;
   canCreateAdapterRoot: boolean;
   isLegacyV010Target?: boolean;
 };
-
-function adapterRootSegment(adapterId: HostAdapterId): string {
-  if (adapterId === "cursor") return ".cursor";
-  if (adapterId === "codex") return ".codex";
-  return ".agents";
-}
-
-function envHome(definition: HostAdapterDefinition): string | undefined {
-  if (definition.adapterId === "cursor") {
-    return process.env.UADS_CURSOR_HOME ?? process.env.CURSOR_USER_HOME;
-  }
-  if (definition.adapterId === "codex") {
-    return process.env.UADS_CODEX_HOME ?? process.env.CODEX_HOME;
-  }
-  return process.env.UADS_AGENT_SKILLS_HOME ?? process.env.AGENT_SKILLS_HOME;
-}
-
-function resolveSource(configuredHome: string | undefined): ResolvedHostTargetSource {
-  if (!configuredHome) return "default";
-  if (
-    configuredHome === process.env.UADS_CURSOR_HOME ||
-    configuredHome === process.env.UADS_CODEX_HOME ||
-    configuredHome === process.env.UADS_AGENT_SKILLS_HOME
-  ) {
-    return "environment";
-  }
-  return "explicit-override";
-}
 
 function hasSymlinkSegment(target: string): boolean {
   const absolute = path.resolve(target);
@@ -73,21 +54,28 @@ export function resolveHostTarget(
   definition: HostAdapterDefinition,
   input: HostAdapterDetectionInput = {},
 ): ResolvedHostTarget {
-  const configuredHome = input.hostHome ?? envHome(definition);
-  const hostHome = path.resolve(configuredHome ?? os.homedir());
-  const source = resolveSource(configuredHome);
-  const targetRoot = path.join(hostHome, adapterRootSegment(definition.adapterId));
-  const resourceRoot = path.join(targetRoot, definition.targetRelativeRoot);
-  const manifestPath = path.join(targetRoot, definition.manifestRelativeTarget);
+  const resolved = resolveHostRootInput(definition, input);
+  const resourceRoot = path.join(resolved.targetRoot, definition.targetRelativeRoot);
+  const manifestPath = path.join(resolved.targetRoot, definition.manifestRelativeTarget);
+  const rootIdentityDigest = computeRootIdentityDigest({
+    adapterId: definition.adapterId,
+    rootKind: resolved.rootKind,
+    sourceClass: resolved.sourceClass,
+    sourceLabel: resolved.sourceLabel,
+  });
   return {
     definition,
-    hostHome,
-    targetRoot,
+    hostHome: resolved.hostHome,
+    targetRoot: resolved.targetRoot,
     resourceRoot,
     manifestPath,
-    source,
+    source: resolved.source,
+    rootKind: resolved.rootKind,
+    sourceClass: resolved.sourceClass,
+    sourceLabel: resolved.sourceLabel,
+    rootIdentityDigest,
     rootLabel: definition.targetLabel,
-    canCreateAdapterRoot: source !== "default",
+    canCreateAdapterRoot: resolved.rootKind !== "system-user-home",
   };
 }
 
@@ -115,13 +103,38 @@ function detectionStatus(target: ResolvedHostTarget): {
   return { status: "SUPPORTED", reasonCodes: ["HOST_TARGET_PRESENT", "VERSION_UNPROVEN"] };
 }
 
+function blockedDetection(
+  adapterId: HostAdapterId,
+  definition: HostAdapterDefinition,
+  reasonCodes: readonly string[],
+): HostAdapterDetection {
+  return {
+    adapterId,
+    status: "BLOCKED",
+    version: null,
+    detectionMethod: "host-root-resolution",
+    targetLabel: definition.targetLabel,
+    provenCapabilities: { ...definition.capabilities },
+    reasonCodes: [...reasonCodes],
+    detectedAt: new Date().toISOString(),
+  };
+}
+
 export function detectHostAdapter(
   adapterId: HostAdapterId,
   input: HostAdapterDetectionInput = {},
   registry = builtinHostAdapterRegistry(),
 ): HostAdapterDetection {
   const definition = getHostAdapterDefinition(adapterId, registry);
-  const target = resolveHostTarget(definition, input);
+  let target: ResolvedHostTarget;
+  try {
+    target = resolveHostTarget(definition, input);
+  } catch (error) {
+    if (error instanceof HostAdapterRootError) {
+      return blockedDetection(adapterId, definition, error.reasonCodes);
+    }
+    throw error;
+  }
   const detected = detectionStatus(target);
   return {
     adapterId,

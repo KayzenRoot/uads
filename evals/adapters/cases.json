@@ -26,5 +26,9 @@
   { "id": "AD25", "name": "Missing default host roots do not become SUPPORTED" },
   { "id": "AD26", "name": "Explicit override/root semantics are deterministic and non-ambiguous" },
   { "id": "AD27", "name": "Failed host install restores canonical UADS global resources" },
-  { "id": "AD28", "name": "Legacy v0.10.0 target state migrates safely or blocks without data loss" }
+  { "id": "AD28", "name": "Legacy v0.10.0 target state migrates safely or blocks without data loss" },
+  { "id": "AD29", "name": "Already-suffixed adapter root never double-appends" },
+  { "id": "AD30", "name": "Environment-root semantics are deterministic and fail-closed" },
+  { "id": "AD31", "name": "Invalid root override performs zero filesystem mutation" },
+  { "id": "AD32", "name": "Detect/install/status/prepare share canonical root identity semantics" }
 ]

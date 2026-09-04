@@ -4,6 +4,22 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-09-04
+
+### Highlights
+
+- Made host adapter root override semantics unambiguous so supported configuration cannot produce duplicated `.cursor/.cursor`, `.codex/.codex`, or `.agents/.agents` segments.
+
+### Fixed
+
+- Synthetic user-home overrides now reject already-suffixed adapter paths with stable `DOUBLE_ADAPTER_ROOT_REJECTED` reason codes.
+- Added explicit `adapterRoot` override support and deterministic environment semantics (`UADS_*` synthetic home, `CODEX_HOME` adapter root, `AGENT_SKILLS_HOME` not auto-consumed).
+- Detection, install, status, explain, and prepare now share one canonical root resolver with privacy-safe root identity metadata.
+
+### Verification
+
+- T41–T48, AD29–AD32, all existing tests/evals, and the complete validation matrix are required for the exact release SHA; v0.10.0 and v0.10.1 remain immutable.
+
 ## [0.10.1] - 2026-09-04
 
 ### Highlights

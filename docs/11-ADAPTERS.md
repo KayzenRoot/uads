@@ -21,8 +21,21 @@ execute arbitrary commands, or become an autonomous gateway.
 `UADS_HOME` controls UADS state. `UADS_CURSOR_HOME`, `UADS_CODEX_HOME`, and
 `UADS_AGENT_SKILLS_HOME` are explicit synthetic user-home overrides for tests or
 controlled environments. The implementation always appends the fixed adapter
-root segment (`.cursor`, `.codex`, or `.agents`) beneath that home. They are
-not ambiguous adapter-root overrides.
+root segment (`.cursor`, `.codex`, or `.agents`) beneath that home. Passing an
+already-suffixed adapter path as a synthetic home is rejected with
+`DOUBLE_ADAPTER_ROOT_REJECTED`. Use `adapterRoot` when the caller already has
+the fully resolved adapter root.
+
+Native environment semantics are fixed and deterministic:
+
+| Variable | Semantics |
+| --- | --- |
+| `UADS_CURSOR_HOME` | synthetic user home |
+| `CURSOR_USER_HOME` | synthetic user home |
+| `UADS_CODEX_HOME` | synthetic user home |
+| `CODEX_HOME` | adapter root (no suffix appended) |
+| `UADS_AGENT_SKILLS_HOME` | synthetic user home |
+| `AGENT_SKILLS_HOME` | not consumed automatically |
 under `~/.uads/adapters/<adapter>/` stores adapter-relative resource names and
 hashes, never raw host paths, credentials, prompts, or environment dumps.
 

@@ -104,6 +104,7 @@ function releaseTitle(version) {
     "0.9.1": "UADS v0.9.1 - Specialist Semantic Revalidation",
     "0.10.0": "UADS v0.10.0 - Runtime Adapters",
     "0.10.1": "UADS v0.10.1 - Runtime Adapter Hardening",
+    "0.10.2": "UADS v0.10.2 - Adapter Root Identity Hardening",
   };
   const mapped = titles[version];
   if (mapped) return mapped;

@@ -18,10 +18,16 @@ import {
 } from "../adapters/host-adapter-detect.js";
 import { resolveLegacyV010HostTarget } from "../adapters/host-adapter-legacy.js";
 import {
+  environmentBindings,
+  hasDoubleHiddenAdapterRoot,
+  resolveHostRootInput,
+} from "../adapters/host-adapter-root.js";
+import {
   getHostAdapterStatePath,
   installHostAdapter,
   readHostAdapterState,
   uninstallHostAdapter,
+  getHostAdapterStatusSummary,
 } from "../adapters/host-adapter-install.js";
 import {
   isHostDispatchBundleCurrent,
@@ -303,9 +309,15 @@ function runCase(id: string): void {
     const home = hostFixture().hostHome;
     for (const adapterId of ["cursor", "codex", "generic-agent-skills"] as const) {
       const target = resolveHostTarget(getHostAdapterDefinition(adapterId), { hostHome: home });
-      assertEval(target.targetRoot !== home, `${adapterId} resolved to bare home`);
-      assertEval(target.canCreateAdapterRoot, `${adapterId} explicit override semantics are ambiguous`);
+      assertEval(target.rootKind === "synthetic-user-home", `${adapterId} explicit override is not synthetic user home`);
+      assertEval(!hasDoubleHiddenAdapterRoot(target.targetRoot, adapterId), `${adapterId} produced a double-hidden root`);
     }
+    const suffixed = path.join(home, ".codex");
+    fs.mkdirSync(suffixed, { recursive: true });
+    assertEval(
+      detectHostAdapter("codex", { hostHome: suffixed }).reasonCodes.includes("DOUBLE_ADAPTER_ROOT_REJECTED"),
+      "already-suffixed synthetic home was accepted",
+    );
   } else if (id === "AD27") {
     const fixture = hostFixture();
     const canonicalRoot = path.join(fixture.uadsHome, "agents");
@@ -341,6 +353,57 @@ function runCase(id: string): void {
     installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
     assertEval(fs.existsSync(path.join(fixture.hostHome, ".codex", "agents", "uads-repo-inspector.md")), "legacy clean state did not migrate");
     assertEval(!fs.existsSync(path.join(legacy.resourceRoot, "uads-repo-inspector.md")), "legacy managed file was orphaned");
+  } else if (id === "AD29") {
+    const home = hostFixture().hostHome;
+    const suffixed = path.join(home, ".codex");
+    fs.mkdirSync(suffixed, { recursive: true });
+    assertEval(
+      detectHostAdapter("codex", { hostHome: suffixed }).reasonCodes.includes("DOUBLE_ADAPTER_ROOT_REJECTED"),
+      "already-suffixed codex root double-appended",
+    );
+    const agentsRoot = path.join(home, ".agents");
+    fs.mkdirSync(agentsRoot, { recursive: true });
+    assertEval(
+      detectHostAdapter("generic-agent-skills", { hostHome: agentsRoot }).reasonCodes.includes("DOUBLE_ADAPTER_ROOT_REJECTED"),
+      "already-suffixed generic root double-appended",
+    );
+  } else if (id === "AD30") {
+    const home = hostFixture().hostHome;
+    const codexRoot = path.join(home, ".codex");
+    fs.mkdirSync(codexRoot, { recursive: true });
+    const previous = { ...process.env };
+    process.env.UADS_CODEX_HOME = path.join(home, "synthetic");
+    process.env.CODEX_HOME = codexRoot;
+    const target = resolveHostTarget(getHostAdapterDefinition("codex"));
+    process.env.UADS_CODEX_HOME = previous.UADS_CODEX_HOME;
+    process.env.CODEX_HOME = previous.CODEX_HOME;
+    assertEval(target.targetRoot === path.join(home, "synthetic", ".codex"), "UADS_CODEX_HOME did not win precedence");
+    assertEval(environmentBindings("generic-agent-skills").length === 1, "unproven AGENT_SKILLS_HOME was consumed");
+  } else if (id === "AD31") {
+    const fixture = hostFixture();
+    const suffixed = path.join(fixture.hostHome, ".cursor");
+    fs.mkdirSync(suffixed, { recursive: true });
+    let failed = false;
+    try {
+      installHostAdapter("cursor", { hostHome: suffixed, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    } catch {
+      failed = true;
+    }
+    assertEval(failed, "invalid override install did not fail");
+    assertEval(!fs.existsSync(path.join(suffixed, ".cursor", "agents")), "invalid override created nested cursor root");
+    assertEval(readHostAdapterState("cursor", fixture.uadsHome, findPackageRoot()) === null, "invalid override wrote sidecar state");
+  } else if (id === "AD32") {
+    const fixture = hostFixture();
+    installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const input = { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() };
+    const detectTarget = resolveHostTarget(getHostAdapterDefinition("codex"), input);
+    const status = getHostAdapterStatusSummary("codex", input, findPackageRoot());
+    assertEval(
+      resolveHostRootInput(getHostAdapterDefinition("codex"), input).targetRoot === detectTarget.targetRoot,
+      "status/detect resolver drift",
+    );
+    assertEval(status.support === detectHostAdapter("codex", input).status, "status/detection support drift");
+    assertEval(detectTarget.rootIdentityDigest.length === 64, "root identity digest missing");
   } else {
     throw new Error(`unknown adapter evaluation case ${id}`);
   }

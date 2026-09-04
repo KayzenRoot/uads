@@ -177,3 +177,14 @@ Complete only when all are true:
 - Adapter install/update failure restores host resources, sidecar state, and canonical `~/.uads/agents` bytes transactionally.
 - Legacy v0.10.0 wrong-target Codex/Generic state migrates only with exact ownership proof or blocks fail-closed.
 - T31–T40, AD23–AD28, all existing tests/evals, release title generation, exact-SHA GitHub evidence, and release assets pass before v0.10.1 publication; v0.10.0 and earlier tags remain immutable.
+
+## Prompt 010 Correction 02 / v0.10.2
+
+Complete only when all are true:
+
+- No supported configuration can produce `.cursor/.cursor`, `.codex/.codex`, or `.agents/.agents`.
+- Synthetic user-home and adapter-root overrides have one documented meaning per input/source class.
+- Native environment-variable semantics are deterministic or explicitly ignored.
+- Invalid/ambiguous override resolution is read-only and fail-closed across detect/install/status/explain/prepare.
+- Legacy v0.10.0 migration and transactional rollback remain intact.
+- T41–T48, AD29–AD32, all existing tests/evals, exact-SHA GitHub evidence, and release assets pass before v0.10.2 publication; v0.10.0 and v0.10.1 remain immutable.

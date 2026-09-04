@@ -18,8 +18,10 @@ import {
 } from "./host-adapter-detect.js";
 import {
   classifyHostAdapterTarget,
+  legacyUserHomeForTarget,
   resolveLegacyV010HostTarget,
 } from "./host-adapter-legacy.js";
+import { HostAdapterRootError } from "./host-adapter-root.js";
 import type {
   HostAdapterId,
   HostAdapterInstallInput,
@@ -505,8 +507,16 @@ export function inspectHostAdapterOwnership(
     return { status: state?.ownershipStatus ?? "UNKNOWN", reasonCodes: [] };
   }
   const definition = getHostAdapterDefinition(adapterId);
-  const target = resolveHostTarget(definition, input);
-  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
+  let target: ResolvedHostTarget;
+  try {
+    target = resolveHostTarget(definition, input);
+  } catch (error) {
+    if (error instanceof HostAdapterRootError) {
+      throw new HostAdapterInstallError(`${error.message}: ${error.reasonCodes.join(",")}`);
+    }
+    throw error;
+  }
+  const legacy = resolveLegacyV010HostTarget(definition, legacyUserHomeForTarget(target));
   const classification = classifyHostAdapterTarget(target, legacy, state);
   const activeTarget =
     classification.classification.startsWith("LEGACY_V010") && legacy ? legacy : target;
@@ -555,8 +565,18 @@ export function installHostAdapter(
   const definition = getHostAdapterDefinition(adapterId, registry);
   const packageRoot = path.resolve(input.packageRoot ?? findPackageRoot());
   const uadsHome = resolveUadsHome(input.uadsHome);
-  const target = resolveHostTarget(definition, input);
-  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
+  let target: ResolvedHostTarget;
+  try {
+    target = resolveHostTarget(definition, input);
+  } catch (error) {
+    if (error instanceof HostAdapterRootError) {
+      throw new HostAdapterInstallError(
+        `${error.message}: ${error.reasonCodes.join(",")}`,
+      );
+    }
+    throw error;
+  }
+  const legacy = resolveLegacyV010HostTarget(definition, legacyUserHomeForTarget(target));
   if (input.projectRoot && isPathInside(path.resolve(input.projectRoot), target.targetRoot)) {
     throw new HostAdapterInstallError("project-local host adapter target is forbidden");
   }
@@ -706,8 +726,16 @@ export function uninstallHostAdapter(
   if (state.ownershipStatus !== "CLEAN") {
     throw new HostAdapterInstallError("host adapter ownership state is not clean");
   }
-  const target = resolveHostTarget(definition, input);
-  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
+  let target: ResolvedHostTarget;
+  try {
+    target = resolveHostTarget(definition, input);
+  } catch (error) {
+    if (error instanceof HostAdapterRootError) {
+      throw new HostAdapterInstallError(`${error.message}: ${error.reasonCodes.join(",")}`);
+    }
+    throw error;
+  }
+  const legacy = resolveLegacyV010HostTarget(definition, legacyUserHomeForTarget(target));
   const classification = classifyHostAdapterTarget(target, legacy, state);
   const activeTarget =
     classification.classification.startsWith("LEGACY_V010") && legacy ? legacy : target;

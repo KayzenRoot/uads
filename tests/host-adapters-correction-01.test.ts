@@ -12,6 +12,11 @@ import {
   resolveLegacyV010HostTarget,
 } from "../src/adapters/host-adapter-legacy.js";
 import {
+  environmentBindings,
+  hasDoubleHiddenAdapterRoot,
+  resolveHostRootInput,
+} from "../src/adapters/host-adapter-root.js";
+import {
   getHostAdapterStatePath,
   inspectHostAdapterOwnership,
   installHostAdapter,
@@ -100,15 +105,17 @@ describe("Prompt 010 correction 01", { timeout: 120_000 }, () => {
     });
   });
 
-  it("T35 explicit root semantics avoid double-hidden roots", () => {
+  it("T35 synthetic user home appends exactly one fixed adapter segment", () => {
     const home = hostHome();
     for (const adapterId of ["cursor", "codex", "generic-agent-skills"] as const) {
       const target = resolveHostTarget(getHostAdapterDefinition(adapterId), { hostHome: home });
+      expect(target.rootKind).toBe("synthetic-user-home");
       expect(target.targetRoot).not.toBe(home);
-      expect(target.targetRoot).not.toContain(`${path.sep}.codex${path.sep}.codex`);
-      expect(target.targetRoot).not.toContain(`${path.sep}.cursor${path.sep}.cursor`);
-      expect(target.targetRoot).not.toContain(`${path.sep}.agents${path.sep}.agents`);
+      expect(hasDoubleHiddenAdapterRoot(target.targetRoot, adapterId)).toBe(false);
     }
+    const suffixed = path.join(home, ".codex");
+    fs.mkdirSync(suffixed, { recursive: true });
+    expect(detectHostAdapter("codex", { hostHome: suffixed }).reasonCodes).toContain("DOUBLE_ADAPTER_ROOT_REJECTED");
   });
 
   it("T36 canonical UADS resources roll back on host failure", () => {

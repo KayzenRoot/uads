@@ -71,6 +71,7 @@ export type HostAdapterRegistry = {
 
 export type HostAdapterDetectionInput = {
   hostHome?: string;
+  adapterRoot?: string;
   packageRoot?: string;
 };
 
