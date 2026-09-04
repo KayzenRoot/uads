@@ -1,0 +1,18 @@
+[
+  {"id":"FI1","name":"scope violation blocks assurance"},
+  {"id":"FI2","name":"missing gate evidence blocks finalization"},
+  {"id":"FI3","name":"contradictory gate state fails closed"},
+  {"id":"FI4","name":"stale digest review cannot satisfy current run"},
+  {"id":"FI5","name":"cross-project review cannot satisfy current run"},
+  {"id":"FI6","name":"changed-files digest mismatch blocks finalization"},
+  {"id":"FI7","name":"duplicate approval cannot counterfeit review"},
+  {"id":"FI8","name":"forged reviewer role is rejected"},
+  {"id":"FI9","name":"corrupted evidence reference fails closed"},
+  {"id":"FI10","name":"invalid specialist selection blocks assurance"},
+  {"id":"FI11","name":"correction-loop exhaustion remains blocked"},
+  {"id":"FI12","name":"approved critical finding is rejected"},
+  {"id":"FI13","name":"cross-role assurance cannot satisfy required role"},
+  {"id":"FI14","name":"missing implementer session blocks independence"},
+  {"id":"FI15","name":"foreign evidence identity cannot satisfy review"},
+  {"id":"FI16","name":"persisted review mutation is revalidated"}
+]

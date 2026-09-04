@@ -112,8 +112,9 @@ export function persistReviewRecord(input: {
   return record;
 }
 
-export function persistReviewPacket(paths: UadsPaths, packet: ReviewPacket): ReviewPacket {
+export function persistReviewPacket(paths: UadsPaths, packet: ReviewPacket, schemaRoot?: string): ReviewPacket {
   const sanitized = sanitizeOperationalValue(packet);
+  assertSchema("review-packet.schema.json", sanitized, schemaRoot);
   const runPaths = ensureExecutionRunDirs(paths, sanitized.executionRunId);
   atomicWriteJson(runPaths.reviewPacket, sanitized);
   return sanitized;

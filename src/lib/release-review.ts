@@ -247,6 +247,14 @@ function validateDirectReviewIdentity(files: JsonMap, direct: any, releaseDirect
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json")) errors.push("direct-review-final-asset-not-indexed");
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json.sha256")) errors.push("direct-review-final-checksum-not-indexed");
   if (final?.securityWorkflows?.codeql?.outcome !== "success") errors.push("direct-review-codeql-not-success");
+  if (manifest?.version === "0.11.0") {
+    for (const label of ["audit", "release", "final"] as const) {
+      const item = label === "audit" ? direct : label === "release" ? releaseDirect : final;
+      for (const platform of ["linux", "windows"] as const) {
+        if (item?.compatibility?.[platform]?.outcome !== "success" || item?.compatibility?.[platform]?.commitSha !== item?.commitSha) errors.push("direct-review-compatibility-not-proven:" + label + ":" + platform);
+      }
+    }
+  }
   if (validation?.commit !== releaseDirect?.commitSha) errors.push("direct-review-validation-commit-mismatch");
   if (direct?.evidenceContractDigest !== releaseDirect?.evidenceContractDigest) errors.push("direct-review-exact-derivative-mismatch");
   if (final?.provenance?.sourceRunSha !== direct?.commitSha || final?.provenance?.sourceRunId !== binding?.runId || final?.provenance?.sourceRunAttempt !== direct?.provenance?.sourceRunAttempt) errors.push("direct-review-source-provenance-mismatch");

@@ -76,6 +76,10 @@ const directEvidence = createDirectReviewFromReceipt(receipt, {
     scorecard: workflowStatus(repo, "scorecard.yml", receipt.commitSha),
     dependencyReview: workflowStatus(repo, "dependency-review.yml", receipt.commitSha),
   },
+  compatibility: {
+    linux: compatibilityStatus(repo, receipt.commitSha, "linux"),
+    windows: compatibilityStatus(repo, receipt.commitSha, "windows"),
+  },
 });
 if (directEvidence.finalVerdict === "INCOMPLETE" && receipt.finalVerdict === "PASS") fail("canonical direct-review identity is incomplete");
 fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -126,6 +130,24 @@ function workflowStatus(repository, workflowFile, expectedSha) {
   const outcome = normalizeGitHubOutcome(run.conclusion);
   return { status: run.status === "completed" ? outcome : "pending", outcome, runId: numberOrNull(run.id), commitSha: safeSha(run.head_sha), htmlUrl: safeUrl(run.html_url), reasonCode: run.status === "completed" ? null : "SECURITY_RUN_PENDING" };
 }
+function compatibilityStatus(repository, expectedSha, platform) {
+  const runs = api(`repos/${repository}/actions/workflows/compatibility.yml/runs?per_page=100&head_sha=${expectedSha}`);
+  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
+  const completed = candidates.filter((run) => run.status === "completed").sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
+  const run = completed[0] ?? candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
+  if (!run) return { status: "unavailable", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "COMPATIBILITY_RUN_UNAVAILABLE" };
+  const jobs = api(`repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`);
+  const job = (jobs?.jobs ?? []).find((item) => item.name === `${platform} / Node 20`);
+  const outcome = normalizeGitHubOutcome(job?.conclusion ?? run.conclusion);
+  return {
+    status: job?.status === "completed" || run.status === "completed" ? outcome : "pending",
+    outcome,
+    runId: numberOrNull(run.id),
+    commitSha: safeSha(run.head_sha),
+    htmlUrl: safeUrl(run.html_url),
+    reasonCode: outcome === "success" ? null : job ? "COMPATIBILITY_JOB_NOT_SUCCESS" : "COMPATIBILITY_JOB_UNAVAILABLE",
+  };
+}
 function safeUrl(value) { return typeof value === "string" && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(value) ? value : null; }
 function api(endpoint) { const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 }); if (result.status !== 0) return null; try { return JSON.parse(result.stdout); } catch { return null; } }
 function git(args) { try { return execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true }).trim(); } catch { return null; } }
@@ -134,5 +156,5 @@ function required(name) { const value = valueOf(name); if (!value) fail(`${name}
 function valueOf(name) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : null; }
 function numberOrNull(value) { const number = Number(value); return Number.isSafeInteger(number) && number > 0 ? number : null; }
 function formatTests(validation) { return `${validation.testFilesPassed ?? "unknown"} files; ${validation.testsPassed ?? "unknown"} passed; ${validation.testsFailed ?? "unknown"} failed`; }
-function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
+function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "assurance", "faultInjection"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

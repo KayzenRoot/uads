@@ -128,6 +128,20 @@ jobs:
           set -o pipefail
           npm run eval:adapters 2>&1 | tee "$RUNNER_TEMP/uads-eval-adapters.log"
 
+      - name: Assurance eval
+        id: eval_assurance
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:assurance 2>&1 | tee "$RUNNER_TEMP/uads-eval-assurance.log"
+
+      - name: Fault-injection eval
+        id: eval_fault_injection
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:fault-injection 2>&1 | tee "$RUNNER_TEMP/uads-eval-fault-injection.log"
+
       - name: Skills preflight
         id: skills_validation
         shell: bash
@@ -169,7 +183,7 @@ jobs:
         env:
           UADS_CI_JOB_NAME: Foundation checks
           UADS_CI_GATE_STEPS: >-
-            {"install":"${{ steps.install.outcome }}","lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","action-pins":"${{ steps.action_pins.outcome }}","tests":"${{ steps.tests.outcome }}","eval-orchestrator":"${{ steps.eval_orchestrator.outcome }}","eval-execution":"${{ steps.eval_execution.outcome }}","eval-context":"${{ steps.eval_context.outcome }}","eval-fault":"${{ steps.eval_fault.outcome }}","eval-cost":"${{ steps.eval_cost.outcome }}","eval-model-routing":"${{ steps.eval_model_routing.outcome }}","eval-specialist-routing":"${{ steps.eval_specialist_routing.outcome }}","eval-adapters":"${{ steps.eval_adapters.outcome }}","skills-validation":"${{ steps.skills_validation.outcome }}","validate":"${{ steps.validate.outcome }}","engineering-validation":"${{ steps.engineering_validation.outcome }}","npm-audit":"${{ steps.npm_audit.outcome }}","packaging":"${{ steps.packaging.outcome }}"}
+            {"install":"${{ steps.install.outcome }}","lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","action-pins":"${{ steps.action_pins.outcome }}","tests":"${{ steps.tests.outcome }}","eval-orchestrator":"${{ steps.eval_orchestrator.outcome }}","eval-execution":"${{ steps.eval_execution.outcome }}","eval-context":"${{ steps.eval_context.outcome }}","eval-fault":"${{ steps.eval_fault.outcome }}","eval-cost":"${{ steps.eval_cost.outcome }}","eval-model-routing":"${{ steps.eval_model_routing.outcome }}","eval-specialist-routing":"${{ steps.eval_specialist_routing.outcome }}","eval-adapters":"${{ steps.eval_adapters.outcome }}","eval-assurance":"${{ steps.eval_assurance.outcome }}","eval-fault-injection":"${{ steps.eval_fault_injection.outcome }}","skills-validation":"${{ steps.skills_validation.outcome }}","validate":"${{ steps.validate.outcome }}","engineering-validation":"${{ steps.engineering_validation.outcome }}","npm-audit":"${{ steps.npm_audit.outcome }}","packaging":"${{ steps.packaging.outcome }}"}
           UADS_COMPARISON_BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha || '' }}
         shell: bash
         run: |

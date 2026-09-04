@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KayzenRoot/uads/schemas/compatibility-evidence.schema.json",
+  "title": "UADS bounded cross-platform compatibility evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "platform", "nodeMajor", "commitSha", "workflowRunId", "workflowRunAttempt", "outcome", "reasonCode"],
+  "properties": {
+    "schema": { "const": "uads.compatibility-evidence" },
+    "schemaVersion": { "const": "0.1.0" },
+    "platform": { "enum": ["linux", "windows"] },
+    "nodeMajor": { "const": 20 },
+    "commitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "workflowRunId": { "type": ["integer", "null"], "minimum": 1 },
+    "workflowRunAttempt": { "type": ["integer", "null"], "minimum": 1 },
+    "outcome": { "enum": ["success", "failure", "cancelled"] },
+    "reasonCode": { "type": ["string", "null"], "pattern": "^[A-Z0-9_:-]{1,120}$" }
+  }
+}

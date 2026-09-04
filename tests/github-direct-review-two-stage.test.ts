@@ -21,7 +21,7 @@ describe("two-stage GitHub direct review contract", () => {
     const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
     const gates = Object.fromEntries([
       "install", "lint", "typecheck", "build", "action-pins", "tests", "eval-orchestrator", "eval-execution",
-      "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "skills-validation", "validate", "npm-audit", "packaging",
+      "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "eval-assurance", "eval-fault-injection", "skills-validation", "validate", "npm-audit", "packaging",
     ].map((id) => [id, id === "tests" ? "failure" : id === "eval-orchestrator" ? "skipped" : "success"]));
     const result = spawnSync(process.execPath, ["scripts/github/generate-ci-gate-receipt.mjs", "--output", path.join(directory, "receipt.json"), "--log-dir", directory], {
       cwd: root,

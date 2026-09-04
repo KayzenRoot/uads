@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "schema", "schemaVersion", "repository", "branch", "commitSha", "gitTreeSha", "version", "generatedAt", "event",
-    "workflow", "comparison", "requiredGates", "validation", "securityWorkflows", "release", "artifact", "provenance",
+    "workflow", "comparison", "requiredGates", "validation", "securityWorkflows", "compatibility", "release", "artifact", "provenance",
     "finalVerdict", "reasonCodes", "evidenceContractDigest"
   ],
   "properties": {
@@ -24,6 +24,7 @@
     "requiredGates": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "#/$defs/gate" } },
     "validation": { "$ref": "#/$defs/validation" },
     "securityWorkflows": { "$ref": "#/$defs/securityWorkflows" },
+    "compatibility": { "$ref": "#/$defs/compatibility" },
     "release": { "$ref": "#/$defs/release" },
     "artifact": { "$ref": "#/$defs/artifact" },
     "provenance": { "$ref": "#/$defs/provenance" },
@@ -85,7 +86,7 @@
     },
     "validation": {
       "type": "object", "additionalProperties": false,
-      "required": ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "specialistPolicyDigest", "builtinSpecialistCatalogDigest", "npmAudit", "packaging"],
+      "required": ["testFilesPassed", "testsPassed", "testsFailed", "orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "assurance", "faultInjection", "specialistPolicyDigest", "builtinSpecialistCatalogDigest", "npmAudit", "packaging"],
       "properties": {
         "testFilesPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
         "testsPassed": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
@@ -98,6 +99,8 @@
         "modelRouting": { "$ref": "#/$defs/summary" },
         "specialistRouting": { "$ref": "#/$defs/summary" },
         "adapters": { "$ref": "#/$defs/summary" },
+        "assurance": { "$ref": "#/$defs/summary" },
+        "faultInjection": { "$ref": "#/$defs/summary" },
         "specialistPolicyDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "builtinSpecialistCatalogDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "npmAudit": {
@@ -131,6 +134,14 @@
         "codeql": { "$ref": "#/$defs/workflowStatus" },
         "scorecard": { "$ref": "#/$defs/workflowStatus" },
         "dependencyReview": { "$ref": "#/$defs/workflowStatus" }
+      }
+    },
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["linux", "windows"],
+      "properties": {
+        "linux": { "$ref": "#/$defs/workflowStatus" },
+        "windows": { "$ref": "#/$defs/workflowStatus" }
       }
     },
     "release": {

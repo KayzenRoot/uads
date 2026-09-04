@@ -24,6 +24,9 @@ UADS by NexLabs treats review packaging and installers as security-sensitive eve
 - Cache files are untrusted persisted data: schema-validate before trust, reject id/path traversal, never execute stored command text, never cache raw secret-bearing output
 - Cross-project cache records cannot be persisted into or satisfy another project's gates
 - Review ZIP cache/cost summaries contain counts and reason codes only; no raw command output or sidecar filesystem paths
+- Assurance packets are bounded machine-readable metadata: they carry identities, sanitized relative scope, gate/evidence references, obligations, blockers, and independence invariants, never prompts, commands, secrets, or absolute paths
+- Contradictory approvals are fail-closed: APPROVED with HIGH/CRITICAL findings, stale or foreign evidence, duplicate reviewer sessions, invalid roles, and cross-role substitutions cannot satisfy a gate
+- Fault-injection cases exercise scope violations, stale digests, forged/corrupt artifacts, contradictory gate state, invalid specialist selection, and correction-loop exhaustion; these are blockers, not warnings
 
 Content scanning is **defense-in-depth**, not a claim of complete secret detection.
 

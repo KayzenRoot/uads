@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const { releaseTitle } = await import("../../dist/release/release-title.js");
 const version = process.argv[2];
 const artifactDir = valueOf("--artifacts");
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
@@ -69,7 +70,7 @@ function releaseNotes(version) {
   if (evidence.finalVerdict !== "PASS" || evidence.commitSha !== head) fail("release notes cannot be derived from a non-PASS direct review proof");
   if (index.commitSha !== evidence.commitSha || index.version !== version || index.tag !== tag || index.directReviewRunId !== evidence.workflow?.runId || index.ciRunId !== evidence.provenance?.sourceRunId || index.directReviewArtifactName !== evidence.artifact?.name || (process.env.GITHUB_RUN_ID && index.releaseRunId !== Number(process.env.GITHUB_RUN_ID))) fail("release notes index is not bound to canonical direct review evidence");
   const validation = evidence.validation ?? {};
-  const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters"]
+  const evals = ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "assurance", "faultInjection"]
     .map((name) => `${name}: ${formatSummary(validation[name])}`)
     .join("; ");
   const audit = validation.npmAudit?.outcome === "success"
@@ -93,33 +94,5 @@ function releaseNotes(version) {
 function formatSummary(summary) {
   if (!summary || summary.passed === null || summary.failed === null || summary.total === null) return "not provable";
   return `${summary.passed}/${summary.total} passed`;
-}
-function releaseTitle(version) {
-  const titles = {
-    "0.7.0": "UADS v0.7.0 - GitHub Release Engineering",
-    "0.7.1": "UADS v0.7.1 - Direct Review Evidence Hardening",
-    "0.8.0": "UADS v0.8.0 - Model Routing",
-    "0.8.1": "UADS v0.8.1 - Runtime Capability Ownership",
-    "0.9.0": "UADS v0.9.0 - Specialist Routing",
-    "0.9.1": "UADS v0.9.1 - Specialist Semantic Revalidation",
-    "0.10.0": "UADS v0.10.0 - Runtime Adapters",
-    "0.10.1": "UADS v0.10.1 - Runtime Adapter Hardening",
-    "0.10.2": "UADS v0.10.2 - Adapter Root Identity Hardening",
-  };
-  const mapped = titles[version];
-  if (mapped) return mapped;
-  const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
-  const start = changelog.indexOf(`## [${version}]`);
-  if (start < 0) fail(`release title cannot be derived for ${version}`);
-  const next = changelog.indexOf("\n## [", start + 1);
-  const section = changelog.slice(start, next < 0 ? changelog.length : next);
-  const highlight = section.match(/### Highlights\s*\n\s*\n\s*-\s+(.+)/)?.[1]?.trim();
-  if (!highlight) fail(`release title cannot be derived from changelog highlights for ${version}`);
-  const summary = highlight.length > 72 ? `${highlight.slice(0, 69)}...` : highlight;
-  const title = `UADS v${version} - ${summary}`;
-  if (title.includes("GitHub Release Engineering") && version !== "0.7.0") {
-    fail("release title must not reuse the stale GitHub Release Engineering increment");
-  }
-  return title;
 }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

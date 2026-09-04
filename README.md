@@ -6,7 +6,7 @@
 
 UADS is a pre-1.0, global-first autonomous software engineering orchestration framework for specialist delegation, independent review, evidence-based quality gates, context intelligence, and cost-aware execution.
 
-This repository is the public open-source UADS product. The latest release is [v0.10.0](https://github.com/KayzenRoot/uads/releases/tag/v0.10.0). The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
+This repository is the public open-source UADS product. Releases are published from exact validated SHAs in the [GitHub Releases](https://github.com/KayzenRoot/uads/releases) page. The TypeScript kernel remains provider-neutral: it does not edit customer projects or call model-provider APIs.
 
 ## Architecture Freeze v0.2 (summary)
 
@@ -94,7 +94,7 @@ Prompt 010 adds strict host adapter state and Host Dispatch Bundle contracts alo
 | `src/` | CLI + orchestrator kernel |
 | `skills/uads-orchestrator/` | Agent Skill + `references/` |
 | `agents/` | Canonical `uads-*` specialist markdown |
-| `evals/` | Orchestrator, execution, context, fault, cost, model-routing, specialist-routing, and adapter evals |
+| `evals/` | Orchestrator, execution, context, fault, cost, model-routing, specialist-routing, adapter, assurance, and fault-injection evals |
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Common Cursor / Codex / Generic Agent Skills host adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, model-routing, and specialist-routing contracts |

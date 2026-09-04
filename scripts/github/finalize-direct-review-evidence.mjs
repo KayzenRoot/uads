@@ -35,6 +35,10 @@ const securityWorkflows = {
   scorecard: workflowStatus(repo, "scorecard.yml", commitSha),
   dependencyReview: workflowStatus(repo, "dependency-review.yml", commitSha),
 };
+const compatibility = {
+  linux: compatibilityStatus(repo, commitSha, "linux"),
+  windows: compatibilityStatus(repo, commitSha, "windows"),
+};
 const reasons = new Set(Array.isArray(base.reasonCodes) ? base.reasonCodes : []);
 const identityValues = [
   ["DIRECT_REVIEW_COMMIT", commitSha],
@@ -48,11 +52,17 @@ const identityComplete = identityValues.every(([, value]) => sha(value));
 if (!identityComplete) reasons.add("IDENTITY_UNPROVEN");
 if (new Set(identityValues.map(([, value]) => value).filter(sha)).size > 1) reasons.add("IDENTITY_MISMATCH");
 if (base.finalVerdict !== "PASS") reasons.add("CI_DIRECT_REVIEW_NOT_PASS");
+if (version === "0.11.0") {
+  for (const platform of ["linux", "windows"]) {
+    if (compatibility[platform].outcome !== "success" || compatibility[platform].commitSha !== commitSha) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
+  }
+}
 
 const derivative = {
   ...base,
   generatedAt: new Date().toISOString(),
   securityWorkflows,
+  compatibility,
   release: {
     version,
     tag,
@@ -144,9 +154,28 @@ function workflowStatus(targetRepo, workflowFile, expectedSha) {
   const outcome = normalizeOutcome(run.conclusion);
   return { status: run.status === "completed" ? outcome : normalizeOutcome(run.status), outcome, runId: numberOrNull(run.id), commitSha: run.head_sha ?? null, htmlUrl: run.html_url ?? null, reasonCode: null };
 }
+function compatibilityStatus(targetRepo, expectedSha, platform) {
+  const runs = api(`repos/${targetRepo}/actions/workflows/compatibility.yml/runs?per_page=100&head_sha=${expectedSha}`);
+  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
+  const completed = candidates.filter((run) => run.status === "completed").sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
+  const run = completed[0] ?? candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
+  if (!run) return { status: "unavailable", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "COMPATIBILITY_RUN_UNAVAILABLE" };
+  const jobs = api(`repos/${targetRepo}/actions/runs/${run.id}/jobs?per_page=100`);
+  const job = (jobs?.jobs ?? []).find((item) => item.name === `${platform} / Node 20`);
+  const outcome = normalizeOutcome(job?.conclusion ?? run.conclusion);
+  return {
+    status: job?.status === "completed" || run.status === "completed" ? outcome : "pending",
+    outcome,
+    runId: numberOrNull(run.id),
+    commitSha: sha(run.head_sha) ? run.head_sha.toLowerCase() : null,
+    htmlUrl: safeUrl(run.html_url),
+    reasonCode: outcome === "success" ? null : job ? "COMPATIBILITY_JOB_NOT_SUCCESS" : "COMPATIBILITY_JOB_UNAVAILABLE",
+  };
+}
 function normalizeOutcome(value) {
   return value === "success" || value === "failure" || value === "cancelled" || value === "skipped" ? value : "unknown";
 }
+function safeUrl(value) { return typeof value === "string" && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(value) ? value : null; }
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exit(1);

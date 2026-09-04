@@ -1,0 +1,18 @@
+[
+  {"id":"AS1","name":"independent reviewer happy path"},
+  {"id":"AS2","name":"implementer role cannot approve"},
+  {"id":"AS3","name":"implementer session cannot approve"},
+  {"id":"AS4","name":"stale digest review cannot satisfy current run"},
+  {"id":"AS5","name":"missing required security reviewer blocks finalize"},
+  {"id":"AS6","name":"missing required performance reviewer blocks finalize"},
+  {"id":"AS7","name":"missing required reliability reviewer blocks finalize"},
+  {"id":"AS8","name":"approved high finding is rejected"},
+  {"id":"AS9","name":"approved critical finding is rejected"},
+  {"id":"AS10","name":"security reviewer cannot satisfy performance role"},
+  {"id":"AS11","name":"performance reviewer cannot satisfy security role"},
+  {"id":"AS12","name":"reliability approval requires rollback obligations"},
+  {"id":"AS13","name":"current fail or blocked gate dominates assurance"},
+  {"id":"AS14","name":"corrupt or mismatched review fails closed"},
+  {"id":"AS15","name":"duplicate review cannot counterfeit independence"},
+  {"id":"AS16","name":"finalize revalidates current assurance semantics"}
+]

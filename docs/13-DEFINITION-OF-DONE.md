@@ -210,3 +210,16 @@ Complete only when all are true:
 - Explicit v1-to-v2 adoption is non-destructive, exact-ownership-checked, transactional, and does not scan alternate roots or overwrite unrelated bytes.
 - Host Dispatch Bundles and currentness checks use the v2 root digest, and raw host paths remain absent from persisted/evidence/release artifacts.
 - T57–T64, AD37–AD40, all previous tests/evals, exact-SHA CI/Direct Review/CodeQL/Scorecard/audit/packaging evidence, and release assets pass before v0.10.4 publication; v0.10.3 and earlier tags remain immutable.
+
+## Prompt 011 / v0.11.0 Assurance & Stabilization
+
+Complete only when all are true:
+
+- Central deterministic assurance policy recognizes only independent, security, performance, and reliability reviewer roles, with exact role-to-gate/evidence semantics.
+- Implementer role/session separation, current execution/run/Work Order/digest identity, current evidence references, sticky FAIL/BLOCKED precedence, duplicate/session defenses, and finalize revalidation are covered by AS1–AS16.
+- Assurance packets are schema-validated, bounded, privacy-safe, and include role mapping, obligations, blockers, change scope, and the independence invariant.
+- FI1–FI16 prove fail-closed blocking for scope, digest, gate/evidence, project, role/session, specialist-selection, corruption, contradiction, and correction-loop faults.
+- Linux and Windows Node.js 20 compatibility workflow passes for the exact SHA, including isolated package-install smoke.
+- CI receipt, Direct Review, release validation, and release notes include the assurance/fault-injection gates and compatibility status without fabricating unavailable external evidence.
+- README and release title are generic/canonical; v0.11.0 metadata is updated only after the complete local and external exact-SHA validation chain passes.
+- Prompt 012, provider gateways, dashboards, deployment, marketplace, and other non-required expansions remain out of scope.

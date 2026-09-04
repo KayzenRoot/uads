@@ -73,6 +73,8 @@ export type DirectReviewEvidence = {
     modelRouting: DirectReviewSummary;
     specialistRouting: DirectReviewSummary;
     adapters: DirectReviewSummary;
+    assurance: DirectReviewSummary;
+    faultInjection: DirectReviewSummary;
     specialistPolicyDigest: string | null;
     builtinSpecialistCatalogDigest: string | null;
     npmAudit: {
@@ -87,6 +89,10 @@ export type DirectReviewEvidence = {
     codeql: DirectReviewWorkflowStatus;
     scorecard: DirectReviewWorkflowStatus;
     dependencyReview: DirectReviewWorkflowStatus;
+  };
+  compatibility: {
+    linux: DirectReviewWorkflowStatus;
+    windows: DirectReviewWorkflowStatus;
   };
   release: {
     version: string | null;
@@ -129,6 +135,8 @@ export const REQUIRED_DIRECT_REVIEW_GATES = [
   "eval-model-routing",
   "eval-specialist-routing",
   "eval-adapters",
+  "eval-assurance",
+  "eval-fault-injection",
   "skills-validation",
   "validate",
   "npm-audit",
@@ -357,6 +365,7 @@ export function createDirectReviewEvidence(input: {
   stepOutcomes?: Record<string, unknown>;
   logs?: Partial<Record<string, string>>;
   securityWorkflows?: Partial<DirectReviewEvidence["securityWorkflows"]>;
+  compatibility?: Partial<DirectReviewEvidence["compatibility"]>;
   specialistPolicyDigest?: string | null;
   builtinSpecialistCatalogDigest?: string | null;
   release?: Partial<DirectReviewEvidence["release"]>;
@@ -386,6 +395,8 @@ export function createDirectReviewEvidence(input: {
     modelRouting: parseEvalSummary(logs["eval-model-routing"] ?? ""),
     specialistRouting: parseEvalSummary(logs["eval-specialist-routing"] ?? ""),
     adapters: parseEvalSummary(logs["eval-adapters"] ?? ""),
+    assurance: parseEvalSummary(logs["eval-assurance"] ?? ""),
+    faultInjection: parseEvalSummary(logs["eval-fault-injection"] ?? ""),
   };
   for (const [id, summary] of Object.entries(evals)) {
     if (summary.passed === null || summary.failed === null || summary.total === null) reasons.push(`COUNT_PARSE_UNAVAILABLE:${id.toUpperCase()}`);
@@ -440,6 +451,8 @@ export function createDirectReviewEvidence(input: {
       modelRouting: evals.modelRouting,
       specialistRouting: evals.specialistRouting,
       adapters: evals.adapters,
+      assurance: evals.assurance,
+      faultInjection: evals.faultInjection,
       specialistPolicyDigest: input.specialistPolicyDigest ?? null,
       builtinSpecialistCatalogDigest: input.builtinSpecialistCatalogDigest ?? null,
       npmAudit: { outcome: parsedSteps["npm-audit"] ?? npmAudit.outcome, highOrGreaterVulnerabilities: npmAudit.highOrGreaterVulnerabilities },
@@ -449,6 +462,10 @@ export function createDirectReviewEvidence(input: {
       codeql: status(input.securityWorkflows?.codeql),
       scorecard: status(input.securityWorkflows?.scorecard),
       dependencyReview: status(input.securityWorkflows?.dependencyReview),
+    },
+    compatibility: {
+      linux: status(input.compatibility?.linux),
+      windows: status(input.compatibility?.windows),
     },
     release: {
       version: input.release?.version ?? null,
@@ -501,6 +518,12 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   const sourceIdentityProven = Boolean(safeSha(evidence.provenance?.sourceRunSha ?? undefined) && safeRunId(evidence.provenance?.sourceRunId ?? undefined) && safeRunAttempt(evidence.provenance?.sourceRunAttempt ?? undefined));
   if (evidence.finalVerdict === "PASS" && !sourceIdentityProven) errors.push("source-run-identity-unproven");
   if (evidence.finalVerdict === "PASS" && evidence.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
+  if (evidence.version === "0.11.0") {
+    for (const key of ["linux", "windows"] as const) {
+      const compatibility = evidence.compatibility?.[key];
+      if (compatibility?.outcome !== "success" || compatibility.commitSha !== evidence.commitSha) errors.push("compatibility-not-proven:" + key);
+    }
+  }
   void schemaRoot;
   return errors;
 }

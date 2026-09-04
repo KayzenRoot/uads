@@ -70,6 +70,8 @@ const requiredFiles = [
   "schemas/execution-packet.schema.json",
   "schemas/evidence-record.schema.json",
   "schemas/review-record.schema.json",
+  "schemas/review-packet.schema.json",
+  "schemas/compatibility-evidence.schema.json",
   "schemas/index-state.schema.json",
   "schemas/dependency-graph.schema.json",
   "schemas/test-map.schema.json",
@@ -113,7 +115,13 @@ const requiredFiles = [
   ".engineering/reports/CLEANUP-INVENTORY.md",
   ".engineering/reports/EVIDENCE-BUNDLE-ENG-PROTOCOL-ADOPTION-001.md",
   ".engineering/checkpoints/CHECKPOINT-DELTA-ENG-PROTOCOL-ADOPTION-001.md",
+  ".engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md",
+  ".engineering/context-locks/PROMPT-011-ASSURANCE-STABILIZATION-001.md",
+  ".engineering/baselines/PROMPT-011-ASSURANCE-STABILIZATION-001.md",
+  ".engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md",
+  ".engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md",
   ".github/ISSUE_TEMPLATE/implementation.yml",
+  ".github/workflows/compatibility.yml",
   "scripts/validate/validate-engineering-protocol.mjs",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
@@ -126,6 +134,10 @@ const requiredFiles = [
   "evals/fault/fl17-stale-active-digest.json",
   "evals/fault/fl18-postfix-live-drift.json",
   "src/eval/fault.ts",
+  "evals/assurance/cases.json",
+  "src/eval/assurance.ts",
+  "evals/fault-injection/cases.json",
+  "src/eval/fault-injection.ts",
   "src/eval/model-routing.ts",
   "src/eval/specialist-routing.ts",
   "evals/specialist-routing/cases.json",
@@ -158,6 +170,7 @@ const requiredFiles = [
   "agents/uads-test-engineer.md",
   "src/kernel/orchestrator.ts",
   "src/kernel/execution.ts",
+  "src/kernel/assurance-policy.ts",
   "src/eval/run.ts",
   "src/eval/execution.ts",
   "scripts/install/install.sh",
@@ -184,6 +197,8 @@ const requiredFiles = [
   "scripts/github/publish-direct-review-evidence.mjs",
   "scripts/github/comparison-runtime.mjs",
   "scripts/github/validate-direct-review-standalone.mjs",
+  "scripts/github/compatibility-smoke.mjs",
+  "scripts/github/generate-compatibility-evidence.mjs",
   "schemas/validation-summary.schema.json",
   "schemas/release-manifest.schema.json",
   "schemas/release-validation-report.schema.json",
@@ -219,6 +234,8 @@ runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "eval:specialist-routing"]);
 runNpmGate(["run", "eval:adapters"]);
+runNpmGate(["run", "eval:assurance"]);
+runNpmGate(["run", "eval:fault-injection"]);
 runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 runNpmGate(["run", "validate:direct-review"]);

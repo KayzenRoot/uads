@@ -76,6 +76,12 @@ import type { Checkpoint, ContextPlan, ContextRadius, RepositoryMap, WorkOrder }
 import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
 import { HOST_ADAPTER_IDS } from "../adapters/host-adapter-types.js";
 import { getHostAdapterStatePath } from "../adapters/host-adapter-install.js";
+import {
+  ASSURANCE_REASON_CODES,
+  assuranceRoleGateMapping,
+  evaluateAssurancePolicy,
+  isRecognizedAssuranceRole,
+} from "./assurance-policy.js";
 
 export class ExecutionBlockedError extends Error {
   readonly code = "BLOCKED";
@@ -226,12 +232,24 @@ function reviewGateState(
   gateId: string,
   digest: string | null,
   reviews: ReviewRecord[],
+  identity?: { projectId: string; workOrderId?: string | null; executionRunId?: string | null },
 ): GateStateSnapshot {
   const role = REVIEW_GATE_ROLES[gateId];
   if (!digest || !role) {
     return { gateId, status: "PENDING", evidenceId: null };
   }
-  const current = reviews.filter((review) => review.changeDigest === digest && review.reviewerRole === role);
+  const current = reviews.filter(
+    (review) =>
+      review.changeDigest === digest &&
+      review.reviewerRole === role &&
+      (!identity ||
+        (review.projectId === identity.projectId &&
+          (identity.workOrderId === undefined || review.workOrderId === identity.workOrderId) &&
+          (identity.executionRunId === undefined || review.executionRunId === identity.executionRunId))),
+  );
+  if (current.some((review) => review.verdict === "APPROVED" && review.findings.some((finding) => finding.severity === "CRITICAL" || finding.severity === "HIGH"))) {
+    return { gateId, status: "FAIL", evidenceId: null };
+  }
   if (current.some((review) => review.verdict === "BLOCKED")) {
     return { gateId, status: "BLOCKED", evidenceId: null };
   }
@@ -261,10 +279,18 @@ export function deriveGateStates(input: {
 }): GateStateSnapshot[] {
   return input.selectedGates.map((gateId) => {
     if (isReviewGate(gateId)) {
-      return reviewGateState(gateId, input.digest, input.reviews);
+      return reviewGateState(gateId, input.digest, input.reviews, input.validation);
     }
     const def = gateDef(gateId);
-    const current = input.evidence.filter((item) => item.gateId === gateId && item.changeDigest === input.digest);
+    const current = input.evidence.filter(
+      (item) =>
+        item.gateId === gateId &&
+        item.changeDigest === input.digest &&
+        (!input.validation ||
+          (item.projectId === input.validation.projectId &&
+            (input.validation.workOrderId === undefined || item.workOrderId === input.validation.workOrderId) &&
+            (input.validation.executionRunId === undefined || item.executionRunId === input.validation.executionRunId))),
+    );
     if (current.some((item) => item.status === "BLOCKED")) {
       const blocked = current.find((item) => item.status === "BLOCKED");
       return { gateId, status: "BLOCKED", evidenceId: blocked?.evidenceId ?? null };
@@ -399,6 +425,23 @@ function buildPacket(run: ExecutionRun, workOrder: WorkOrder): ExecutionPacket {
     selectionMode: run.selectionMode ?? "host-managed",
     modelExecutionStrategy: run.modelExecutionStrategy,
   };
+}
+
+function assertCurrentSpecialistSelectionForAssurance(
+  paths: UadsPaths,
+  workOrder: WorkOrder,
+  routing: ReturnType<typeof readRoutingDecision>,
+  contextPlan: ContextPlan,
+  schemaRoot: string,
+): void {
+  try {
+    assertSpecialistSelectionBoundToWorkOrder(paths, workOrder, schemaRoot, { routing, contextPlan });
+  } catch (error) {
+    throw new ExecutionBlockedError(
+      `assurance requires current specialist selection: ${error instanceof Error ? error.message : String(error)}`,
+      [ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID],
+    );
+  }
 }
 
 function ensureCurrentModelPlan(input: {
@@ -1221,6 +1264,20 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
   if (blocking.length > 0) {
     throw new ExecutionBlockedError("selected non-review gates are not PASS", blocking.map((gate) => `${gate.gateId}:${gate.status}`));
   }
+  assertCurrentSpecialistSelectionForAssurance(ctx.paths, workOrder, readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot), contextPlan, schemaRoot);
+  const assuranceStatus = evaluateAssurancePolicy({
+    mode: "status",
+    projectId: ctx.projectId,
+    workOrder,
+    run,
+    gateStates,
+    evidence,
+    reviews,
+    specialistSelectionValid: true,
+  });
+  if (!assuranceStatus.allowed) {
+    throw new ExecutionBlockedError("assurance prerequisites are not valid", assuranceStatus.blockers);
+  }
 
   const packet: ReviewPacket = {
     schema: "uads.review-packet",
@@ -1234,12 +1291,24 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
     changedFiles: run.changedFiles,
     changeDigest: run.currentChangeDigest,
     gateStates: gateStates.map((gate) => ({ gateId: gate.gateId, status: gate.status })),
-    evidenceRefs: run.evidenceRefs,
+    evidenceRefs: assuranceStatus.currentEvidenceRefs,
     requiredReviewers: run.requiredReviewers,
     riskLevel: workOrder.riskLevel,
+    roleToGateMapping: assuranceRoleGateMapping(run.selectedGates),
+    requiredEvidenceObligations: [...workOrder.requiredEvidence],
+    unresolvedBlockers: [
+      ...assuranceStatus.blockers,
+      ...assuranceStatus.pendingRoles.map((role) => `${ASSURANCE_REASON_CODES.MISSING_REQUIRED_REVIEWER}:${role}`),
+    ],
+    doNotImplement: [
+      "provider API calls or arbitrary external commands",
+      "out-of-scope files or project-local UADS operational state",
+      "approval-gated release, deployment, custody, or financial actions",
+    ],
+    independentReviewInvariant: "Every required assurance role uses an exact recognized role and a distinct non-implementer session bound to this change digest.",
     nextAction: "Invoke distinct reviewer session(s). Do not self-approve. Record verdicts with uads assurance record.",
   };
-  persistReviewPacket(ctx.paths, packet);
+  persistReviewPacket(ctx.paths, packet, schemaRoot);
   const updated = touchRun(run, {
     phase: "review",
     status: "in_progress",
@@ -1297,6 +1366,9 @@ export function runAssuranceRecord(input: {
   findingsFile?: string;
 }): { record: ReviewRecord; run: ExecutionRun } {
   const { ctx, schemaRoot, checkpoint, workOrder, contextPlan, run } = loadActive(input);
+  if (!["APPROVED", "CORRECTION_NEEDED", "BLOCKED"].includes(input.verdict)) {
+    throw new ExecutionBlockedError("assurance verdict is not recognized", ["invalid assurance verdict"]);
+  }
   if (run.phase !== "review") {
     throw new ExecutionBlockedError("assurance record requires review phase after uads assurance start", [
       `phase is ${run.phase}`,
@@ -1336,6 +1408,44 @@ export function runAssuranceRecord(input: {
     ]);
   }
 
+  if (!isRecognizedAssuranceRole(reviewerRole)) {
+    throw new ExecutionBlockedError("reviewer role is not recognized by the assurance policy", [
+      `${ASSURANCE_REASON_CODES.UNKNOWN_REVIEWER_ROLE}:${reviewerRole}`,
+    ]);
+  }
+  if (!run.requiredReviewers.includes(reviewerRole)) {
+    throw new ExecutionBlockedError("reviewer role is not required for this Work Order", [
+      `${ASSURANCE_REASON_CODES.REVIEWER_ROLE_NOT_REQUIRED}:${reviewerRole}`,
+    ]);
+  }
+
+  const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
+  const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
+  assertCurrentSpecialistSelectionForAssurance(ctx.paths, workOrder, readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot), contextPlan, schemaRoot);
+  const gateStates = deriveGateStates({
+    selectedGates: run.selectedGates,
+    digest: run.currentChangeDigest,
+    evidence,
+    reviews,
+    validation: {
+      paths: ctx.paths,
+      projectId: ctx.projectId,
+      workOrderId: run.workOrderId,
+      executionRunId: run.executionRunId,
+      schemaRoot,
+    },
+  });
+  const findings = parseFindings(input.findingsJson, input.findingsFile);
+  const reasonCodes = findings.length === 0 && input.verdict === "BLOCKED"
+    ? [ASSURANCE_REASON_CODES.REVIEW_BLOCKED]
+    : findings.length === 0 && input.verdict === "CORRECTION_NEEDED"
+      ? [ASSURANCE_REASON_CODES.REVIEW_CORRECTION_REQUIRED]
+      : [];
+  const currentEvidenceRefs = evidence
+    .filter((item) => item.projectId === ctx.projectId && item.workOrderId === run.workOrderId && item.executionRunId === run.executionRunId && item.changeDigest === run.currentChangeDigest)
+    .map((item) => `sidecar://execution-runs/${run.executionRunId}/evidence/${item.evidenceId}.json`)
+    .sort((a, b) => a.localeCompare(b));
+
   const createdAt = nowIso();
   const record: ReviewRecord = {
     schema: "uads.review-record",
@@ -1351,10 +1461,25 @@ export function runAssuranceRecord(input: {
     implementerSessionId,
     verdict: input.verdict,
     summary: sanitizeOperationalText(input.summary),
-    findings: parseFindings(input.findingsJson, input.findingsFile),
-    evidenceRefs: run.evidenceRefs,
+    findings,
+    reasonCodes,
+    evidenceRefs: currentEvidenceRefs,
     createdAt,
   };
+  const assuranceSubmission = evaluateAssurancePolicy({
+    mode: "submission",
+    projectId: ctx.projectId,
+    workOrder,
+    run,
+    gateStates,
+    evidence,
+    reviews,
+    candidate: record,
+    specialistSelectionValid: true,
+  });
+  if (!assuranceSubmission.allowed) {
+    throw new ExecutionBlockedError("assurance record rejected by deterministic policy", assuranceSubmission.blockers);
+  }
   persistReviewRecord({ paths: ctx.paths, record, schemaRoot });
 
   let updated = touchRun(run, {
@@ -1466,6 +1591,23 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
   }
   const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
   const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
+  let specialistSelectionValid = true;
+  try {
+    assertCurrentSpecialistSelectionForAssurance(
+      ctx.paths,
+      workOrder,
+      readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot),
+      contextPlan,
+      schemaRoot,
+    );
+  } catch (error) {
+    specialistSelectionValid = false;
+    blockers.push(
+      error instanceof ExecutionBlockedError
+        ? error.blockers[0] ?? ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID
+        : ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID,
+    );
+  }
   const gateStates = deriveGateStates({
     selectedGates: run.selectedGates,
     digest: run.currentChangeDigest,
@@ -1479,6 +1621,17 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
       schemaRoot,
     },
   });
+  const assuranceFinal = evaluateAssurancePolicy({
+    mode: "finalize",
+    projectId: ctx.projectId,
+    workOrder,
+    run,
+    gateStates,
+    evidence,
+    reviews,
+    specialistSelectionValid,
+  });
+  blockers.push(...assuranceFinal.blockers);
   for (const gate of gateStates) {
     if (!isKnownGateId(gate.gateId) && run.selectedGates.includes(gate.gateId)) {
       blockers.push(`unknown selected gate ${gate.gateId}`);

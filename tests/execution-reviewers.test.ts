@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { runAssuranceRecord, runAssuranceStart, runContextExpand, runDispatch, runVerify } from "../src/kernel/execution.js";
+import { assertSchema } from "../src/lib/json-schema.js";
 import { tempDirs } from "./helpers.js";
 import { implement, planFrontend, recordGates, seedFrontend } from "./execution-helpers.js";
 
@@ -14,7 +15,10 @@ describe("execution reviewers and context", { timeout: 120_000 }, () => {
     implement(repo);
     runVerify({ cwd: repo, uadsHome: home });
     recordGates(repo, home, planned.workOrder.qualityGates);
-    runAssuranceStart({ cwd: repo, uadsHome: home });
+    const assurance = runAssuranceStart({ cwd: repo, uadsHome: home });
+    expect(assurance.packet.roleToGateMapping).toBeDefined();
+    expect(assurance.packet.independentReviewInvariant).toMatch(/exact recognized role/i);
+    expect(() => assertSchema("review-packet.schema.json", assurance.packet, process.cwd())).not.toThrow();
     expect(() =>
       runAssuranceRecord({
         cwd: repo,
@@ -37,6 +41,18 @@ describe("execution reviewers and context", { timeout: 120_000 }, () => {
         summary: "same session",
       }),
     ).toThrow(/same implementer\/reviewer session/i);
+    expect(() =>
+      runAssuranceRecord({
+        cwd: repo,
+        uadsHome: home,
+        role: "independent-reviewer",
+        session: "rev-2",
+        implementerSession: "imp-1",
+        verdict: "APPROVED",
+        summary: "contradictory approval",
+        findingsJson: JSON.stringify([{ severity: "HIGH", category: "security", message: "blocking" }]),
+      }),
+    ).toThrow(/APPROVAL_CONTRADICTS_HIGH_FINDING|assurance record rejected/i);
   });
 
   it("treats focused tests as supporting scope", () => {

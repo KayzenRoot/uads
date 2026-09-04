@@ -8,7 +8,7 @@ export const DIRECT_REVIEW_ARTIFACT_RETENTION_DAYS = 90;
 export const REQUIRED_GATES = [
   "install", "lint", "typecheck", "build", "action-pins", "tests",
   "eval-orchestrator", "eval-execution", "eval-context", "eval-fault",
-  "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "skills-validation", "validate",
+  "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "eval-assurance", "eval-fault-injection", "skills-validation", "validate",
   "npm-audit", "packaging",
 ];
 
@@ -27,6 +27,8 @@ export const GATE_STEP_NAMES = {
   "eval-model-routing": "Model routing eval",
   "eval-specialist-routing": "Specialist routing eval",
   "eval-adapters": "Adapter eval",
+  "eval-assurance": "Assurance eval",
+  "eval-fault-injection": "Fault-injection eval",
   "skills-validation": "Skills preflight",
   validate: "Validate foundation",
   "npm-audit": "Audit dependencies",
@@ -181,7 +183,7 @@ function summariesFromLogs(logs) {
   const vitest = parseVitestSummary(source.tests ?? "");
   const evals = Object.fromEntries([
     ["orchestrator", "eval-orchestrator"], ["execution", "eval-execution"], ["context", "eval-context"],
-    ["fault", "eval-fault"], ["cost", "eval-cost"], ["modelRouting", "eval-model-routing"], ["specialistRouting", "eval-specialist-routing"], ["adapters", "eval-adapters"],
+    ["fault", "eval-fault"], ["cost", "eval-cost"], ["modelRouting", "eval-model-routing"], ["specialistRouting", "eval-specialist-routing"], ["adapters", "eval-adapters"], ["assurance", "eval-assurance"], ["faultInjection", "eval-fault-injection"],
   ].map(([name, log]) => [name, parseEvalSummary(source[log] ?? "")]));
   return {
     ...vitest,
@@ -203,6 +205,8 @@ function baseValidation(summary, steps, input) {
     modelRouting: summary.modelRouting,
     specialistRouting: summary.specialistRouting,
     adapters: summary.adapters,
+    assurance: summary.assurance,
+    faultInjection: summary.faultInjection,
     specialistPolicyDigest: typeof input?.specialistPolicyDigest === "string" && /^[0-9a-f]{64}$/i.test(input.specialistPolicyDigest) ? input.specialistPolicyDigest.toLowerCase() : null,
     builtinSpecialistCatalogDigest: typeof input?.builtinSpecialistCatalogDigest === "string" && /^[0-9a-f]{64}$/i.test(input.builtinSpecialistCatalogDigest) ? input.builtinSpecialistCatalogDigest.toLowerCase() : null,
     npmAudit: { outcome: steps["npm-audit"] ?? summary.npmAudit.outcome, highOrGreaterVulnerabilities: summary.npmAudit.highOrGreaterVulnerabilities },
@@ -281,6 +285,15 @@ export function createDirectReviewFromReceipt(receipt, input) {
   if (!repository || !commitSha || !gitTreeSha || !workflow.runId || !workflow.runAttempt || !workflow.htmlUrl) reasons.add("IDENTITY_UNPROVEN");
   if (!sourceRunId || !sourceRunAttempt || !sourceRunSha) reasons.add("SOURCE_RUN_IDENTITY_UNPROVEN");
   const receiptVerdict = receipt.finalVerdict;
+  const compatibility = input.compatibility ?? {
+    linux: { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "NOT_EVALUATED_HERE" },
+    windows: { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "NOT_EVALUATED_HERE" },
+  };
+  if (receipt.version === "0.11.0") {
+    for (const platform of ["linux", "windows"]) {
+      if (compatibility[platform]?.outcome !== "success" || compatibility[platform]?.commitSha !== receipt.commitSha) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
+    }
+  }
   const finalVerdict = receiptVerdict === "FAIL"
     ? "FAIL"
     : receiptVerdict !== "PASS" || reasons.has("IDENTITY_UNPROVEN") || reasons.has("SOURCE_RUN_IDENTITY_UNPROVEN")
@@ -305,6 +318,7 @@ export function createDirectReviewFromReceipt(receipt, input) {
       scorecard: { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "NOT_EVALUATED_HERE" },
       dependencyReview: { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "NOT_EVALUATED_HERE" },
     },
+    compatibility,
     release: { version: null, tag: null, tagTargetSha: null, releaseRunId: null, releaseRunConclusion: "unknown", assetNames: null, ciBindingAsset: null, directReviewArtifactName: null },
     artifact: { name: safePath(input.artifactName) ?? null, retentionDays: input.artifactRetentionDays ?? DIRECT_REVIEW_ARTIFACT_RETENTION_DAYS },
     provenance: {
