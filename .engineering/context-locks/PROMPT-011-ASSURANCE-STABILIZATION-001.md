@@ -9,24 +9,24 @@ Generated at: `2026-09-04T00:00:00.000Z`
 
 | Source | Relative path or deterministic sentinel | SHA-256 |
 | --- | --- | --- |
-| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b261322b0d9cf3f587fefce2eb9efa22c0565bf891b104888b5193e846c17517` |
+| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `3f8a0a026fda8feb75ec33d40d3d308eb32cf770244d9cf49724079f682e8d27` |
 | Decisions | `.engineering/DECISIONS.md` | `eacbe3d47b1295561d9673338d2580c305575286fb01a95859c975c2176e1e6a` |
-| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `cc1494742dbafbf449d5b5dc5a9c207f9cd91f1da6650e3a8b188e41c8d9a4a7` |
-| Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `f664669b8638622865c601cf5d4c80da55d3e4540fe15c1f1b6e241832dc2ee8` |
+| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `a2ae126ca9b6f46a997c202974b8e08fcc686218c2230975156da733b7c0847f` |
+| Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `fb92a45e7a5233e82fc48d2e731b312ebfb4100394d76bcfaee6b99f90ff6c57` |
 | Architecture | `docs/04-ARCHITECTURE.md` | `575e46f741a47a2227bf13e6dab21d882cde2a494a4aa7a4ec4385eb8dc61ca0` |
 | Project overview | `README.md` | `fb3dcb8a051dc68b9fcd19f7a048c16205d90e326292017b40fc3d34d0aed8b3` |
-| Quality gates | `docs/07-QUALITY-GATES.md` | `2c4f8bdb74f9fe223bd3c3f01166255fc1cbe2abbe68cf5cdd31fd2c4d236b61` |
+| Quality gates | `docs/07-QUALITY-GATES.md` | `751d8dde295c5fc696516ffcfe2b0404048cfb6aa380189e1401141d6e6d97a6` |
 | Executor rules | `.cursorrules` | `7c70f6d93d061f986ea1a0079faa6bf88c0d88504123807694526d7b2a87a711` |
 | Delivery protocol | `.engineering/PROTOCOL.md` | `f1ccaf41ae75ba578ed0d548e0d601ed56fe30dd0eff9d7cef00028ec71a60cf` |
-| Assurance policy | `src/kernel/assurance-policy.ts` | `3be385cb17846f878726967912cab57dd5af123ce040fdef1a57739765816f6e` |
-| Execution seam | `src/kernel/execution.ts` | `176e9fe45a24c49a549bf823223b7cd6883e516afac9bcbd18e358914cd83f28` |
-| Direct Review seam | `src/github/direct-review.ts` | `1595056242481a1898b097682d7b25c8e5453789d6d4fcdb96a0e86ab328e4d0` |
+| Assurance policy | `src/kernel/assurance-policy.ts` | `3cd7adee881cc68aa800e9e1931595b45e62276857ce031f8fff51f3874daba6` |
+| Execution seam | `src/kernel/execution.ts` | `1eb7df8f977df62d15aa5c0322525e4670cbbfcba4c06a2a38b5c7443735f6f0` |
+| Direct Review seam | `src/github/direct-review.ts` | `88f5616a76ec6b70b3a64239b6b49c0f0b5a8a45c5de1125b44bcbf7dc97d198` |
 | Review packet schema | `schemas/review-packet.schema.json` | `c109d6da98d537375635463acc9112071b20d15f33b39298af1341773a0e81f0` |
-| Compatibility schema | `schemas/compatibility-evidence.schema.json` | `b456cfa832fa9d01fe5c977443639f34df0331a57dcdcb4d911748806546cd42` |
-| Compatibility workflow | `.github/workflows/compatibility.yml` | `60a0d3afe43d1aa67cd756b91ae8c9afba92fab07368b755f8c39e142dd63a34` |
-| Assurance eval | `src/eval/assurance.ts` | `825c998d9b91a2b03f8801e0419617969a4c21157fa78200ed1947db7a277935` |
-| Fault-injection eval | `src/eval/fault-injection.ts` | `b7c03fa6eb91d46604fb2c6d1205581d5e6f343e92338fad4f5579c4effc87ed` |
-| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `c9c5165a3fa8dd05ac671c52c34fd3d71acf26751c1d424d525302d37c9eafa7` |
+| Compatibility schema | `schemas/compatibility-evidence.schema.json` | `23511445a029266c92abe4d9c9455f2f8a155d3572afde1235404ccfe78f792d` |
+| Compatibility workflow | `.github/workflows/compatibility.yml` | `23f12440cd7f8f77ec6adce280f44adc5963d778c20641185da2de1a17bb25f1` |
+| Assurance eval | `src/eval/assurance.ts` | `1229811d750b70bcd322808cc679a74fc19de5c60d27513a5ab24a9e9be6a522` |
+| Fault-injection eval | `src/eval/fault-injection.ts` | `c45b94a5a57617f78d9ff81e03ca71e9c717aa9d203325672e9a744783eea3f7` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b2b1b4e7a528e6995d11e04aa6f5d07b62e3e4d90aa564c25faae1dd79edb878` |
 
 ## Stale events
 
@@ -35,8 +35,11 @@ Record every critical source change after the lock. Do not continue silently.
 - Source: Prompt 011 implementation, schemas, evals, workflows, release metadata, and documentation
 - Reason: critical sources changed after the initial `FRESH` lock was created
 - Action: stopped the initial flow, re-inspected the changed source set, recomputed SHA-256 fingerprints, and relocked before final validation
+- Source: Prompt 011 correction implementation and evidence records
+- Reason: C1-C4 correction blockers changed assurance authority, normative FI coverage, compatibility artifact identity, findings-file safety, and their documentation
+- Action: committed implementation at `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`, recomputed all required fingerprints, and relocked before hosted validation
 
 ## Relock evidence
 
-- Re-inspection commands: `git status --short`, `git diff --check`, targeted `rg` review, `npm run typecheck`, `npm run build`, focused Vitest, the full 47-file/329-test Vitest run, all legacy/new evals, CLI smoke, `npm ci`, `npm audit --audit-level=high`, `npm pack --dry-run`, and the engineering/skills/actions/Direct Review/CI receipt validators.
-- New lock or reason blocked: `RELOCKED`; all foundation component gates passed. The first aggregate wrapper was interrupted during `eval:fault` by user follow-up; the missing family and remaining wrapper commands were rerun successfully and are described in the Evidence Bundle.
+- Re-inspection commands: `git status --short`, `git diff --check`, targeted `rg` review, `npm run typecheck`, `npm run build`, all legacy/new evals, AS1-AS22, normative FI1-FI16 plus legacy FI17-FI32, CLI smoke, `npm ci`, `npm audit --audit-level=high`, `npm pack --dry-run`, and the engineering/skills/actions/Direct Review/CI receipt validators. The corrected full Vitest run completed with 47 files/329 tests and 0 failures.
+- New lock or reason blocked: `RELOCKED`; corrected source and documentation fingerprints match the locked set. C5 remains maintainer-blocked because Dependency Graph/Dependency Review was not exposed through the authenticated API.

@@ -216,10 +216,10 @@ Complete only when all are true:
 Complete only when all are true:
 
 - Central deterministic assurance policy recognizes only independent, security, performance, and reliability reviewer roles, with exact role-to-gate/evidence semantics.
-- Implementer role/session separation, current execution/run/Work Order/digest identity, current evidence references, sticky FAIL/BLOCKED precedence, duplicate/session defenses, and finalize revalidation are covered by AS1–AS16.
+- Implementer role/session separation, current execution/run/Work Order/digest identity, current evidence references, sticky FAIL/BLOCKED precedence, duplicate/session defenses, and finalize revalidation are covered by AS1–AS22; typed specialist obligations and managed findings-file safety are included.
 - Assurance packets are schema-validated, bounded, privacy-safe, and include role mapping, obligations, blockers, change scope, and the independence invariant.
-- FI1–FI16 prove fail-closed blocking for scope, digest, gate/evidence, project, role/session, specialist-selection, corruption, contradiction, and correction-loop faults.
-- Linux and Windows Node.js 20 compatibility workflow passes for the exact SHA, including isolated package-install smoke.
+- Normative FI1–FI16 prove fail-closed blocking for false evidence, hidden failures, self-approval, omitted assurance, scope/deletion violations, checkpoint/model/plan/host identity tampering, missing architecture/rollback/dependency evidence, current FAIL masking, forged cache provenance, and deterministic correction-loop stop. FI17–FI32 preserve the prior synthetic regression cases.
+- Linux and Windows Node.js 20 compatibility workflow may PASS only for an exact source SHA with exact tree/run/attempt/job/artifact identity, fixed checks, Node 20, and validated evidence digest; absent or ambiguous proof is incomplete.
 - CI receipt, Direct Review, release validation, and release notes include the assurance/fault-injection gates and compatibility status without fabricating unavailable external evidence.
 - README and release title are generic/canonical; v0.11.0 metadata is updated only after the complete local and external exact-SHA validation chain passes.
 - Prompt 012, provider gateways, dashboards, deployment, marketplace, and other non-required expansions remain out of scope.
