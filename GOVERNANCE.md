@@ -22,6 +22,12 @@ Normal contributions go through pull requests with one approval, stale-review di
 
 The exact remote state is audited by `npm run github:audit -- --output <sidecar-directory>`; permission- or plan-gated features are reported rather than assumed.
 
+## Governed engineering delivery
+
+Repository changes follow the static protocol in `.engineering/PROTOCOL.md`. Each increment has one Work Order identity, an exact pre-change baseline, a Context Lock with SHA-256 source fingerprints, an Evidence Bundle, and a proposed Checkpoint Delta. Existing `docs/` documents remain canonical; `.engineering/` records governance and review evidence but never replaces UADS runtime state in the global sidecar.
+
+The first adoption is `ENG-PROTOCOL-ADOPTION-001` on branch `chore/eng-protocol-adoption-001`. Executors must inspect before editing, run the same validation before and after, stop on stale context or unbounded risk, and leave cleanup candidates in an evidence-backed inventory. Cleanup is never started automatically after adoption.
+
 ## Out of scope for informal PRs
 
 Marketplace, cloud control plane, enterprise server, production Skill registry, and deep UGAS integration are roadmap items, not drive-by additions.
