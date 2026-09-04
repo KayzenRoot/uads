@@ -11,7 +11,7 @@ Generated at: `2026-09-04T00:00:00.000Z`
 | --- | --- | --- |
 | Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b261322b0d9cf3f587fefce2eb9efa22c0565bf891b104888b5193e846c17517` |
 | Decisions | `.engineering/DECISIONS.md` | `eacbe3d47b1295561d9673338d2580c305575286fb01a95859c975c2176e1e6a` |
-| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `de7dfa1196456d8c36ae22ebadb52661c1a80d4d6caf1614de40af63a051723f` |
+| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `cc1494742dbafbf449d5b5dc5a9c207f9cd91f1da6650e3a8b188e41c8d9a4a7` |
 | Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `f664669b8638622865c601cf5d4c80da55d3e4540fe15c1f1b6e241832dc2ee8` |
 | Architecture | `docs/04-ARCHITECTURE.md` | `575e46f741a47a2227bf13e6dab21d882cde2a494a4aa7a4ec4385eb8dc61ca0` |
 | Project overview | `README.md` | `fb3dcb8a051dc68b9fcd19f7a048c16205d90e326292017b40fc3d34d0aed8b3` |
@@ -26,6 +26,7 @@ Generated at: `2026-09-04T00:00:00.000Z`
 | Compatibility workflow | `.github/workflows/compatibility.yml` | `60a0d3afe43d1aa67cd756b91ae8c9afba92fab07368b755f8c39e142dd63a34` |
 | Assurance eval | `src/eval/assurance.ts` | `825c998d9b91a2b03f8801e0419617969a4c21157fa78200ed1947db7a277935` |
 | Fault-injection eval | `src/eval/fault-injection.ts` | `b7c03fa6eb91d46604fb2c6d1205581d5e6f343e92338fad4f5579c4effc87ed` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `c9c5165a3fa8dd05ac671c52c34fd3d71acf26751c1d424d525302d37c9eafa7` |
 
 ## Stale events
 

@@ -44,4 +44,3 @@ The approved Prompt 010 release baseline is `0936f818ba8dc938b1b2ad41ffab0450c8f
 - Assurance and adversarial fault-injection evaluations did not yet exist.
 - Direct Review and release contracts did not yet require assurance/fault-injection gates or Linux/Windows compatibility status for v0.11.0.
 - Independent review, exact-SHA GitHub security evidence, and maintainer promotion are external gates and cannot be inferred from local execution.
-
