@@ -188,3 +188,14 @@ Complete only when all are true:
 - Invalid/ambiguous override resolution is read-only and fail-closed across detect/install/status/explain/prepare.
 - Legacy v0.10.0 migration and transactional rollback remain intact.
 - T41–T48, AD29–AD32, all existing tests/evals, exact-SHA GitHub evidence, and release assets pass before v0.10.2 publication; v0.10.0 and v0.10.1 remain immutable.
+
+## Prompt 010 Correction 03 / v0.10.3
+
+Complete only when all are true:
+
+- Installed adapter state binds ownership to a privacy-safe `targetRootDigest`, not semantic source labels alone.
+- Cross-root identical-byte replay is rejected for inspect, install, uninstall, status, explain, prepare, and bundle staleness checks.
+- Legacy unbound v0.10.0–v0.10.2 states block destructive uninstall and adopt binding only through explicit non-destructive install/update.
+- Host Dispatch Bundles include `hostTargetRootDigest` and become stale when the resolved target root changes.
+- No raw host paths appear in persisted state, status JSON, bundles, or release artifacts.
+- T49–T56, AD33–AD36, all existing tests/evals, exact-SHA GitHub evidence, and release assets pass before v0.10.3 publication; v0.10.0–v0.10.2 remain immutable.

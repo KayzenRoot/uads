@@ -8,6 +8,7 @@ export const RELEASE_TITLE_BY_VERSION: Readonly<Record<string, string>> = Object
   "0.10.0": "UADS v0.10.0 - Runtime Adapters",
   "0.10.1": "UADS v0.10.1 - Runtime Adapter Hardening",
   "0.10.2": "UADS v0.10.2 - Adapter Root Identity Hardening",
+  "0.10.3": "UADS v0.10.3 - Host Root Ownership Binding",
 });
 
 const STALE_HARDCODED_TITLE = "UADS v0.10.0 - GitHub Release Engineering";

@@ -13,6 +13,7 @@
     "detection",
     "installStatus",
     "ownershipStatus",
+    "rootBinding",
     "resources",
     "manifestRelativeTarget",
     "manifestDigest",
@@ -28,6 +29,7 @@
     "detection": { "$ref": "#/$defs/detection" },
     "installStatus": { "enum": ["INSTALLED", "NOT_INSTALLED"] },
     "ownershipStatus": { "enum": ["CLEAN", "CONFLICT", "STALE", "UNKNOWN"] },
+    "rootBinding": { "$ref": "#/$defs/rootBindingOrNull" },
     "resources": {
       "type": "array",
       "maxItems": 128,
@@ -84,6 +86,17 @@
         "relativeTarget": { "$ref": "#/$defs/relativePath" },
         "sourceDigest": { "$ref": "#/$defs/digest" },
         "installedDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "rootBindingOrNull": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["targetRootDigest", "rootKind", "sourceClass", "bindingVersion"],
+      "properties": {
+        "targetRootDigest": { "$ref": "#/$defs/digest" },
+        "rootKind": { "enum": ["system-user-home", "synthetic-user-home", "adapter-root"] },
+        "sourceClass": { "enum": ["default", "explicit-override", "uads-environment", "native-environment"] },
+        "bindingVersion": { "const": "1" }
       }
     }
   }

@@ -39,7 +39,7 @@ function evidence(overrides: Record<string, unknown> = {}) {
       "eval-cost": "27 passed, 0 failed, 27 total",
       "eval-model-routing": "20 passed, 0 failed, 20 total",
       "eval-specialist-routing": "26 passed, 0 failed, 26 total",
-      "eval-adapters": "22 passed, 0 failed, 22 total",
+      "eval-adapters": "36 passed, 0 failed, 36 total",
       "npm-audit": "found 0 vulnerabilities",
     },
     artifactName: `uads-direct-review-${sha}`,

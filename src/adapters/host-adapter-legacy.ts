@@ -3,7 +3,7 @@ import path from "node:path";
 import { sha256Hex } from "../lib/hash.js";
 import type { HostAdapterDefinition, HostAdapterId, HostAdapterState } from "./host-adapter-types.js";
 import type { ResolvedHostTarget } from "./host-adapter-detect.js";
-import { computeRootIdentityDigest, resolveLegacyUserHome } from "./host-adapter-root.js";
+import { computeRootIdentityDigest, computeTargetRootDigest, resolveLegacyUserHome } from "./host-adapter-root.js";
 
 export type TargetClassification =
   | "NOT_INSTALLED"
@@ -48,6 +48,7 @@ export function resolveLegacyV010HostTarget(
       sourceLabel,
       isLegacyV010Target: true,
     }),
+    targetRootDigest: computeTargetRootDigest(definition.adapterId, targetRoot),
     rootLabel: sourceLabel,
     canCreateAdapterRoot: false,
     isLegacyV010Target: true,

@@ -4,6 +4,21 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-09-04
+
+### Highlights
+
+- Bound host adapter ownership to a privacy-safe target-root digest so identical bytes at different canonical roots cannot replay as trusted ownership.
+
+### Fixed
+
+- Added `rootBinding` to persisted adapter state and `hostTargetRootDigest` to Host Dispatch Bundles; cross-root replay, tampered binding, and stale bundles now fail closed.
+- Legacy v0.10.0–v0.10.2 unbound states remain readable but block destructive uninstall until an explicit install/update safely adopts binding without overwriting user bytes.
+
+### Verification
+
+- T49–T56, AD33–AD36, all existing tests/evals, and the complete validation matrix are required for the exact release SHA; v0.10.0–v0.10.2 remain immutable.
+
 ## [0.10.2] - 2026-09-04
 
 ### Highlights

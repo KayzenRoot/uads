@@ -57,7 +57,7 @@ function fixture() {
       "eval-cost": "cost eval 27/27",
       "eval-model-routing": "model routing eval 20/20",
       "eval-specialist-routing": "specialist routing eval 26/26",
-      "eval-adapters": "adapter eval 22/22",
+      "eval-adapters": "adapter eval 36/36",
       "npm-audit": "found 0 vulnerabilities",
     },
     artifactName: `uads-direct-review-${sha}`,

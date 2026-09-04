@@ -21,24 +21,55 @@ import {
   environmentBindings,
   hasDoubleHiddenAdapterRoot,
   resolveHostRootInput,
+  validateHostRootBinding,
 } from "../adapters/host-adapter-root.js";
 import {
   getHostAdapterStatePath,
   installHostAdapter,
+  inspectHostAdapterOwnership,
   readHostAdapterState,
   uninstallHostAdapter,
   getHostAdapterStatusSummary,
 } from "../adapters/host-adapter-install.js";
 import {
+  hostDispatchBundleStatus,
   isHostDispatchBundleCurrent,
   prepareHostDispatchBundle,
   readCurrentHostDispatchBundle,
 } from "../adapters/host-dispatch.js";
-import type { HostAdapterId, HostDispatchBundle } from "../adapters/host-adapter-types.js";
+import type { HostAdapterId, HostAdapterState, HostDispatchBundle } from "../adapters/host-adapter-types.js";
 import { runPlan } from "../kernel/orchestrator.js";
 import { resolveProjectContext } from "../kernel/project-context.js";
 
 type EvalCase = { id: string; name: string };
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, stableValue(item)]),
+    );
+  }
+  return value;
+}
+
+function legacyUnboundState(state: HostAdapterState): Omit<HostAdapterState, "rootBinding"> {
+  const legacy = { ...state };
+  delete (legacy as Partial<HostAdapterState>).rootBinding;
+  const { stateDigest: _ignored, ...withoutDigest } = legacy;
+  const digest = sha256Hex(
+    JSON.stringify(
+      stableValue({
+        ...withoutDigest,
+        updatedAt: null,
+        detection: { ...withoutDigest.detection, detectedAt: null },
+      }),
+    ),
+  );
+  return { ...legacy, stateDigest: digest };
+}
 
 const gitEnv = {
   ...process.env,
@@ -404,6 +435,78 @@ function runCase(id: string): void {
     );
     assertEval(status.support === detectHostAdapter("codex", input).status, "status/detection support drift");
     assertEval(detectTarget.rootIdentityDigest.length === 64, "root identity digest missing");
+    assertEval(detectTarget.targetRootDigest.length === 64, "target root digest missing");
+  } else if (id === "AD33") {
+    const fixture = hostFixture();
+    const homeB = fs.mkdtempSync(path.join(os.tmpdir(), "uads-ad33-b-"));
+    installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const targetA = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: fixture.hostHome });
+    const targetB = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: homeB });
+    fs.mkdirSync(targetB.targetRoot, { recursive: true });
+    fs.cpSync(targetA.targetRoot, targetB.targetRoot, { recursive: true });
+    assertEval(targetA.targetRootDigest !== targetB.targetRootDigest, "cross-root digests collided");
+    const ownership = inspectHostAdapterOwnership("codex", { hostHome: homeB, uadsHome: fixture.uadsHome }, findPackageRoot());
+    assertEval(ownership.status === "CONFLICT", "cross-root replay accepted");
+    assertEval(ownership.reasonCodes.includes("ROOT_BINDING_MISMATCH"), "cross-root mismatch reason missing");
+  } else if (id === "AD34") {
+    const fixture = hostFixture();
+    const homeB = fs.mkdtempSync(path.join(os.tmpdir(), "uads-ad34-b-"));
+    installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const targetA = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: fixture.hostHome });
+    const targetB = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: homeB });
+    fs.mkdirSync(targetB.targetRoot, { recursive: true });
+    fs.cpSync(targetA.targetRoot, targetB.targetRoot, { recursive: true });
+    let failed = false;
+    try {
+      uninstallHostAdapter("codex", { hostHome: homeB, uadsHome: fixture.uadsHome }, findPackageRoot());
+    } catch {
+      failed = true;
+    }
+    assertEval(failed, "cross-root uninstall did not fail closed");
+    assertEval(fs.existsSync(path.join(targetB.resourceRoot, "uads-repo-inspector.md")), "foreign bytes were deleted");
+    const state = readHostAdapterState("codex", fixture.uadsHome, findPackageRoot());
+    assertEval(state?.rootBinding?.targetRootDigest === targetA.targetRootDigest, "state rebound to foreign root");
+  } else if (id === "AD35") {
+    const fixture = plannedFixture();
+    const homeA = fixture.hostHome;
+    const homeB = fs.mkdtempSync(path.join(os.tmpdir(), "uads-ad35-b-"));
+    const bundle = prepare(fixture);
+    const ctx = resolveProjectContext(fixture.project, fixture.uadsHome);
+    assertEval(
+      hostDispatchBundleStatus(ctx.paths, fixture.planned.workOrder.projectId, findPackageRoot(), "generic-agent-skills", homeA) === "current",
+      "bundle not current for bound root",
+    );
+    assertEval(
+      hostDispatchBundleStatus(ctx.paths, fixture.planned.workOrder.projectId, findPackageRoot(), "generic-agent-skills", homeB) === "stale",
+      "bundle stayed current after root switch",
+    );
+    assertEval(
+      !isHostDispatchBundleCurrent(bundle, {
+        hostTargetRootDigest: resolveHostTarget(getHostAdapterDefinition("generic-agent-skills"), { hostHome: homeB })
+          .targetRootDigest,
+      }),
+      "bundle accepted foreign root digest",
+    );
+  } else if (id === "AD36") {
+    const fixture = hostFixture();
+    installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const bound = readHostAdapterState("codex", fixture.uadsHome, findPackageRoot());
+    const target = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: fixture.hostHome });
+    const legacy = legacyUnboundState(bound!);
+    fs.writeFileSync(
+      getHostAdapterStatePath("codex", fixture.uadsHome),
+      `${JSON.stringify(legacy, null, 2)}\n`,
+    );
+    let uninstallFailed = false;
+    try {
+      uninstallHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot());
+    } catch {
+      uninstallFailed = true;
+    }
+    assertEval(uninstallFailed, "legacy unbound uninstall was destructive");
+    const adopted = installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    assertEval(validateHostRootBinding(adopted, target).status === "BOUND_MATCH", "legacy adoption did not bind root");
+    assertEval(inspectHostAdapterOwnership("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot()).status === "CLEAN", "legacy adoption not clean");
   } else {
     throw new Error(`unknown adapter evaluation case ${id}`);
   }

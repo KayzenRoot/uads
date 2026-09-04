@@ -4,6 +4,16 @@ import { sha256Hex } from "../lib/hash.js";
 import type { HostAdapterDefinition, HostAdapterDetectionInput, HostAdapterId } from "./host-adapter-types.js";
 import type { ResolvedHostTargetSource } from "./host-adapter-detect.js";
 
+export const HOST_TARGET_ROOT_BINDING_VERSION = "1" as const;
+export const HOST_TARGET_ROOT_DOMAIN = "uads-host-target-root-v1" as const;
+
+export type HostAdapterRootBinding = {
+  targetRootDigest: string;
+  rootKind: HostRootKind;
+  sourceClass: HostRootSourceClass;
+  bindingVersion: typeof HOST_TARGET_ROOT_BINDING_VERSION;
+};
+
 export type HostRootKind = "system-user-home" | "synthetic-user-home" | "adapter-root";
 export type HostRootSourceClass = "default" | "explicit-override" | "uads-environment" | "native-environment";
 
@@ -232,4 +242,74 @@ export function computeRootIdentityDigest(input: {
       isLegacyV010Target: Boolean(input.isLegacyV010Target),
     }),
   );
+}
+
+function canonicalTargetRootPath(targetRoot: string): string {
+  const resolved = path.resolve(targetRoot);
+  const parsed = path.parse(resolved);
+  const segments = resolved
+    .slice(parsed.root.length)
+    .split(path.sep)
+    .filter(Boolean)
+    .map((segment) => segment.toLowerCase());
+  const root = parsed.root.replace(/\\/g, "/").toLowerCase();
+  return `${root}/${segments.join("/")}`;
+}
+
+export function computeTargetRootDigest(adapterId: HostAdapterId, targetRoot: string): string {
+  return sha256Hex(
+    `${HOST_TARGET_ROOT_DOMAIN}\0${adapterId}\0${canonicalTargetRootPath(targetRoot)}`,
+  );
+}
+
+export function createHostAdapterRootBinding(target: {
+  definition: { adapterId: HostAdapterId };
+  targetRoot: string;
+  rootKind: HostRootKind;
+  sourceClass: HostRootSourceClass;
+}): HostAdapterRootBinding {
+  return {
+    targetRootDigest: computeTargetRootDigest(target.definition.adapterId, target.targetRoot),
+    rootKind: target.rootKind,
+    sourceClass: target.sourceClass,
+    bindingVersion: HOST_TARGET_ROOT_BINDING_VERSION,
+  };
+}
+
+export type HostRootBindingStatus =
+  | "BOUND_MATCH"
+  | "UNBOUND_LEGACY"
+  | "ROOT_BINDING_MISMATCH"
+  | "ROOT_BINDING_REQUIRED"
+  | "ROOT_BINDING_TAMPERED"
+  | "NOT_INSTALLED";
+
+export function validateHostRootBinding(
+  state: { installStatus: "INSTALLED" | "NOT_INSTALLED"; rootBinding?: HostAdapterRootBinding | null } | null,
+  currentTarget: {
+    definition: { adapterId: HostAdapterId };
+    targetRoot: string;
+    rootKind: HostRootKind;
+    sourceClass: HostRootSourceClass;
+  },
+): { status: HostRootBindingStatus; reasonCodes: string[] } {
+  if (!state || state.installStatus !== "INSTALLED") {
+    return { status: "NOT_INSTALLED", reasonCodes: [] };
+  }
+  const currentDigest = computeTargetRootDigest(currentTarget.definition.adapterId, currentTarget.targetRoot);
+  if (!state.rootBinding) {
+    return { status: "UNBOUND_LEGACY", reasonCodes: ["UNBOUND_LEGACY_ROOT_IDENTITY", "ROOT_BINDING_REQUIRED"] };
+  }
+  if (state.rootBinding.bindingVersion !== HOST_TARGET_ROOT_BINDING_VERSION) {
+    return { status: "ROOT_BINDING_TAMPERED", reasonCodes: ["ROOT_BINDING_TAMPERED"] };
+  }
+  if (state.rootBinding.targetRootDigest !== currentDigest) {
+    return { status: "ROOT_BINDING_MISMATCH", reasonCodes: ["ROOT_BINDING_MISMATCH"] };
+  }
+  return { status: "BOUND_MATCH", reasonCodes: [] };
+}
+
+export function unboundLegacyReasonCodes(reasonCodes: readonly string[]): boolean {
+  const legacy = new Set(["UNBOUND_LEGACY_ROOT_IDENTITY", "ROOT_BINDING_REQUIRED"]);
+  return reasonCodes.length > 0 && reasonCodes.every((code) => legacy.has(code));
 }

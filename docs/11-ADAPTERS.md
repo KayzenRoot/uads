@@ -65,7 +65,13 @@ installer:
 - rejects traversal and symlink/junction escapes;
 - rolls back host, sidecar state, and canonical `~/.uads/agents` writes when a later write fails;
 - migrates exact legacy v0.10.0 Codex/Generic default-target state transactionally when ownership is provably clean;
+- persists a privacy-safe `rootBinding.targetRootDigest` for every newly installed state;
+- adopts legacy v0.10.0–v0.10.2 unbound states only through explicit install/update when bytes and manifest match exactly;
 - is idempotent when canonical resources are unchanged.
+
+Persisted adapter state under `~/.uads/adapters/<adapter>/` stores adapter-relative resource names, hashes, and `rootBinding` metadata (digest, `rootKind`, `sourceClass`, `bindingVersion`). Raw host paths never appear in state, status JSON, Host Dispatch Bundles, or release artifacts. The location digest is `SHA256("uads-host-target-root-v1" + adapterId + canonical-target-root)` and is independent of diagnostic `sourceLabel` when the physical root is the same.
+
+Cross-root replay is forbidden: identical managed bytes at a different canonical root do not satisfy ownership, block destructive uninstall, and invalidate prepared bundles through `hostTargetRootDigest`.
 
 `uads adapters uninstall <adapter>` removes only unchanged resources listed in
 the ownership state. Modified or ambiguous resources survive and produce a

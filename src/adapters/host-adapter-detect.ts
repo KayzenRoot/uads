@@ -8,6 +8,7 @@ import {
 } from "./host-adapter-registry.js";
 import {
   computeRootIdentityDigest,
+  computeTargetRootDigest,
   HostAdapterRootError,
   resolveHostRootInput,
 } from "./host-adapter-root.js";
@@ -34,6 +35,7 @@ export type ResolvedHostTarget = {
   sourceClass: HostRootSourceClass;
   sourceLabel: string;
   rootIdentityDigest: string;
+  targetRootDigest: string;
   rootLabel: string;
   canCreateAdapterRoot: boolean;
   isLegacyV010Target?: boolean;
@@ -63,6 +65,7 @@ export function resolveHostTarget(
     sourceClass: resolved.sourceClass,
     sourceLabel: resolved.sourceLabel,
   });
+  const targetRootDigest = computeTargetRootDigest(definition.adapterId, resolved.targetRoot);
   return {
     definition,
     hostHome: resolved.hostHome,
@@ -74,6 +77,7 @@ export function resolveHostTarget(
     sourceClass: resolved.sourceClass,
     sourceLabel: resolved.sourceLabel,
     rootIdentityDigest,
+    targetRootDigest,
     rootLabel: definition.targetLabel,
     canCreateAdapterRoot: resolved.rootKind !== "system-user-home",
   };

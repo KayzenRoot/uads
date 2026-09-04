@@ -77,6 +77,7 @@ type CurrentArtifacts = {
   modelPolicyDigest: string;
   hostRuntime: ReturnType<typeof runtimeSnapshotFromHostDetection>;
   adapterDetection: ReturnType<typeof detectHostAdapter>;
+  hostTargetRootDigest: string;
   currentIndexDigest: string;
   executionRunId: string | null;
   currentChangeDigest: string | null;
@@ -140,6 +141,7 @@ export function isHostDispatchBundleCurrent(
     | "modelPlanId"
     | "modelPlanDigest"
     | "runtimeIdentityDigest"
+    | "hostTargetRootDigest"
     | "contextPackId"
     | "impactReportId"
     | "indexDigest"
@@ -241,6 +243,7 @@ function readRequiredArtifacts(
   if (ownership.status === "CONFLICT" || ownership.status === "STALE") {
     throw new HostDispatchError(`host adapter ownership is not clean: ${ownership.reasonCodes.join(", ") || ownership.status}`);
   }
+  const hostTarget = resolveHostTarget(getHostAdapterDefinition(input.adapterId), { hostHome: input.hostHome });
 
   const currentIndex = currentOrRefreshIndex({
     repoRoot: ctx.repoRoot,
@@ -321,6 +324,7 @@ function readRequiredArtifacts(
     modelPolicyDigest: MODEL_ROUTING_POLICY_DIGEST,
     hostRuntime,
     adapterDetection: detection,
+    hostTargetRootDigest: hostTarget.targetRootDigest,
     currentIndexDigest,
     executionRunId: currentExecution?.executionRunId ?? null,
     currentChangeDigest: currentExecution?.currentChangeDigest ?? null,
@@ -364,6 +368,7 @@ export function prepareHostDispatchBundle(input: {
     modelPlanDigest,
     runtimeIdentityDigest: artifacts.hostRuntime.identityDigest,
     modelRuntimeIdentityDigest: artifacts.modelRuntimeIdentityDigest,
+    hostTargetRootDigest: artifacts.hostTargetRootDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
   };
@@ -397,6 +402,7 @@ export function prepareHostDispatchBundle(input: {
     modelPolicyDigest: artifacts.modelPolicyDigest,
     runtimeId: artifacts.hostRuntime.runtimeId,
     runtimeIdentityDigest: artifacts.hostRuntime.identityDigest,
+    hostTargetRootDigest: artifacts.hostTargetRootDigest,
     hostCapabilities: artifacts.hostRuntime.capabilities,
     contextPackId: artifacts.contextPlan.contextPackId ?? null,
     impactReportId: artifacts.contextPlan.impactReportId ?? null,
@@ -441,10 +447,16 @@ export function hostDispatchBundleStatus(
   projectId: string,
   schemaRoot?: string,
   adapterId?: HostAdapterId,
+  hostHome?: string,
 ): HostAdapterStatusSummary["preparedBundle"] {
   try {
     const bundle = readCurrentHostDispatchBundle(paths, schemaRoot);
     if (!bundle) return "none";
+    const definition = adapterId ? getHostAdapterDefinition(adapterId) : null;
+    const hostTargetRootDigest =
+      definition && adapterId
+        ? resolveHostTarget(definition, { hostHome }).targetRootDigest
+        : null;
     const checkpoint = readCurrentCheckpoint(paths, schemaRoot);
     const workOrder = checkpoint?.workOrderId ? readWorkOrder(paths, checkpoint.workOrderId, schemaRoot) : null;
     const contextPlan = readContextPlan(paths);
@@ -459,7 +471,8 @@ export function hostDispatchBundleStatus(
       bundle.specialistSelectionDigest === workOrder?.specialistSelectionDigest &&
       bundle.specialistSelectionDigest === specialistPlan?.selectionDigest &&
       bundle.modelPlanId === modelPlan?.planId &&
-      bundle.indexDigest === (contextPlan?.indexDigest ?? null);
+      bundle.indexDigest === (contextPlan?.indexDigest ?? null) &&
+      (!hostTargetRootDigest || bundle.hostTargetRootDigest === hostTargetRootDigest);
     return current ? "current" : "stale";
   } catch {
     return "stale";
@@ -476,7 +489,7 @@ export function hostAdapterStatus(
     ...summary,
     preparedBundle:
       input.paths && input.projectId
-        ? hostDispatchBundleStatus(input.paths, input.projectId, schemaRoot, adapterId)
+        ? hostDispatchBundleStatus(input.paths, input.projectId, schemaRoot, adapterId, input.hostHome)
         : "none",
   };
 }

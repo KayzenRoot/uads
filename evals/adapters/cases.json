@@ -30,5 +30,9 @@
   { "id": "AD29", "name": "Already-suffixed adapter root never double-appends" },
   { "id": "AD30", "name": "Environment-root semantics are deterministic and fail-closed" },
   { "id": "AD31", "name": "Invalid root override performs zero filesystem mutation" },
-  { "id": "AD32", "name": "Detect/install/status/prepare share canonical root identity semantics" }
+  { "id": "AD32", "name": "Detect/install/status/prepare share canonical root identity semantics" },
+  { "id": "AD33", "name": "Cross-root identical-byte ownership replay is rejected" },
+  { "id": "AD34", "name": "Bound root mismatch blocks uninstall and preserves bytes" },
+  { "id": "AD35", "name": "Host dispatch root identity invalidates stale bundle" },
+  { "id": "AD36", "name": "Legacy unbound root state is fail-closed / safely adopted without destructive ambiguity" }
 ]

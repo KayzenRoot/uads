@@ -1,5 +1,8 @@
 import type { RuntimeCapabilities } from "../kernel/model-types.js";
 import type { CapabilityClass, ContextRadius, RiskLevel, ScopeClass } from "../kernel/types.js";
+import type { HostAdapterRootBinding } from "./host-adapter-root.js";
+
+export type { HostAdapterRootBinding, HostRootKind, HostRootSourceClass } from "./host-adapter-root.js";
 
 export const HOST_ADAPTER_SCHEMA_VERSION = "0.10.0" as const;
 export const HOST_ADAPTER_CONTRACT_VERSION = "0.10.0" as const;
@@ -44,6 +47,7 @@ export type HostAdapterState = {
   detection: HostAdapterDetection;
   installStatus: HostInstallStatus;
   ownershipStatus: HostOwnershipStatus;
+  rootBinding: HostAdapterRootBinding | null;
   resources: HostAdapterResource[];
   manifestRelativeTarget: string;
   manifestDigest: string | null;
@@ -143,6 +147,7 @@ export type HostDispatchBundle = {
   modelPolicyDigest: string | null;
   runtimeId: string | null;
   runtimeIdentityDigest: string;
+  hostTargetRootDigest: string;
   hostCapabilities: RuntimeCapabilities;
   contextPackId: string | null;
   impactReportId: string | null;
