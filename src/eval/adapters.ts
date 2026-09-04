@@ -18,6 +18,7 @@ import {
 } from "../adapters/host-adapter-detect.js";
 import { resolveLegacyV010HostTarget } from "../adapters/host-adapter-legacy.js";
 import {
+  computeTargetRootDigest,
   environmentBindings,
   hasDoubleHiddenAdapterRoot,
   resolveHostRootInput,
@@ -69,6 +70,75 @@ function legacyUnboundState(state: HostAdapterState): Omit<HostAdapterState, "ro
     ),
   );
   return { ...legacy, stateDigest: digest };
+}
+
+function legacyV1RootDigest(adapterId: HostAdapterId, targetRoot: string): string {
+  const resolved = path.resolve(targetRoot);
+  const parsed = path.parse(resolved);
+  const segments = resolved
+    .slice(parsed.root.length)
+    .split(path.sep)
+    .filter(Boolean)
+    .map((segment) => segment.toLowerCase());
+  const root = parsed.root.replace(/\\/g, "/").toLowerCase();
+  return sha256Hex(`uads-host-target-root-v1\0${adapterId}\0${root}/${segments.join("/")}`);
+}
+
+function rewriteAsLegacyV1(state: HostAdapterState, sidecar: string, targetRoot: string): void {
+  const legacy = {
+    ...state,
+    rootBinding: {
+      ...state.rootBinding!,
+      targetRootDigest: legacyV1RootDigest(state.adapterId, targetRoot),
+      bindingVersion: "1" as const,
+    },
+  };
+  const { stateDigest: _ignored, ...withoutDigest } = legacy;
+  const stateDigest = sha256Hex(
+    JSON.stringify(
+      stableValue({
+        ...withoutDigest,
+        updatedAt: null,
+        detection: { ...withoutDigest.detection, detectedAt: null },
+      }),
+    ),
+  );
+  fs.writeFileSync(
+    getHostAdapterStatePath(state.adapterId, sidecar),
+    `${JSON.stringify({ ...legacy, stateDigest }, null, 2)}\n`,
+  );
+}
+
+function caseSensitiveRoots(): { homeA: string; homeB: string } | null {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "uads-case-eval-"));
+  const homeA = path.join(parent, "UADS-Case-Root");
+  const homeB = path.join(parent, "uads-case-root");
+  fs.mkdirSync(homeA);
+  let createdB = false;
+  try {
+    fs.mkdirSync(homeB);
+    createdB = true;
+  } catch {
+    // Case-insensitive filesystems report the first directory as existing.
+  }
+  if (!createdB || fs.realpathSync(homeA) === fs.realpathSync(homeB)) return null;
+  return { homeA, homeB };
+}
+
+function copyManagedTree(sourceRoot: string, destinationRoot: string): void {
+  const visit = (relative: string): void => {
+    const source = path.join(sourceRoot, relative);
+    const destination = path.join(destinationRoot, relative);
+    const stat = fs.statSync(source);
+    if (stat.isDirectory()) {
+      fs.mkdirSync(destination, { recursive: true });
+      for (const entry of fs.readdirSync(source)) visit(path.join(relative, entry));
+      return;
+    }
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(source, destination);
+  };
+  visit(".");
 }
 
 const gitEnv = {
@@ -507,6 +577,50 @@ function runCase(id: string): void {
     const adopted = installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
     assertEval(validateHostRootBinding(adopted, target).status === "BOUND_MATCH", "legacy adoption did not bind root");
     assertEval(inspectHostAdapterOwnership("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot()).status === "CLEAN", "legacy adoption not clean");
+  } else if (id === "AD37") {
+    const base = hostFixture().hostHome;
+    const rootA = path.join(base, "RootA", ".codex");
+    const rootB = path.join(base, "roota", ".codex");
+    assertEval(computeTargetRootDigest("codex", rootA) !== computeTargetRootDigest("codex", rootB), "case-distinct roots were case-folded");
+  } else if (id === "AD38") {
+    const fixture = plannedFixture();
+    const state = readHostAdapterState("generic-agent-skills", fixture.uadsHome, findPackageRoot());
+    const target = resolveHostTarget(getHostAdapterDefinition("generic-agent-skills"), { hostHome: fixture.hostHome });
+    rewriteAsLegacyV1(state!, fixture.uadsHome, target.targetRoot);
+    assertEval(readHostAdapterState("generic-agent-skills", fixture.uadsHome, findPackageRoot())?.rootBinding?.bindingVersion === "1", "legacy v1 state was not readable");
+    const ownership = inspectHostAdapterOwnership("generic-agent-skills", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot());
+    assertEval(ownership.status === "STALE" && ownership.reasonCodes.includes("ROOT_BINDING_UPGRADE_REQUIRED"), "legacy v1 state was treated as current");
+    let uninstallFailed = false;
+    try {
+      uninstallHostAdapter("generic-agent-skills", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot());
+    } catch {
+      uninstallFailed = true;
+    }
+    assertEval(uninstallFailed, "legacy v1 uninstall was destructive");
+    expectPreparationToFail(fixture, "legacy v1 state authorized trusted preparation");
+  } else if (id === "AD39") {
+    const fixture = hostFixture();
+    const state = installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const target = resolveHostTarget(getHostAdapterDefinition("codex"), { hostHome: fixture.hostHome });
+    const managed = path.join(target.resourceRoot, "uads-repo-inspector.md");
+    const userFile = path.join(target.targetRoot, "user-owned.txt");
+    const beforeManaged = fs.readFileSync(managed);
+    fs.writeFileSync(userFile, "user bytes must survive adoption\n");
+    rewriteAsLegacyV1(state, fixture.uadsHome, target.targetRoot);
+    const adopted = installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    assertEval(adopted.rootBinding?.bindingVersion === "2", "legacy v1 adoption did not write v2");
+    assertEval(fs.readFileSync(managed).equals(beforeManaged), "legacy v1 adoption rewrote managed bytes");
+    assertEval(fs.readFileSync(userFile, "utf8") === "user bytes must survive adoption\n", "legacy v1 adoption changed unrelated bytes");
+    assertEval(inspectHostAdapterOwnership("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot()).status === "CLEAN", "legacy v1 adoption did not end BOUND_MATCH");
+  } else if (id === "AD40") {
+    const fixture = plannedFixture();
+    const bundle = prepare(fixture);
+    const caseVariantHome = path.join(path.dirname(fixture.hostHome), path.basename(fixture.hostHome).toUpperCase());
+    const variantTarget = resolveHostTarget(getHostAdapterDefinition("generic-agent-skills"), { hostHome: caseVariantHome });
+    assertEval(bundle.hostTargetRootDigest === resolveHostTarget(getHostAdapterDefinition("generic-agent-skills"), { hostHome: fixture.hostHome }).targetRootDigest, "bundle did not use the v2 root identity");
+    assertEval(bundle.hostTargetRootDigest !== variantTarget.targetRootDigest, "case-collision root digest was accepted");
+    assertEval(hostDispatchBundleStatus(fixture.context.paths, fixture.planned.workOrder.projectId, findPackageRoot(), "generic-agent-skills", caseVariantHome) === "stale", "bundle remained current for case-variant root");
+    assertEval(!isHostDispatchBundleCurrent(bundle, { hostTargetRootDigest: variantTarget.targetRootDigest }), "case-variant bundle replay was accepted");
   } else {
     throw new Error(`unknown adapter evaluation case ${id}`);
   }

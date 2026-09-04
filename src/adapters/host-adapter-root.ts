@@ -4,14 +4,17 @@ import { sha256Hex } from "../lib/hash.js";
 import type { HostAdapterDefinition, HostAdapterDetectionInput, HostAdapterId } from "./host-adapter-types.js";
 import type { ResolvedHostTargetSource } from "./host-adapter-detect.js";
 
-export const HOST_TARGET_ROOT_BINDING_VERSION = "1" as const;
-export const HOST_TARGET_ROOT_DOMAIN = "uads-host-target-root-v1" as const;
+export const HOST_TARGET_ROOT_BINDING_VERSION = "2" as const;
+export const HOST_TARGET_ROOT_DOMAIN = "uads-host-target-root-v2" as const;
+export const LEGACY_HOST_TARGET_ROOT_BINDING_VERSION = "1" as const;
 
 export type HostAdapterRootBinding = {
   targetRootDigest: string;
   rootKind: HostRootKind;
   sourceClass: HostRootSourceClass;
-  bindingVersion: typeof HOST_TARGET_ROOT_BINDING_VERSION;
+  bindingVersion:
+    | typeof HOST_TARGET_ROOT_BINDING_VERSION
+    | typeof LEGACY_HOST_TARGET_ROOT_BINDING_VERSION;
 };
 
 export type HostRootKind = "system-user-home" | "synthetic-user-home" | "adapter-root";
@@ -244,16 +247,18 @@ export function computeRootIdentityDigest(input: {
   );
 }
 
-function canonicalTargetRootPath(targetRoot: string): string {
+export function canonicalTargetRootPath(targetRoot: string): string {
   const resolved = path.resolve(targetRoot);
   const parsed = path.parse(resolved);
   const segments = resolved
     .slice(parsed.root.length)
     .split(path.sep)
-    .filter(Boolean)
-    .map((segment) => segment.toLowerCase());
-  const root = parsed.root.replace(/\\/g, "/").toLowerCase();
-  return `${root}/${segments.join("/")}`;
+    .filter(Boolean);
+  const root = parsed.root.replace(/\\/g, "/");
+  const suffix = segments.join("/");
+  if (root === "/") return suffix ? `/${suffix}` : "/";
+  if (root.endsWith("/")) return `${root}${suffix}`;
+  return suffix ? `${root}/${suffix}` : root;
 }
 
 export function computeTargetRootDigest(adapterId: HostAdapterId, targetRoot: string): string {
@@ -278,6 +283,7 @@ export function createHostAdapterRootBinding(target: {
 
 export type HostRootBindingStatus =
   | "BOUND_MATCH"
+  | "LEGACY_ROOT_BINDING_V1"
   | "UNBOUND_LEGACY"
   | "ROOT_BINDING_MISMATCH"
   | "ROOT_BINDING_REQUIRED"
@@ -299,6 +305,12 @@ export function validateHostRootBinding(
   const currentDigest = computeTargetRootDigest(currentTarget.definition.adapterId, currentTarget.targetRoot);
   if (!state.rootBinding) {
     return { status: "UNBOUND_LEGACY", reasonCodes: ["UNBOUND_LEGACY_ROOT_IDENTITY", "ROOT_BINDING_REQUIRED"] };
+  }
+  if (state.rootBinding.bindingVersion === LEGACY_HOST_TARGET_ROOT_BINDING_VERSION) {
+    return {
+      status: "LEGACY_ROOT_BINDING_V1",
+      reasonCodes: ["LEGACY_ROOT_BINDING_V1", "ROOT_BINDING_UPGRADE_REQUIRED"],
+    };
   }
   if (state.rootBinding.bindingVersion !== HOST_TARGET_ROOT_BINDING_VERSION) {
     return { status: "ROOT_BINDING_TAMPERED", reasonCodes: ["ROOT_BINDING_TAMPERED"] };

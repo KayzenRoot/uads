@@ -453,6 +453,14 @@ export function hostDispatchBundleStatus(
     const bundle = readCurrentHostDispatchBundle(paths, schemaRoot);
     if (!bundle) return "none";
     const definition = adapterId ? getHostAdapterDefinition(adapterId) : null;
+    if (definition && adapterId) {
+      const ownership = inspectHostAdapterOwnership(
+        adapterId,
+        { hostHome, uadsHome: paths.home },
+        schemaRoot,
+      );
+      if (ownership.status !== "CLEAN") return "stale";
+    }
     const hostTargetRootDigest =
       definition && adapterId
         ? resolveHostTarget(definition, { hostHome }).targetRootDigest

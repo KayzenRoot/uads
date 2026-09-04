@@ -69,7 +69,9 @@ installer:
 - adopts legacy v0.10.0–v0.10.2 unbound states only through explicit install/update when bytes and manifest match exactly;
 - is idempotent when canonical resources are unchanged.
 
-Persisted adapter state under `~/.uads/adapters/<adapter>/` stores adapter-relative resource names, hashes, and `rootBinding` metadata (digest, `rootKind`, `sourceClass`, `bindingVersion`). Raw host paths never appear in state, status JSON, Host Dispatch Bundles, or release artifacts. The location digest is `SHA256("uads-host-target-root-v1" + adapterId + canonical-target-root)` and is independent of diagnostic `sourceLabel` when the physical root is the same.
+Persisted adapter state under `~/.uads/adapters/<adapter>/` stores adapter-relative resource names, hashes, and `rootBinding` metadata (digest, `rootKind`, `sourceClass`, `bindingVersion`). Raw host paths never appear in state, status JSON, Host Dispatch Bundles, or release artifacts. Current ownership uses `SHA256("uads-host-target-root-v2" + adapterId + canonical-target-root)` with case-preserving lexical canonicalization: absolute resolution collapses `.` / `..`, separators are normalized, trailing separators are removed, and path component case is never folded. The digest is independent of diagnostic `sourceLabel`.
+
+Binding version 1 from v0.10.3 is readable for migration but is always reported as stale/upgrade-required and cannot authorize destructive uninstall or trusted preparation. An explicit install/update may adopt v1 to v2 only after exact managed-resource and manifest ownership checks at the currently configured target; the adoption is transactional, preserves unrelated bytes, and never searches alternate roots.
 
 Cross-root replay is forbidden: identical managed bytes at a different canonical root do not satisfy ownership, block destructive uninstall, and invalidate prepared bundles through `hostTargetRootDigest`.
 

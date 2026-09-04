@@ -77,6 +77,7 @@ export const IMMUTABLE_TAG_TARGETS: Readonly<Record<string, string>> = Object.fr
   "v0.10.0": "86f7f1767f40ecfee3afd49aadef4f4e63b51fda",
   "v0.10.1": "6210ed235f0e0c0742fbba15e6a909b3d7bed8f0",
   "v0.10.2": "3aa81ac53f9c6b3b31dcb216e2eb8210d3fb3d21",
+  "v0.10.3": "f0ab15e0b00834f3ca2f0ed3d72f193d579741b0",
 });
 
 const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;

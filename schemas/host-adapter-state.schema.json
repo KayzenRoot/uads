@@ -96,7 +96,7 @@
         "targetRootDigest": { "$ref": "#/$defs/digest" },
         "rootKind": { "enum": ["system-user-home", "synthetic-user-home", "adapter-root"] },
         "sourceClass": { "enum": ["default", "explicit-override", "uads-environment", "native-environment"] },
-        "bindingVersion": { "const": "1" }
+        "bindingVersion": { "enum": ["1", "2"] }
       }
     }
   }

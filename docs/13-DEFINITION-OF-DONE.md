@@ -199,3 +199,14 @@ Complete only when all are true:
 - Host Dispatch Bundles include `hostTargetRootDigest` and become stale when the resolved target root changes.
 - No raw host paths appear in persisted state, status JSON, bundles, or release artifacts.
 - T49–T56, AD33–AD36, all existing tests/evals, exact-SHA GitHub evidence, and release assets pass before v0.10.3 publication; v0.10.0–v0.10.2 remain immutable.
+
+## Prompt 010 Correction 04 / v0.10.4
+
+Complete only when all are true:
+
+- Target-root canonicalization is absolute, lexically deterministic, separator-normalized, trailing-separator-safe, case-preserving, and never unconditionally case-folds filesystem identity.
+- Current ownership uses binding v2 with `uads-host-target-root-v2`; newly written installed states never use binding v1.
+- Valid v1 states remain readable but are stale/upgrade-required and cannot authorize destructive uninstall, update/delete, or trusted Host Dispatch Bundle preparation.
+- Explicit v1-to-v2 adoption is non-destructive, exact-ownership-checked, transactional, and does not scan alternate roots or overwrite unrelated bytes.
+- Host Dispatch Bundles and currentness checks use the v2 root digest, and raw host paths remain absent from persisted/evidence/release artifacts.
+- T57–T64, AD37–AD40, all previous tests/evals, exact-SHA CI/Direct Review/CodeQL/Scorecard/audit/packaging evidence, and release assets pass before v0.10.4 publication; v0.10.3 and earlier tags remain immutable.

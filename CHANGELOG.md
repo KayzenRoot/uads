@@ -4,6 +4,22 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.10.4] - 2026-09-04
+
+### Highlights
+
+- Made host adapter target-root identity filesystem-safe by preserving path case and introducing root-binding v2.
+
+### Fixed
+
+- Case-distinct roots no longer collide in ownership digests, preventing case-only cross-root replay on case-sensitive filesystems.
+- v0.10.3 binding states remain readable as legacy weak bindings but cannot authorize current or destructive operations until explicit, non-destructive v2 adoption.
+- Host Dispatch Bundle currentness and release evidence continue to use privacy-safe v2 root digests without persisting raw host paths.
+
+### Verification
+
+- T57–T64, AD37–AD40, all existing tests/evals, and the complete exact-SHA validation chain are required before v0.10.4 publication; v0.10.3 and earlier tags remain immutable.
+
 ## [0.10.3] - 2026-09-04
 
 ### Highlights

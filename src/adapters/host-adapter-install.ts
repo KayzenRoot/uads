@@ -21,7 +21,13 @@ import {
   legacyUserHomeForTarget,
   resolveLegacyV010HostTarget,
 } from "./host-adapter-legacy.js";
-import { HostAdapterRootError, createHostAdapterRootBinding, unboundLegacyReasonCodes, validateHostRootBinding } from "./host-adapter-root.js";
+import {
+  HostAdapterRootError,
+  createHostAdapterRootBinding,
+  LEGACY_HOST_TARGET_ROOT_BINDING_VERSION,
+  unboundLegacyReasonCodes,
+  validateHostRootBinding,
+} from "./host-adapter-root.js";
 import type {
   HostAdapterId,
   HostAdapterInstallInput,
@@ -172,7 +178,8 @@ function validateState(
     }
     if (state.installStatus === "INSTALLED" && state.rootBinding) {
       if (
-        state.rootBinding.bindingVersion !== "1" ||
+        (state.rootBinding.bindingVersion !== LEGACY_HOST_TARGET_ROOT_BINDING_VERSION &&
+          state.rootBinding.bindingVersion !== "2") ||
         state.rootBinding.targetRootDigest.length !== 64
       ) {
         throw new Error("host adapter root binding contract mismatch");
@@ -223,6 +230,12 @@ function writeHostAdapterState(
   const { stateDigest: _ignored, ...withoutDigest } = state as HostAdapterState;
   if (withoutDigest.installStatus === "INSTALLED" && !withoutDigest.rootBinding) {
     throw new HostAdapterInstallError("installed host adapter state requires root binding");
+  }
+  if (
+    withoutDigest.installStatus === "INSTALLED" &&
+    withoutDigest.rootBinding?.bindingVersion !== "2"
+  ) {
+    throw new HostAdapterInstallError("newly written installed host adapter state requires v2 root binding");
   }
   if (withoutDigest.installStatus === "NOT_INSTALLED" && withoutDigest.rootBinding !== null) {
     throw new HostAdapterInstallError("uninstalled host adapter state cannot retain root binding");
@@ -560,6 +573,14 @@ function assertInstallRootBinding(
   }
 }
 
+function allowsExplicitLegacyBindingAdoption(reasonCodes: readonly string[]): boolean {
+  return (
+    unboundLegacyReasonCodes(reasonCodes) ||
+    reasonCodes.includes("LEGACY_ROOT_BINDING_V1") ||
+    reasonCodes.includes("ROOT_BINDING_UPGRADE_REQUIRED")
+  );
+}
+
 function assertDestructiveRootBinding(
   state: HostAdapterState,
   target: ResolvedHostTarget,
@@ -568,7 +589,7 @@ function assertDestructiveRootBinding(
   if (binding.status === "ROOT_BINDING_MISMATCH" || binding.status === "ROOT_BINDING_TAMPERED") {
     throw new HostAdapterInstallError("host adapter root binding mismatch");
   }
-  if (binding.status === "UNBOUND_LEGACY") {
+  if (binding.status === "UNBOUND_LEGACY" || binding.status === "LEGACY_ROOT_BINDING_V1") {
     throw new HostAdapterInstallError("host adapter root binding is required");
   }
 }
@@ -634,6 +655,9 @@ export function inspectHostAdapterOwnership(
   if (rootBinding.status === "UNBOUND_LEGACY") {
     return { status: "STALE", reasonCodes: reasons.sort() };
   }
+  if (rootBinding.status === "LEGACY_ROOT_BINDING_V1") {
+    return { status: "STALE", reasonCodes: reasons.sort() };
+  }
   if (reasons.length > 0) return { status: "STALE", reasonCodes: reasons.sort() };
   return { status: "CLEAN", reasonCodes: classification.reasonCodes };
 }
@@ -677,7 +701,7 @@ export function installHostAdapter(
   if (ownership.status === "CONFLICT") {
     throw new HostAdapterInstallError("host adapter ownership state is not clean");
   }
-  if (ownership.status === "STALE" && !unboundLegacyReasonCodes(ownership.reasonCodes)) {
+  if (ownership.status === "STALE" && !allowsExplicitLegacyBindingAdoption(ownership.reasonCodes)) {
     throw new HostAdapterInstallError("host adapter ownership state is not clean");
   }
   if (state && state.ownershipStatus !== "CLEAN" && state.installStatus === "INSTALLED" && ownership.status !== "STALE") {
@@ -716,6 +740,51 @@ export function installHostAdapter(
 
   const manifest = manifestContent(definition, resources);
   const desiredStateResources = resources.map(({ content: _content, ...resource }) => resource);
+  const hasLegacyV1Binding =
+    state?.installStatus === "INSTALLED" &&
+    state.rootBinding?.bindingVersion === LEGACY_HOST_TARGET_ROOT_BINDING_VERSION;
+  if (
+    hasLegacyV1Binding &&
+    state &&
+    state.ownershipStatus === "CLEAN" &&
+    classification.classification === "CURRENT_TARGET_CLEAN" &&
+    fs.existsSync(target.manifestPath) &&
+    state.manifestDigest === manifest.digest &&
+    JSON.stringify(stableValue(state.resources)) === JSON.stringify(stableValue(desiredStateResources))
+  ) {
+    const snapshots = new Map<string, Snapshot>();
+    const canonicalTargets = definition.resourceKind === "agents" ? canonicalAgentPaths(resources, uadsHome) : [];
+    for (const absolute of [hostStatePath(adapterId, uadsHome), ...canonicalTargets]) {
+      snapshots.set(absolute, readSnapshot(absolute));
+    }
+    try {
+      if (definition.resourceKind === "agents") syncCanonicalAgents(resources, uadsHome);
+      injectInstallFault("after-canonical-sync");
+      const detection = detectHostAdapter(adapterId, input, registry);
+      return writeHostAdapterState(
+        {
+          ...state,
+          detection,
+          ownershipStatus: "CLEAN",
+          rootBinding: rootBindingForTarget(target),
+          updatedAt: new Date().toISOString(),
+        },
+        uadsHome,
+        schemaRoot,
+      );
+    } catch (error) {
+      for (const [absolute, snapshot] of snapshots) {
+        try {
+          restoreSnapshot(absolute, snapshot);
+        } catch {
+          // Preserve the original failure.
+        }
+      }
+      throw error instanceof HostAdapterInstallError
+        ? error
+        : new HostAdapterInstallError(error instanceof Error ? error.message : String(error));
+    }
+  }
   if (
     classification.classification === "LEGACY_V010_TARGET_CLEAN" &&
     legacy &&
@@ -727,6 +796,7 @@ export function installHostAdapter(
     state?.installStatus === "INSTALLED" &&
     state.ownershipStatus === "CLEAN" &&
     classification.classification === "CURRENT_TARGET_CLEAN" &&
+    !hasLegacyV1Binding &&
     fs.existsSync(target.manifestPath) &&
     state.manifestDigest === manifest.digest &&
     JSON.stringify(stableValue(state.resources)) === JSON.stringify(stableValue(desiredStateResources))
@@ -774,11 +844,6 @@ export function installHostAdapter(
       atomicWriteFile(absolute, resource.content.toString("utf8"));
     }
     injectInstallFault("after-host-write");
-    for (const prior of previous.values()) {
-      if (desired.has(prior.relativeTarget)) continue;
-      const absolute = targetPath(target, prior.relativeTarget);
-      if (fs.existsSync(absolute)) fs.unlinkSync(absolute);
-    }
     fs.mkdirSync(path.dirname(target.manifestPath), { recursive: true });
     atomicWriteFile(target.manifestPath, manifest.content);
     const detection = detectHostAdapter(adapterId, input, registry);
@@ -801,6 +866,11 @@ export function installHostAdapter(
       uadsHome,
       schemaRoot,
     );
+    for (const prior of previous.values()) {
+      if (desired.has(prior.relativeTarget)) continue;
+      const absolute = targetPath(target, prior.relativeTarget);
+      if (fs.existsSync(absolute)) fs.unlinkSync(absolute);
+    }
     return next;
   } catch (error) {
     for (const [absolute, snapshot] of snapshots) {

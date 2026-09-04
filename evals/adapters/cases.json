@@ -34,5 +34,9 @@
   { "id": "AD33", "name": "Cross-root identical-byte ownership replay is rejected" },
   { "id": "AD34", "name": "Bound root mismatch blocks uninstall and preserves bytes" },
   { "id": "AD35", "name": "Host dispatch root identity invalidates stale bundle" },
-  { "id": "AD36", "name": "Legacy unbound root state is fail-closed / safely adopted without destructive ambiguity" }
+  { "id": "AD36", "name": "Legacy unbound root state is fail-closed / safely adopted without destructive ambiguity" },
+  { "id": "AD37", "name": "Case-sensitive root identity does not case-fold distinct roots" },
+  { "id": "AD38", "name": "Legacy v1 root binding is readable but cannot authorize destructive/current operations" },
+  { "id": "AD39", "name": "Explicit v1-to-v2 adoption is non-destructive and ends BOUND_MATCH" },
+  { "id": "AD40", "name": "Host dispatch/currentness uses v2 root identity and rejects case-collision replay" }
 ]
