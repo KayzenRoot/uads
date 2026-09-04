@@ -27,4 +27,3 @@ Canonical promotion: `PENDING_MAINTAINER`
 ## Safety statement
 
 This delta does not silently modify UADS canonical sidecar state or promote repository truth. A maintainer must accept any promotion through the normal PR process.
-

@@ -48,4 +48,3 @@ Risk: `LOW | MEDIUM | HIGH | CRITICAL`
 - PR title: `<title>`
 - Evidence Bundle: `<relative path>`
 - Checkpoint Delta: `<relative path>`
-

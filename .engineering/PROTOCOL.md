@@ -99,4 +99,3 @@ Never copy credentials, raw tokens, private keys, customer data, or absolute hos
 - post-adoption validation is no worse than baseline;
 - the diff is committed, pushed, and submitted for independent review;
 - the final review is explicit about limitations, risks, and proposed next increments.
-

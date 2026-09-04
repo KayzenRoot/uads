@@ -22,4 +22,3 @@ Head Git SHA: `<40 lowercase hex or pending>`
 
 - [ ] No credentials, raw tokens, private keys, customer data, or absolute host paths.
 - [ ] Generated/cache/vendored material is excluded or explicitly classified.
-

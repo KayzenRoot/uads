@@ -36,4 +36,3 @@ Every adoption or later protocol increment has one immutable identity in the for
 ## Record status
 
 `PROPOSED` and `READY_FOR_REVIEW` records are not canonical product truth. They become accepted only through the normal maintainer review and merge path. A stale Context Lock is never silently reused.
-

@@ -19,4 +19,3 @@ Canonical promotion: `NOT_REQUESTED | PENDING_MAINTAINER | PROMOTED`
 ## Safety statement
 
 This delta does not silently modify UADS canonical sidecar state. A maintainer must accept any promotion.
-

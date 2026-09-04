@@ -30,4 +30,3 @@ Record every critical source change after the lock. Do not continue silently.
 
 - Re-inspection command: `<command>`
 - New lock or reason blocked: `<reference>`
-

@@ -42,4 +42,3 @@ The following mechanisms prevent safe deletion from static absence alone: dynami
 4. Audit release/installer scripts and configuration ownership with maintainers.
 5. Review template UX after real usage.
 6. Only after independent review and characterization tests, remove one `VERIFIED_DEAD` candidate per small Work Order.
-

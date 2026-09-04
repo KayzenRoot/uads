@@ -18,4 +18,3 @@ Status: `DRAFT | COMPLETE | BLOCKED | STALE`
 ## Next action
 
 <Smallest safe next action and owner.>
-

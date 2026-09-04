@@ -22,4 +22,3 @@ Baseline Git SHA: `<40 lowercase hex>`
 ## Remaining risks
 
 - `<risk or none known>`
-

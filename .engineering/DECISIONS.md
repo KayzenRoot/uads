@@ -26,4 +26,3 @@ This ledger is repository governance, not UADS runtime state. Entries are append
 - Decision: No production file, dependency, migration, endpoint, job, flag, configuration, or public contract is removed by this increment.
 - Rationale: Static absence is not proof of runtime absence in an extensible orchestration project.
 - Evidence: `.engineering/reports/CLEANUP-INVENTORY.md` and `.engineering/PROTOCOL.md`.
-

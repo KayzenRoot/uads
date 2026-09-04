@@ -91,4 +91,3 @@ Read-only audit of `KayzenRoot/uads` at the baseline reported:
 - T58/T59 filesystem-object replay portions were skipped because this Windows filesystem is case-insensitive; the tests themselves passed.
 - Test execution emitted LF-to-CRLF warnings only for temporary fixture repositories.
 - No dedicated integration/E2E command, semantic unused-import/export lint, or cycle detector is configured; these gaps are in the cleanup inventory.
-
