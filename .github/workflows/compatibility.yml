@@ -36,6 +36,19 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
+      - name: Prove exact checkout identity
+        id: checkout_identity
+        shell: pwsh
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $actual = (git rev-parse HEAD).Trim().ToLowerInvariant()
+          $expected = $env:EXPECTED_SOURCE_SHA.Trim().ToLowerInvariant()
+          if ($actual -ne $expected) { throw "checked out HEAD does not match explicit source SHA" }
+          $tree = (git rev-parse 'HEAD^{tree}').Trim().ToLowerInvariant()
+          if ($tree -notmatch '^[0-9a-f]{40}$') { throw "checked out source tree SHA is invalid" }
+          "sourceTreeSha=$tree" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Setup Node.js 20
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -70,7 +83,7 @@ jobs:
           node scripts/github/generate-compatibility-evidence.mjs
           --platform "${{ matrix.platform }}"
           --source-sha "${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}"
-          --source-tree-sha "$(git rev-parse HEAD^{tree})"
+          --source-tree-sha "${{ steps.checkout_identity.outputs.sourceTreeSha }}"
           --job-name "${{ matrix.platform }} / Node 20"
           --checks-file "${{ runner.temp }}/uads-compatibility-smoke.json"
           --output "${{ runner.temp }}/uads-compatibility-evidence.json"
