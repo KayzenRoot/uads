@@ -23,10 +23,10 @@ Generated at: `2026-09-04T00:00:00.000Z`
 | Direct Review seam | `src/github/direct-review.ts` | `88f5616a76ec6b70b3a64239b6b49c0f0b5a8a45c5de1125b44bcbf7dc97d198` |
 | Review packet schema | `schemas/review-packet.schema.json` | `c109d6da98d537375635463acc9112071b20d15f33b39298af1341773a0e81f0` |
 | Compatibility schema | `schemas/compatibility-evidence.schema.json` | `23511445a029266c92abe4d9c9455f2f8a155d3572afde1235404ccfe78f792d` |
-| Compatibility workflow | `.github/workflows/compatibility.yml` | `23f12440cd7f8f77ec6adce280f44adc5963d778c20641185da2de1a17bb25f1` |
+| Compatibility workflow | `.github/workflows/compatibility.yml` | `41fdd64b75526a6ac09f708457dee3c177dc99cf50e60530cea5d9593fba825a` |
 | Assurance eval | `src/eval/assurance.ts` | `1229811d750b70bcd322808cc679a74fc19de5c60d27513a5ab24a9e9be6a522` |
 | Fault-injection eval | `src/eval/fault-injection.ts` | `c45b94a5a57617f78d9ff81e03ca71e9c717aa9d203325672e9a744783eea3f7` |
-| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b2b1b4e7a528e6995d11e04aa6f5d07b62e3e4d90aa564c25faae1dd79edb878` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `90c6e4d00dec78bfdfd72fa85022ef7efbabc5b35e2dee458e2b314f01435bf9` |
 
 ## Stale events
 
@@ -37,7 +37,7 @@ Record every critical source change after the lock. Do not continue silently.
 - Action: stopped the initial flow, re-inspected the changed source set, recomputed SHA-256 fingerprints, and relocked before final validation
 - Source: Prompt 011 correction implementation and evidence records
 - Reason: C1-C4 correction blockers changed assurance authority, normative FI coverage, compatibility artifact identity, findings-file safety, and their documentation
-- Action: committed implementation at `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`, recomputed all required fingerprints, and relocked before hosted validation
+- Action: committed implementation at `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`, fixed the Windows tree-proof shell portability at `3e06aa9d1fdcdee371b1d4cca41222d052072d5f`, recomputed all required fingerprints, and relocked before hosted validation
 
 ## Relock evidence
 
