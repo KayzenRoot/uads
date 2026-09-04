@@ -28,6 +28,9 @@ describe("Cursor adapter and skills preflight", () => {
 
   it("reports Cursor adapter write failure without deleting canonical agents", () => {
     const uadsHome = fs.mkdtempSync(path.join(os.tmpdir(), "uads-adapter-home-"));
+    const canonicalDir = path.join(uadsHome, "agents");
+    fs.mkdirSync(canonicalDir, { recursive: true });
+    fs.writeFileSync(path.join(canonicalDir, "uads-repo-inspector.md"), "pre-existing canonical\n");
     const blockedFile = fs.mkdtempSync(path.join(os.tmpdir(), "uads-cursor-file-"));
     const asFile = path.join(blockedFile, "not-a-dir");
     fs.writeFileSync(asFile, "x");
@@ -37,7 +40,9 @@ describe("Cursor adapter and skills preflight", () => {
       packageRoot: path.resolve("."),
     });
     expect(result.error).toMatch(/Cursor adapter skipped/i);
-    expect(fs.existsSync(path.join(uadsHome, "agents", "uads-repo-inspector.md"))).toBe(true);
+    expect(fs.readFileSync(path.join(uadsHome, "agents", "uads-repo-inspector.md"), "utf8")).toBe(
+      "pre-existing canonical\n",
+    );
   });
 
   it("passes the UADS Agent Skills compatibility preflight", () => {

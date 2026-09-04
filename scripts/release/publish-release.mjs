@@ -26,7 +26,7 @@ if (assets.length < 7 || !assets.includes("github-direct-review-evidence.json") 
 const existing = spawnSync("gh", ["release", "view", tag, "--repo", repo], { cwd: root, windowsHide: true }).status === 0;
 if (!existing) {
   const notes = releaseNotes(version);
-  run("gh", ["release", "create", tag, "--repo", repo, "--title", `UADS ${tag} - GitHub Release Engineering`, "--notes", notes, "--prerelease", "--verify-tag", ...assets.map((asset) => path.join(artifactDir, asset))]);
+  run("gh", ["release", "create", tag, "--repo", repo, "--title", releaseTitle(version), "--notes", notes, "--prerelease", "--verify-tag", ...assets.map((asset) => path.join(artifactDir, asset))]);
 }
 process.stdout.write(`published ${tag} at ${head}\n`);
 
@@ -93,5 +93,32 @@ function releaseNotes(version) {
 function formatSummary(summary) {
   if (!summary || summary.passed === null || summary.failed === null || summary.total === null) return "not provable";
   return `${summary.passed}/${summary.total} passed`;
+}
+function releaseTitle(version) {
+  const titles = {
+    "0.7.0": "UADS v0.7.0 - GitHub Release Engineering",
+    "0.7.1": "UADS v0.7.1 - Direct Review Evidence Hardening",
+    "0.8.0": "UADS v0.8.0 - Model Routing",
+    "0.8.1": "UADS v0.8.1 - Runtime Capability Ownership",
+    "0.9.0": "UADS v0.9.0 - Specialist Routing",
+    "0.9.1": "UADS v0.9.1 - Specialist Semantic Revalidation",
+    "0.10.0": "UADS v0.10.0 - Runtime Adapters",
+    "0.10.1": "UADS v0.10.1 - Runtime Adapter Hardening",
+  };
+  const mapped = titles[version];
+  if (mapped) return mapped;
+  const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
+  const start = changelog.indexOf(`## [${version}]`);
+  if (start < 0) fail(`release title cannot be derived for ${version}`);
+  const next = changelog.indexOf("\n## [", start + 1);
+  const section = changelog.slice(start, next < 0 ? changelog.length : next);
+  const highlight = section.match(/### Highlights\s*\n\s*\n\s*-\s+(.+)/)?.[1]?.trim();
+  if (!highlight) fail(`release title cannot be derived from changelog highlights for ${version}`);
+  const summary = highlight.length > 72 ? `${highlight.slice(0, 69)}...` : highlight;
+  const title = `UADS v${version} - ${summary}`;
+  if (title.includes("GitHub Release Engineering") && version !== "0.7.0") {
+    fail("release title must not reuse the stale GitHub Release Engineering increment");
+  }
+  return title;
 }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

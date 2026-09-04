@@ -9,11 +9,14 @@ import { findPackageRoot } from "../lib/version.js";
 import {
   builtinHostAdapterRegistry,
   createHostAdapterRegistry,
+  getHostAdapterDefinition,
 } from "../adapters/host-adapter-registry.js";
 import {
   detectHostAdapter,
+  resolveHostTarget,
   runtimeSnapshotFromHostDetection,
 } from "../adapters/host-adapter-detect.js";
+import { resolveLegacyV010HostTarget } from "../adapters/host-adapter-legacy.js";
 import {
   getHostAdapterStatePath,
   installHostAdapter,
@@ -189,11 +192,11 @@ function runCase(id: string): void {
     assertEval(symlinkBlocked, "host symlink escape was not blocked");
   } else if (id === "AD5") {
     const fixture = install("codex");
-    assertEval(fs.existsSync(path.join(fixture.hostHome, "agents", "uads-repo-inspector.md")), "Codex agents were not installed");
+    assertEval(fs.existsSync(path.join(fixture.hostHome, ".codex", "agents", "uads-repo-inspector.md")), "Codex agents were not installed");
     assertEval(!fs.existsSync(path.join(fixture.project, "AGENTS.md")), "Codex install touched the project");
   } else if (id === "AD6") {
     const fixture = install("generic-agent-skills");
-    assertEval(fs.existsSync(path.join(fixture.hostHome, "skills", "uads-orchestrator", "SKILL.md")), "Generic skill was not installed");
+    assertEval(fs.existsSync(path.join(fixture.hostHome, ".agents", "skills", "uads-orchestrator", "SKILL.md")), "Generic skill was not installed");
     assertEval(!fs.existsSync(path.join(fixture.project, "skills")), "Generic install touched the project");
   } else if (id === "AD7") {
     const fixture = hostFixture();
@@ -282,6 +285,62 @@ function runCase(id: string): void {
     const text = JSON.stringify({ bundle, state });
     assertEval(!text.includes(fixture.hostHome) && !text.includes(fixture.uadsHome) && !text.includes("apiKey"), "adapter summary leaked host data");
     assertEval(readCurrentHostDispatchBundle(fixture.context.paths, findPackageRoot())?.bundleDigest === bundle.bundleDigest, "bundle sidecar was not readable");
+  } else if (id === "AD23") {
+    const fixture = install("codex");
+    assertEval(fs.existsSync(path.join(fixture.hostHome, ".codex", "agents", "uads-repo-inspector.md")), "Codex default target is not under .codex");
+    assertEval(!fs.existsSync(path.join(fixture.hostHome, "agents")), "Codex wrote to bare home agents");
+  } else if (id === "AD24") {
+    const fixture = install("generic-agent-skills");
+    assertEval(fs.existsSync(path.join(fixture.hostHome, ".agents", "skills", "uads-orchestrator", "SKILL.md")), "Generic default target is not under .agents");
+    assertEval(!fs.existsSync(path.join(fixture.hostHome, "skills", "uads-orchestrator")), "Generic wrote to bare home skills");
+  } else if (id === "AD25") {
+    const home = hostFixture().hostHome;
+    const codex = detectHostAdapter("codex", { hostHome: home });
+    const generic = detectHostAdapter("generic-agent-skills", { hostHome: home });
+    assertEval(codex.status !== "SUPPORTED" && generic.status !== "SUPPORTED", "missing adapter roots were marked supported");
+    assertEval(!fs.existsSync(path.join(home, ".codex")) && !fs.existsSync(path.join(home, ".agents")), "detection created adapter roots");
+  } else if (id === "AD26") {
+    const home = hostFixture().hostHome;
+    for (const adapterId of ["cursor", "codex", "generic-agent-skills"] as const) {
+      const target = resolveHostTarget(getHostAdapterDefinition(adapterId), { hostHome: home });
+      assertEval(target.targetRoot !== home, `${adapterId} resolved to bare home`);
+      assertEval(target.canCreateAdapterRoot, `${adapterId} explicit override semantics are ambiguous`);
+    }
+  } else if (id === "AD27") {
+    const fixture = hostFixture();
+    const canonicalRoot = path.join(fixture.uadsHome, "agents");
+    fs.mkdirSync(canonicalRoot, { recursive: true });
+    const canonicalFile = path.join(canonicalRoot, "uads-repo-inspector.md");
+    fs.writeFileSync(canonicalFile, "canonical original\n");
+    process.env.UADS_ADAPTER_INSTALL_FAULT = "after-canonical-sync";
+    let failed = false;
+    try {
+      installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    } catch {
+      failed = true;
+    }
+    delete process.env.UADS_ADAPTER_INSTALL_FAULT;
+    assertEval(failed, "injected host install failure did not surface");
+    assertEval(fs.readFileSync(canonicalFile, "utf8") === "canonical original\n", "canonical UADS resources were not restored");
+  } else if (id === "AD28") {
+    const fixture = hostFixture();
+    const installed = installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    const savedState = readHostAdapterState("codex", fixture.uadsHome, findPackageRoot());
+    const legacy = resolveLegacyV010HostTarget(getHostAdapterDefinition("codex"), fixture.hostHome)!;
+    fs.mkdirSync(legacy.resourceRoot, { recursive: true });
+    for (const resource of installed.resources) {
+      const current = path.join(fixture.hostHome, ".codex", resource.relativeTarget);
+      const legacyPath = path.join(legacy.targetRoot, resource.relativeTarget);
+      fs.mkdirSync(path.dirname(legacyPath), { recursive: true });
+      fs.copyFileSync(current, legacyPath);
+    }
+    fs.copyFileSync(path.join(fixture.hostHome, ".codex", installed.manifestRelativeTarget), legacy.manifestPath);
+    uninstallHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome }, findPackageRoot());
+    fs.mkdirSync(path.dirname(getHostAdapterStatePath("codex", fixture.uadsHome)), { recursive: true });
+    fs.writeFileSync(getHostAdapterStatePath("codex", fixture.uadsHome), `${JSON.stringify(savedState, null, 2)}\n`);
+    installHostAdapter("codex", { hostHome: fixture.hostHome, uadsHome: fixture.uadsHome, packageRoot: findPackageRoot() }, findPackageRoot());
+    assertEval(fs.existsSync(path.join(fixture.hostHome, ".codex", "agents", "uads-repo-inspector.md")), "legacy clean state did not migrate");
+    assertEval(!fs.existsSync(path.join(legacy.resourceRoot, "uads-repo-inspector.md")), "legacy managed file was orphaned");
   } else {
     throw new Error(`unknown adapter evaluation case ${id}`);
   }

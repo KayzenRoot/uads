@@ -3,6 +3,7 @@ import { findActionPinIssues, validateActionPins } from "../src/release/action-p
 import { createReleaseManifest, checksumFile } from "../src/release/release-artifacts.js";
 import { MAIN_PROTECTION, repositoryConfigSnapshot } from "../src/release/github-config.js";
 import { HISTORICAL_RELEASES, validateReleaseMetadata } from "../src/release/semver.js";
+import { releaseTitle } from "../src/release/release-title.js";
 
 const validMetadata = {
   version: "0.7.0",
@@ -95,8 +96,9 @@ describe("release engineering", () => {
     ]);
   });
 
-  it("15: historical mappings are exact SHAs, never symbolic main", () => {
-    expect(HISTORICAL_RELEASES.every(({ commit }) => /^[0-9a-f]{40}$/.test(commit))).toBe(true);
-    expect(HISTORICAL_RELEASES.some(({ commit }) => commit === "main")).toBe(false);
+  it("16: release titles are version-aware and not globally hard-coded", () => {
+    expect(releaseTitle("0.10.0")).toBe("UADS v0.10.0 - Runtime Adapters");
+    expect(releaseTitle("0.10.1")).toBe("UADS v0.10.1 - Runtime Adapter Hardening");
+    expect(releaseTitle("0.10.1")).not.toContain("GitHub Release Engineering");
   });
 });

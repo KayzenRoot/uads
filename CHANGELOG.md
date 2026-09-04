@@ -4,14 +4,23 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
-### Added
+## [0.10.1] - 2026-09-04
 
-- Strict GitHub Direct Review Evidence schema, bounded parsers, exact-SHA Actions artifact generation, CI log markers, release derivatives, and adversarial validation.
-- Two-stage CI gate receipts and post-CI canonical Direct Review publication with exact run/attempt cross-checks and checksummed GitHub review index.
+### Highlights
 
-### Security / Supply Chain
+- Hardened runtime adapter target integrity so Codex and Generic Agent Skills resolve under fixed `~/.codex` and `~/.agents` roots instead of bare user home.
+- Made host detection truthful for missing adapter roots and extended adapter installation rollback to include canonical `~/.uads/agents` synchronization.
 
-- Direct-review outputs exclude raw logs, secrets, and host paths; unavailable counts and GitHub security limitations remain explicit instead of being inferred as PASS.
+### Fixed
+
+- Default Codex/Generic installs no longer write to `~/agents` or `~/skills`; explicit override semantics always append the fixed adapter root segment.
+- Failed adapter installs now restore canonical UADS agent copies transactionally alongside host resources and sidecar state.
+- Legacy v0.10.0 wrong-target Codex/Generic state migrates safely when ownership is exact, or blocks without deleting ambiguous bytes.
+- GitHub release titles are version-aware and no longer hard-coded to the Prompt 007 increment.
+
+### Verification
+
+- T31–T40, AD23–AD28, all existing tests/evals, and the complete validation matrix are required for the exact release SHA; v0.10.0 and earlier tags remain immutable.
 
 ## [0.10.0] - 2026-09-03
 

@@ -20,5 +20,11 @@
   { "id": "AD19", "name": "Adapter cannot invent or remove authoritative roles" },
   { "id": "AD20", "name": "Context token gate and evidence constraints survive translation" },
   { "id": "AD21", "name": "Install update uninstall ownership is idempotent and safe" },
-  { "id": "AD22", "name": "Adapter summaries remain secret and path safe" }
+  { "id": "AD22", "name": "Adapter summaries remain secret and path safe" },
+  { "id": "AD23", "name": "Default Codex target resolves under fixed .codex root" },
+  { "id": "AD24", "name": "Default Generic target resolves under fixed .agents root" },
+  { "id": "AD25", "name": "Missing default host roots do not become SUPPORTED" },
+  { "id": "AD26", "name": "Explicit override/root semantics are deterministic and non-ambiguous" },
+  { "id": "AD27", "name": "Failed host install restores canonical UADS global resources" },
+  { "id": "AD28", "name": "Legacy v0.10.0 target state migrates safely or blocks without data loss" }
 ]

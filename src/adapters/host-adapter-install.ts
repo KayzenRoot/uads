@@ -16,6 +16,10 @@ import {
   resolveHostTarget,
   type ResolvedHostTarget,
 } from "./host-adapter-detect.js";
+import {
+  classifyHostAdapterTarget,
+  resolveLegacyV010HostTarget,
+} from "./host-adapter-legacy.js";
 import type {
   HostAdapterId,
   HostAdapterInstallInput,
@@ -281,6 +285,122 @@ function sourceAgentFileName(sourceRef: string): string {
   return relative;
 }
 
+function canonicalAgentPaths(resources: SourceResource[], uadsHome: string): string[] {
+  const canonicalRoot = path.join(uadsHome, "agents");
+  return resources.map((resource) => path.join(canonicalRoot, sourceAgentFileName(resource.sourceRef)));
+}
+
+function assertAdapterRootWritable(target: ResolvedHostTarget): void {
+  if (target.isLegacyV010Target) return;
+  if (!target.canCreateAdapterRoot && !fs.existsSync(target.targetRoot)) {
+    throw new HostAdapterInstallError("host adapter root is not present; explicit override or pre-existing host root is required");
+  }
+}
+
+function assertManagedWritesContained(target: ResolvedHostTarget, absolutePaths: string[]): void {
+  const resolvedRoot = path.resolve(target.targetRoot);
+  for (const absolute of absolutePaths) {
+    if (!isPathInside(resolvedRoot, path.resolve(absolute))) {
+      throw new HostAdapterInstallError("managed host write would escape the adapter root");
+    }
+  }
+}
+
+function injectInstallFault(point: string): void {
+  if (process.env.UADS_ADAPTER_INSTALL_FAULT === point) {
+    throw new HostAdapterInstallError(`injected install fault at ${point}`);
+  }
+}
+
+function removeManagedLegacyFiles(target: ResolvedHostTarget, state: HostAdapterState): void {
+  for (const resource of state.resources) {
+    const absolute = targetPath(target, resource.relativeTarget);
+    if (fs.existsSync(absolute)) {
+      const stat = fs.lstatSync(absolute);
+      if (stat.isFile() && !stat.isSymbolicLink()) fs.unlinkSync(absolute);
+    }
+  }
+  if (fs.existsSync(target.manifestPath)) {
+    const stat = fs.lstatSync(target.manifestPath);
+    if (stat.isFile() && !stat.isSymbolicLink()) fs.unlinkSync(target.manifestPath);
+  }
+}
+
+function migrateLegacyV010Target(
+  current: ResolvedHostTarget,
+  legacy: ResolvedHostTarget,
+  state: HostAdapterState,
+  resources: SourceResource[],
+  manifest: { content: string; digest: string },
+  input: HostAdapterInstallInput,
+  uadsHome: string,
+  schemaRoot?: string,
+): HostAdapterState {
+  const registry = builtinHostAdapterRegistry();
+  const adapterId = current.definition.adapterId;
+  const snapshots = new Map<string, Snapshot>();
+  const managedCurrent = resources.map((resource) => targetPath(current, resource.relativeTarget));
+  const managedLegacy = state.resources.map((resource) => targetPath(legacy, resource.relativeTarget));
+  const canonicalTargets = current.definition.resourceKind === "agents" ? canonicalAgentPaths(resources, uadsHome) : [];
+  for (const absolute of [
+    ...managedCurrent,
+    current.manifestPath,
+    ...managedLegacy,
+    legacy.manifestPath,
+    hostStatePath(adapterId, uadsHome),
+    ...canonicalTargets,
+  ]) {
+    snapshots.set(absolute, readSnapshot(absolute));
+  }
+
+  try {
+    if (current.definition.resourceKind === "agents") syncCanonicalAgents(resources, uadsHome);
+    injectInstallFault("after-canonical-sync");
+    assertNoSymlinkEscape(current.targetRoot, current.resourceRoot);
+    fs.mkdirSync(current.resourceRoot, { recursive: true });
+    for (const resource of resources) {
+      const absolute = targetPath(current, resource.relativeTarget);
+      fs.mkdirSync(path.dirname(absolute), { recursive: true });
+      atomicWriteFile(absolute, resource.content.toString("utf8"));
+    }
+    injectInstallFault("after-host-write");
+    fs.mkdirSync(path.dirname(current.manifestPath), { recursive: true });
+    atomicWriteFile(current.manifestPath, manifest.content);
+    const detection = detectHostAdapter(adapterId, input, registry);
+    const next = writeHostAdapterState(
+      {
+        schema: "uads.host-adapter-state",
+        schemaVersion: HOST_ADAPTER_SCHEMA_VERSION,
+        adapterId,
+        contractVersion: HOST_ADAPTER_CONTRACT_VERSION,
+        targetLabel: current.definition.targetLabel,
+        detection,
+        installStatus: "INSTALLED",
+        ownershipStatus: "CLEAN",
+        resources: resources.map(({ content: _content, ...resource }) => resource),
+        manifestRelativeTarget: current.definition.manifestRelativeTarget,
+        manifestDigest: manifest.digest,
+        updatedAt: new Date().toISOString(),
+      },
+      uadsHome,
+      schemaRoot,
+    );
+    removeManagedLegacyFiles(legacy, state);
+    return next;
+  } catch (error) {
+    for (const [absolute, snapshot] of snapshots) {
+      try {
+        restoreSnapshot(absolute, snapshot);
+      } catch {
+        // Preserve the original failure.
+      }
+    }
+    throw error instanceof HostAdapterInstallError
+      ? error
+      : new HostAdapterInstallError(error instanceof Error ? error.message : String(error));
+  }
+}
+
 function syncCanonicalAgents(resources: SourceResource[], uadsHome: string): void {
   const canonicalRoot = path.join(uadsHome, "agents");
   assertNoSymlinkEscape(uadsHome, canonicalRoot);
@@ -386,9 +506,13 @@ export function inspectHostAdapterOwnership(
   }
   const definition = getHostAdapterDefinition(adapterId);
   const target = resolveHostTarget(definition, input);
+  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
+  const classification = classifyHostAdapterTarget(target, legacy, state);
+  const activeTarget =
+    classification.classification.startsWith("LEGACY_V010") && legacy ? legacy : target;
   const reasons: string[] = [];
   for (const resource of state.resources) {
-    const absolute = targetPath(target, resource.relativeTarget);
+    const absolute = targetPath(activeTarget, resource.relativeTarget);
     if (!fs.existsSync(absolute)) {
       reasons.push(`MISSING_MANAGED_RESOURCE:${resource.relativeTarget}`);
       continue;
@@ -402,20 +526,23 @@ export function inspectHostAdapterOwnership(
     }
   }
   try {
-    assertNoSymlinkEscape(target.targetRoot, target.manifestPath);
-    if (!fs.existsSync(target.manifestPath)) {
+    assertNoSymlinkEscape(activeTarget.targetRoot, activeTarget.manifestPath);
+    if (!fs.existsSync(activeTarget.manifestPath)) {
       reasons.push("MISSING_MANIFEST");
-    } else if (fileDigest(target.manifestPath) !== state.manifestDigest) {
+    } else if (fileDigest(activeTarget.manifestPath) !== state.manifestDigest) {
       reasons.push("MODIFIED_MANIFEST");
     }
   } catch {
     reasons.push("SYMLINK_MANIFEST");
   }
-  if (reasons.some((reason) => reason.startsWith("MODIFIED") || reason.startsWith("SYMLINK"))) {
+  if (classification.classification === "LEGACY_V010_TARGET_AMBIGUOUS") {
+    reasons.push("LEGACY_TARGET_AMBIGUOUS");
+  }
+  if (reasons.some((reason) => reason.startsWith("MODIFIED") || reason.startsWith("SYMLINK") || reason === "LEGACY_TARGET_AMBIGUOUS")) {
     return { status: "CONFLICT", reasonCodes: reasons.sort() };
   }
   if (reasons.length > 0) return { status: "STALE", reasonCodes: reasons.sort() };
-  return { status: "CLEAN", reasonCodes: [] };
+  return { status: "CLEAN", reasonCodes: classification.reasonCodes };
 }
 
 export function installHostAdapter(
@@ -429,22 +556,33 @@ export function installHostAdapter(
   const packageRoot = path.resolve(input.packageRoot ?? findPackageRoot());
   const uadsHome = resolveUadsHome(input.uadsHome);
   const target = resolveHostTarget(definition, input);
+  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
   if (input.projectRoot && isPathInside(path.resolve(input.projectRoot), target.targetRoot)) {
     throw new HostAdapterInstallError("project-local host adapter target is forbidden");
   }
   const resources = collectSourceResources(definition, packageRoot);
   const state = readHostAdapterState(adapterId, uadsHome, schemaRoot);
+  const classification = classifyHostAdapterTarget(target, legacy, state);
+  if (classification.classification === "LEGACY_V010_TARGET_MODIFIED") {
+    throw new HostAdapterInstallError("legacy host adapter target was modified");
+  }
+  if (classification.classification === "LEGACY_V010_TARGET_AMBIGUOUS") {
+    throw new HostAdapterInstallError("legacy host adapter target is ambiguous");
+  }
   if (state && state.ownershipStatus !== "CLEAN" && state.installStatus === "INSTALLED") {
     throw new HostAdapterInstallError("host adapter ownership state is not clean");
   }
+  assertAdapterRootWritable(target);
   assertDirectoryOrMissing(target.targetRoot, "host adapter target root");
   assertDirectoryOrMissing(target.resourceRoot, "host adapter resource root");
   const previous = priorResourceMap(state);
   const desired = new Set(resources.map((resource) => resource.relativeTarget));
   assertUnmanagedAgentFiles(target, desired, previous);
-  assertManifestSafety(target, state);
-  if (state?.installStatus === "INSTALLED" && state.resources.length > 0 && !fs.existsSync(target.manifestPath)) {
-    const allMissing = state.resources.every((resource) => !fs.existsSync(targetPath(target, resource.relativeTarget)));
+  const manifestTarget =
+    classification.classification === "LEGACY_V010_TARGET_CLEAN" && legacy ? legacy : target;
+  assertManifestSafety(manifestTarget, state);
+  if (state?.installStatus === "INSTALLED" && state.resources.length > 0 && !fs.existsSync(manifestTarget.manifestPath)) {
+    const allMissing = state.resources.every((resource) => !fs.existsSync(targetPath(manifestTarget, resource.relativeTarget)));
     if (allMissing) throw new HostAdapterInstallError("installed host adapter target is no longer present");
   }
 
@@ -468,8 +606,16 @@ export function installHostAdapter(
   const manifest = manifestContent(definition, resources);
   const desiredStateResources = resources.map(({ content: _content, ...resource }) => resource);
   if (
+    classification.classification === "LEGACY_V010_TARGET_CLEAN" &&
+    legacy &&
+    state
+  ) {
+    return migrateLegacyV010Target(target, legacy, state, resources, manifest, input, uadsHome, schemaRoot);
+  }
+  if (
     state?.installStatus === "INSTALLED" &&
     state.ownershipStatus === "CLEAN" &&
+    classification.classification === "CURRENT_TARGET_CLEAN" &&
     fs.existsSync(target.manifestPath) &&
     state.manifestDigest === manifest.digest &&
     JSON.stringify(stableValue(state.resources)) === JSON.stringify(stableValue(desiredStateResources))
@@ -477,26 +623,34 @@ export function installHostAdapter(
     if (definition.resourceKind === "agents") syncCanonicalAgents(resources, uadsHome);
     return state;
   }
-  const snapshots = new Map<string, Snapshot>();
-  const allTargets = [
+  const hostManagedTargets = [
     ...resources.map((resource) => targetPath(target, resource.relativeTarget)),
     ...[...previous.values()]
       .filter((resource) => !desired.has(resource.relativeTarget))
       .map((resource) => targetPath(target, resource.relativeTarget)),
     target.manifestPath,
-    hostStatePath(adapterId, uadsHome),
   ];
-  for (const absolute of allTargets) snapshots.set(absolute, readSnapshot(absolute));
+  assertManagedWritesContained(target, hostManagedTargets);
+  const canonicalTargets = definition.resourceKind === "agents" ? canonicalAgentPaths(resources, uadsHome) : [];
+  const snapshots = new Map<string, Snapshot>();
+  for (const absolute of [...hostManagedTargets, hostStatePath(adapterId, uadsHome), ...canonicalTargets]) {
+    snapshots.set(absolute, readSnapshot(absolute));
+  }
 
   try {
     if (definition.resourceKind === "agents") syncCanonicalAgents(resources, uadsHome);
+    injectInstallFault("after-canonical-sync");
     assertNoSymlinkEscape(target.targetRoot, target.resourceRoot);
+    if (target.canCreateAdapterRoot && !fs.existsSync(target.targetRoot)) {
+      fs.mkdirSync(target.targetRoot, { recursive: true });
+    }
     fs.mkdirSync(target.resourceRoot, { recursive: true });
     for (const resource of resources) {
       const absolute = targetPath(target, resource.relativeTarget);
       fs.mkdirSync(path.dirname(absolute), { recursive: true });
       atomicWriteFile(absolute, resource.content.toString("utf8"));
     }
+    injectInstallFault("after-host-write");
     for (const prior of previous.values()) {
       if (desired.has(prior.relativeTarget)) continue;
       const absolute = targetPath(target, prior.relativeTarget);
@@ -553,17 +707,21 @@ export function uninstallHostAdapter(
     throw new HostAdapterInstallError("host adapter ownership state is not clean");
   }
   const target = resolveHostTarget(definition, input);
-  if (input.projectRoot && isPathInside(path.resolve(input.projectRoot), target.targetRoot)) {
+  const legacy = resolveLegacyV010HostTarget(definition, target.hostHome);
+  const classification = classifyHostAdapterTarget(target, legacy, state);
+  const activeTarget =
+    classification.classification.startsWith("LEGACY_V010") && legacy ? legacy : target;
+  if (input.projectRoot && isPathInside(path.resolve(input.projectRoot), activeTarget.targetRoot)) {
     throw new HostAdapterInstallError("project-local host adapter target is forbidden");
   }
-  assertManifestSafety(target, state);
+  assertManifestSafety(activeTarget, state);
   const snapshots = new Map<string, Snapshot>();
-  const managedTargets = state.resources.map((resource) => targetPath(target, resource.relativeTarget));
-  for (const absolute of [...managedTargets, target.manifestPath, hostStatePath(adapterId, uadsHome)]) {
+  const managedTargets = state.resources.map((resource) => targetPath(activeTarget, resource.relativeTarget));
+  for (const absolute of [...managedTargets, activeTarget.manifestPath, hostStatePath(adapterId, uadsHome)]) {
     snapshots.set(absolute, readSnapshot(absolute));
   }
   for (const resource of state.resources) {
-    const absolute = targetPath(target, resource.relativeTarget);
+    const absolute = targetPath(activeTarget, resource.relativeTarget);
     const current = fileDigest(absolute);
     if (current !== null && current !== resource.installedDigest) {
       throw new HostAdapterInstallError(`modified managed resource blocks uninstall: ${resource.relativeTarget}`);
@@ -573,7 +731,7 @@ export function uninstallHostAdapter(
     for (const absolute of managedTargets) {
       if (fs.existsSync(absolute)) fs.unlinkSync(absolute);
     }
-    if (fs.existsSync(target.manifestPath)) fs.unlinkSync(target.manifestPath);
+    if (fs.existsSync(activeTarget.manifestPath)) fs.unlinkSync(activeTarget.manifestPath);
     const detection = detectHostAdapter(adapterId, input);
     return writeHostAdapterState(
       {

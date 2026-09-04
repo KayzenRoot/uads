@@ -19,7 +19,10 @@ execute arbitrary commands, or become an autonomous gateway.
 | Generic Agent Skills | `~/.agents/skills/uads-orchestrator/` | canonical UADS Skill tree |
 
 `UADS_HOME` controls UADS state. `UADS_CURSOR_HOME`, `UADS_CODEX_HOME`, and
-`UADS_AGENT_SKILLS_HOME` are explicit controlled/test overrides. Adapter state
+`UADS_AGENT_SKILLS_HOME` are explicit synthetic user-home overrides for tests or
+controlled environments. The implementation always appends the fixed adapter
+root segment (`.cursor`, `.codex`, or `.agents`) beneath that home. They are
+not ambiguous adapter-root overrides.
 under `~/.uads/adapters/<adapter>/` stores adapter-relative resource names and
 hashes, never raw host paths, credentials, prompts, or environment dumps.
 
@@ -47,7 +50,8 @@ installer:
 - refuses unmanaged `uads-*` collisions;
 - refuses user-modified managed bytes;
 - rejects traversal and symlink/junction escapes;
-- rolls back host writes when a later write fails;
+- rolls back host, sidecar state, and canonical `~/.uads/agents` writes when a later write fails;
+- migrates exact legacy v0.10.0 Codex/Generic default-target state transactionally when ownership is provably clean;
 - is idempotent when canonical resources are unchanged.
 
 `uads adapters uninstall <adapter>` removes only unchanged resources listed in

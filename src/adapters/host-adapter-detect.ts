@@ -16,14 +16,25 @@ import type {
 } from "./host-adapter-types.js";
 import { HOST_ADAPTER_CONTRACT_VERSION } from "./host-adapter-types.js";
 
+export type ResolvedHostTargetSource = "default" | "explicit-override" | "environment";
+
 export type ResolvedHostTarget = {
   definition: HostAdapterDefinition;
   hostHome: string;
   targetRoot: string;
   resourceRoot: string;
   manifestPath: string;
-  explicitHome: boolean;
+  source: ResolvedHostTargetSource;
+  rootLabel: string;
+  canCreateAdapterRoot: boolean;
+  isLegacyV010Target?: boolean;
 };
+
+function adapterRootSegment(adapterId: HostAdapterId): string {
+  if (adapterId === "cursor") return ".cursor";
+  if (adapterId === "codex") return ".codex";
+  return ".agents";
+}
 
 function envHome(definition: HostAdapterDefinition): string | undefined {
   if (definition.adapterId === "cursor") {
@@ -33,6 +44,18 @@ function envHome(definition: HostAdapterDefinition): string | undefined {
     return process.env.UADS_CODEX_HOME ?? process.env.CODEX_HOME;
   }
   return process.env.UADS_AGENT_SKILLS_HOME ?? process.env.AGENT_SKILLS_HOME;
+}
+
+function resolveSource(configuredHome: string | undefined): ResolvedHostTargetSource {
+  if (!configuredHome) return "default";
+  if (
+    configuredHome === process.env.UADS_CURSOR_HOME ||
+    configuredHome === process.env.UADS_CODEX_HOME ||
+    configuredHome === process.env.UADS_AGENT_SKILLS_HOME
+  ) {
+    return "environment";
+  }
+  return "explicit-override";
 }
 
 function hasSymlinkSegment(target: string): boolean {
@@ -52,8 +75,8 @@ export function resolveHostTarget(
 ): ResolvedHostTarget {
   const configuredHome = input.hostHome ?? envHome(definition);
   const hostHome = path.resolve(configuredHome ?? os.homedir());
-  const targetRoot =
-    definition.adapterId === "cursor" ? path.join(hostHome, ".cursor") : hostHome;
+  const source = resolveSource(configuredHome);
+  const targetRoot = path.join(hostHome, adapterRootSegment(definition.adapterId));
   const resourceRoot = path.join(targetRoot, definition.targetRelativeRoot);
   const manifestPath = path.join(targetRoot, definition.manifestRelativeTarget);
   return {
@@ -62,7 +85,9 @@ export function resolveHostTarget(
     targetRoot,
     resourceRoot,
     manifestPath,
-    explicitHome: Boolean(configuredHome),
+    source,
+    rootLabel: definition.targetLabel,
+    canCreateAdapterRoot: source !== "default",
   };
 }
 
@@ -78,8 +103,8 @@ function detectionStatus(target: ResolvedHostTarget): {
   }
   if (!fs.existsSync(target.targetRoot)) {
     return {
-      status: target.explicitHome ? "UNPROVEN" : "UNAVAILABLE",
-      reasonCodes: [target.explicitHome ? "EXPLICIT_TARGET_NOT_PRESENT" : "HOST_NOT_PRESENT"],
+      status: target.canCreateAdapterRoot ? "UNPROVEN" : "UNAVAILABLE",
+      reasonCodes: [target.canCreateAdapterRoot ? "EXPLICIT_TARGET_NOT_PRESENT" : "HOST_NOT_PRESENT"],
     };
   }
   if (fs.existsSync(target.resourceRoot)) {
@@ -102,9 +127,12 @@ export function detectHostAdapter(
     adapterId,
     status: detected.status,
     version: null,
-    detectionMethod: target.explicitHome
-      ? "explicit-home-or-environment"
-      : "known-user-home-structure",
+    detectionMethod:
+      target.source === "default"
+        ? "known-user-home-structure"
+        : target.source === "environment"
+          ? "environment-override"
+          : "explicit-home-override",
     targetLabel: definition.targetLabel,
     provenCapabilities: { ...definition.capabilities },
     reasonCodes: detected.reasonCodes,

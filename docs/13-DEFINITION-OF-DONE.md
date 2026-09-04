@@ -167,3 +167,13 @@ Complete the correction only when all are true:
 - `uads adapters prepare` validates current Work Order, Routing Decision, Specialist Selection Plan, Model Execution Plan, runtime, Context/Impact, and execution identity before writing a sidecar-only Host Dispatch Bundle.
 - Host fallback may serialize or use role cycling, but cannot add kernel-selected specialists, assurance, gates, evidence, scope, parallelism, or model quality.
 - T1–T30-equivalent tests, AD1–AD22, the complete validation matrix, exact-SHA GitHub evidence, and release assets pass before v0.10.0 publication; v0.9.1 and earlier tags remain immutable.
+
+## Prompt 010 Correction 01 / v0.10.1
+
+Complete only when all are true:
+
+- Default Codex/Generic adapter roots resolve to `~/.codex` and `~/.agents`, never bare user home.
+- Missing default adapter roots are not reported as `SUPPORTED`; detection remains read-only.
+- Adapter install/update failure restores host resources, sidecar state, and canonical `~/.uads/agents` bytes transactionally.
+- Legacy v0.10.0 wrong-target Codex/Generic state migrates only with exact ownership proof or blocks fail-closed.
+- T31–T40, AD23–AD28, all existing tests/evals, release title generation, exact-SHA GitHub evidence, and release assets pass before v0.10.1 publication; v0.10.0 and earlier tags remain immutable.

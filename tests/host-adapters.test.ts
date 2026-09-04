@@ -145,7 +145,7 @@ describe("Prompt 010 host adapters", { timeout: 120_000 }, () => {
     const target = hostHome();
     const home = uadsHome();
     installHostAdapter("codex", { hostHome: target, uadsHome: home, packageRoot: ROOT }, ROOT);
-    const managed = path.join(target, "agents", "uads-repo-inspector.md");
+    const managed = path.join(target, ".codex", "agents", "uads-repo-inspector.md");
     fs.writeFileSync(managed, "user edit\n");
     expect(inspectHostAdapterOwnership("codex", { hostHome: target, uadsHome: home }, ROOT).status).toBe("CONFLICT");
     expect(() => uninstallHostAdapter("codex", { hostHome: target, uadsHome: home }, ROOT)).toThrow(/modified|clean/i);
@@ -176,7 +176,7 @@ describe("Prompt 010 host adapters", { timeout: 120_000 }, () => {
     const second = installHostAdapter("generic-agent-skills", { hostHome: target, uadsHome: home, packageRoot: ROOT }, ROOT);
     expect(second.stateDigest).toBe(first.stateDigest);
     expect(JSON.stringify(readHostAdapterState("generic-agent-skills", home, ROOT))).toBe(firstState);
-    const unrelated = path.join(target, "skills", "other-skill", "SKILL.md");
+    const unrelated = path.join(target, ".agents", "skills", "other-skill", "SKILL.md");
     fs.mkdirSync(path.dirname(unrelated), { recursive: true });
     fs.writeFileSync(unrelated, "unrelated\n");
     uninstallHostAdapter("generic-agent-skills", { hostHome: target, uadsHome: home }, ROOT);

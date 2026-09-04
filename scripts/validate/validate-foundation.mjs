@@ -117,6 +117,7 @@ const requiredFiles = [
   "src/adapters/host-adapter.ts",
   "src/adapters/host-adapter-registry.ts",
   "src/adapters/host-adapter-detect.ts",
+  "src/adapters/host-adapter-legacy.ts",
   "src/adapters/host-adapter-install.ts",
   "src/adapters/host-dispatch.ts",
   "src/adapters/cursor-adapter.ts",
