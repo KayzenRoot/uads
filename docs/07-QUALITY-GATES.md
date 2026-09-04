@@ -13,6 +13,7 @@ Evidence-first delivery requires gates. Prompt 001 implements the **foundation**
 - Agent Skills compatibility preflight (`npm run validate:skills`)
 - Validation inventory + CLI smoke (`scripts/validate/validate-foundation.mjs`)
 - Dependency audit (`npm audit`) captured as sidecar evidence
+- Engineering delivery protocol artifacts (`npm run validate:engineering`)
 - CI on pull requests and pushes (`.github/workflows/ci.yml`)
 
 Command outputs are written under `~/.uads/workspaces/<project-id>/evidence/` by `scripts/validate/capture-evidence.mjs`, not into git.

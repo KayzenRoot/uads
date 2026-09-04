@@ -92,6 +92,29 @@ const requiredFiles = [
   "schemas/host-adapter-state.schema.json",
   "schemas/host-dispatch-bundle.schema.json",
   "schemas/github-review-index.schema.json",
+  ".engineering/README.md",
+  ".engineering/PROTOCOL.md",
+  ".engineering/DECISIONS.md",
+  ".engineering/schemas/engineering-work-order.schema.json",
+  ".engineering/schemas/context-lock.schema.json",
+  ".engineering/schemas/evidence-bundle.schema.json",
+  ".engineering/schemas/correction-delta.schema.json",
+  ".engineering/schemas/checkpoint-delta.schema.json",
+  ".engineering/schemas/report.schema.json",
+  ".engineering/templates/WORK-ORDER.md",
+  ".engineering/templates/CONTEXT-LOCK.md",
+  ".engineering/templates/EVIDENCE-BUNDLE.md",
+  ".engineering/templates/CORRECTION-DELTA.md",
+  ".engineering/templates/CHECKPOINT-DELTA.md",
+  ".engineering/templates/REPORT.md",
+  ".engineering/work-orders/ENG-PROTOCOL-ADOPTION-001.md",
+  ".engineering/context-locks/ENG-PROTOCOL-ADOPTION-001.md",
+  ".engineering/baselines/ENG-PROTOCOL-ADOPTION-001.md",
+  ".engineering/reports/CLEANUP-INVENTORY.md",
+  ".engineering/reports/EVIDENCE-BUNDLE-ENG-PROTOCOL-ADOPTION-001.md",
+  ".engineering/checkpoints/CHECKPOINT-DELTA-ENG-PROTOCOL-ADOPTION-001.md",
+  ".github/ISSUE_TEMPLATE/implementation.yml",
+  "scripts/validate/validate-engineering-protocol.mjs",
   "skills/uads-orchestrator/references/ORCHESTRATION-PROTOCOL.md",
   "evals/orchestrator/e1-frontend-style.json",
   "evals/execution/x1-frontend-happy.json",
@@ -200,6 +223,7 @@ runNpmGate(["run", "validate:skills"]);
 runNpmGate(["run", "validate:actions"]);
 runNpmGate(["run", "validate:direct-review"]);
 runNpmGate(["run", "validate:ci-receipt"]);
+runNpmGate(["run", "validate:engineering"]);
 
 const cli = path.join(root, "dist", "cli.js");
 for (const args of [["--help"], ["doctor"], ["status"], ["inspect", "--json"]]) {

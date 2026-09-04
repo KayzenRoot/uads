@@ -98,6 +98,7 @@ Prompt 010 adds strict host adapter state and Host Dispatch Bundle contracts alo
 | `core/` | Reserved orchestrator modules |
 | `adapters/` | Common Cursor / Codex / Generic Agent Skills host adapters |
 | `schemas/` | Checkpoint, work order, evidence, review, profile, repo map, execution-run, index/impact/context pack, failure/diagnosis/memory, model-routing, and specialist-routing contracts |
+| `.engineering/` | Static engineering delivery protocol, contracts, templates, adoption records, and cleanup reports; never UADS runtime sidecar state |
 | `docs/` | Architecture Freeze v0.2 |
 | `scripts/` | Install, GitHub audit/direct-review, release, review, validate |
 
