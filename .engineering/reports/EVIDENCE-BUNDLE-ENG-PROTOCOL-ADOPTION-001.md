@@ -3,7 +3,8 @@
 Status: `COMPLETE — LOCAL GATES PASS; INDEPENDENT REVIEW PENDING`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `0936f818ba8dc938b1b2ad41ffab0450c8fb30eb`
-Head Git SHA: `PENDING_COMMIT_AND_REMOTE_CI`
+Head Git SHA at local validation snapshot: `84bfb02aba6953c704cec575e6d0e9d9f7ba0fb8`
+Final PR head: `see pull request head`
 
 This bundle contains bounded evidence references for the adoption. Local baseline results are recorded in `.engineering/baselines/ENG-PROTOCOL-ADOPTION-001.md`; the after-gate rows are updated before commit/PR submission.
 

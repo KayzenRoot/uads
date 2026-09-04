@@ -62,6 +62,6 @@ The following critical sources were re-read after the additive edits. Unchanged 
 
 ## Relock evidence
 
-- Status: `RELOCKED_PENDING_FINAL_GATE_AND_COMMIT_SHA`.
+- Status: `RELOCKED; LOCAL_GATE_SNAPSHOT_84bfb02`.
 - Command: `Get-FileHash -Algorithm SHA256 -LiteralPath <critical-source>` plus `git diff --check` and `npm run validate:engineering`.
-- Result: no unexpected critical source changed; artifact validation passed; final gate/commit identity remains to be recorded in the Evidence Bundle.
+- Result: no unexpected critical source changed; artifact validation and full local gate passed against the validated working-tree snapshot committed as `84bfb02aba6953c704cec575e6d0e9d9f7ba0fb8`; remote CI/review remains separate evidence.

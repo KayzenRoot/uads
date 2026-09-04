@@ -4,7 +4,8 @@ Status: `READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Branch: `chore/eng-protocol-adoption-001`
 Baseline Git SHA: `0936f818ba8dc938b1b2ad41ffab0450c8fb30eb`
-Head Git SHA: `PENDING_FINAL_COMMIT`
+Head Git SHA at local validation snapshot: `84bfb02aba6953c704cec575e6d0e9d9f7ba0fb8`
+Final PR head: `see pull request head`
 Scope class: `cross-cutting`
 Risk: `MEDIUM`
 
