@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { assuranceRoleGateMapping, evaluateAssurancePolicy, ASSURANCE_REASON_CODES } from "../src/kernel/assurance-policy.js";
 import type { EvidenceRecord, ExecutionRun, GateStateSnapshot, ReviewRecord } from "../src/kernel/execution-types.js";
+import { gateEvidence } from "../src/kernel/gates.js";
 import type { WorkOrder } from "../src/kernel/types.js";
+import type { SpecialistObligation, SpecialistSelectionPlan } from "../src/kernel/specialist-types.js";
+import { sha256Hex } from "../src/lib/hash.js";
 
 const digest = "a".repeat(64);
 
@@ -120,6 +123,38 @@ function review(role: string, verdict: "APPROVED" | "CORRECTION_NEEDED" | "BLOCK
   };
 }
 
+function specialistPlan(current: WorkOrder, currentRun: ExecutionRun): SpecialistSelectionPlan {
+  const roles = [...new Set(["implementation-agent", "test-engineer", ...current.assuranceReviewers])];
+  const assuranceRoles = new Set(["independent-reviewer", "security-reviewer", "performance-reviewer", "reliability-reviewer"]);
+  const selected = roles.map((specialistId) => ({
+    specialistId,
+    kind: assuranceRoles.has(specialistId) ? "assurance" as const : "core" as const,
+    role: specialistId,
+    required: true,
+    reasonCodes: ["fixture"],
+    coversDomains: ["general" as const],
+    coversGates: [],
+    independenceClass: specialistId === "implementation-agent" ? "implementation" as const : assuranceRoles.has(specialistId) ? "assurance" as const : specialistId === "independent-reviewer" ? "independent-review" as const : "support" as const,
+  }));
+  const requiredObligations: SpecialistObligation[] = [
+    ...current.qualityGates.map((gateId) => ({ obligationId: `gate:${gateId}`, kind: "gate" as const, domainId: null, gateId, evidenceId: gateEvidence(gateId), affectedArea: null, specialistId: null })),
+    ...current.assuranceReviewers.map((role) => ({ obligationId: `assurance:${role}`, kind: "assurance" as const, domainId: null, gateId: null, evidenceId: role === "independent-reviewer" ? "independent review" : role === "performance-reviewer" ? "performance evidence" : role === "reliability-reviewer" ? "reliability review" : "security review", affectedArea: null, specialistId: role })),
+  ];
+  const coveredObligations = requiredObligations.map((item) => ({
+    obligationId: item.obligationId, gateId: item.gateId, evidenceId: item.evidenceId,
+    specialistId: item.specialistId ?? (item.gateId === "security-review" ? "security-reviewer" : item.gateId === "performance-check" ? "performance-reviewer" : item.gateId === "rollback-validation" ? "reliability-reviewer" : "test-engineer"),
+    reasonCode: "fixture", coverageKind: item.kind,
+  }));
+  const withoutDigest = {
+    schema: "uads.specialist-selection-plan" as const, schemaVersion: "0.9.0" as const, selectionPlanId: "sp-policy-test",
+    projectId: current.projectId, workOrderId: current.workOrderId, workOrderDigest: "work-order", routingDigest: "routing", registryDigest: "registry", policyDigest: "policy",
+    changeDigest: currentRun.currentChangeDigest, impactDigest: null, gateContractDigest: "gate-contract", selected,
+    assurance: selected.filter((item) => assuranceRoles.has(item.specialistId)), assignments: [], rejections: [], unmetCoverage: [],
+    requiredObligations, coveredObligations, unmetObligations: [], conflicts: [], dispatch: { dependencyGroups: [], parallelEligibleGroups: [] }, status: "SELECTED" as const, blockedReasonCodes: [],
+  };
+  return { ...withoutDigest, selectionDigest: sha256Hex(JSON.stringify(withoutDigest)) };
+}
+
 type EvalOverrides = Omit<Partial<Parameters<typeof evaluateAssurancePolicy>[0]>, "workOrder" | "run"> & {
   workOrder?: Partial<WorkOrder>;
   run?: Partial<ExecutionRun>;
@@ -137,7 +172,7 @@ function evaluate(overrides: EvalOverrides = {}) {
     gateStates: overrides.gateStates ?? [{ gateId: "unit-test", status: "PASS", evidenceId: "ev-unit-test" }],
     evidence: overrides.evidence ?? [evidence()],
     reviews: overrides.reviews ?? [review("independent-reviewer")],
-    specialistSelectionValid: true,
+    specialistSelectionPlan: specialistPlan(order, execution),
     ...rest,
   });
 }

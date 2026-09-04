@@ -433,9 +433,9 @@ function assertCurrentSpecialistSelectionForAssurance(
   routing: ReturnType<typeof readRoutingDecision>,
   contextPlan: ContextPlan,
   schemaRoot: string,
-): void {
+): ReturnType<typeof assertSpecialistSelectionBoundToWorkOrder> {
   try {
-    assertSpecialistSelectionBoundToWorkOrder(paths, workOrder, schemaRoot, { routing, contextPlan });
+    return assertSpecialistSelectionBoundToWorkOrder(paths, workOrder, schemaRoot, { routing, contextPlan });
   } catch (error) {
     throw new ExecutionBlockedError(
       `assurance requires current specialist selection: ${error instanceof Error ? error.message : String(error)}`,
@@ -1264,7 +1264,13 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
   if (blocking.length > 0) {
     throw new ExecutionBlockedError("selected non-review gates are not PASS", blocking.map((gate) => `${gate.gateId}:${gate.status}`));
   }
-  assertCurrentSpecialistSelectionForAssurance(ctx.paths, workOrder, readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot), contextPlan, schemaRoot);
+  const specialistSelectionPlan = assertCurrentSpecialistSelectionForAssurance(
+    ctx.paths,
+    workOrder,
+    readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot),
+    contextPlan,
+    schemaRoot,
+  );
   const assuranceStatus = evaluateAssurancePolicy({
     mode: "status",
     projectId: ctx.projectId,
@@ -1273,7 +1279,7 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
     gateStates,
     evidence,
     reviews,
-    specialistSelectionValid: true,
+    specialistSelectionPlan,
   });
   if (!assuranceStatus.allowed) {
     throw new ExecutionBlockedError("assurance prerequisites are not valid", assuranceStatus.blockers);
@@ -1333,20 +1339,98 @@ export function runAssuranceStart(input: { cwd?: string; uadsHome?: string }): {
   return { run: updated, packet };
 }
 
-function parseFindings(raw?: string, file?: string): ReviewFinding[] {
-  if (file && file.split(/[\\/]/).includes("..")) {
-    throw new ExecutionBlockedError("path traversal rejected", ["findings path traversal"]);
+const MAX_FINDINGS_FILE_BYTES = 1_048_576;
+const MAX_FINDINGS = 1_000;
+
+function safeFindingsFile(file: string, roots: string[]): string {
+  const absolute = path.resolve(file);
+  if (roots.every((root) => !isPathInside(path.resolve(root), absolute))) {
+    throw new ExecutionBlockedError("findings file must be inside the repository or sidecar", ["findings path outside managed roots"]);
   }
-  const text = file ? fs.readFileSync(file, "utf8") : raw ?? "[]";
-  const parsed = JSON.parse(text) as unknown;
-  if (!Array.isArray(parsed)) {
-    throw new ExecutionBlockedError("findings must be a JSON array", ["invalid findings"]);
+  let stat: fs.Stats;
+  try {
+    stat = fs.lstatSync(absolute);
+  } catch {
+    throw new ExecutionBlockedError("findings file is unavailable", ["findings file unavailable"]);
+  }
+  if (stat.isSymbolicLink()) {
+    throw new ExecutionBlockedError("findings file symlinks are rejected", ["findings symlink rejected"]);
+  }
+  if (stat.isDirectory() || stat.isFIFO() || stat.isSocket() || stat.isCharacterDevice() || stat.isBlockDevice() || !stat.isFile()) {
+    throw new ExecutionBlockedError("findings file must be an ordinary file", ["unsupported findings file type"]);
+  }
+  if (stat.size > MAX_FINDINGS_FILE_BYTES) {
+    throw new ExecutionBlockedError("findings file exceeds the bounded input size", ["findings file too large"]);
+  }
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    throw new ExecutionBlockedError("findings file is unavailable", ["findings file unavailable"]);
+  }
+  if (roots.every((root) => !isPathInside(path.resolve(root), real))) {
+    throw new ExecutionBlockedError("findings file resolves outside managed roots", ["findings symlink escape rejected"]);
+  }
+  for (const root of roots) {
+    const resolvedRoot = path.resolve(root);
+    if (!isPathInside(resolvedRoot, absolute)) continue;
+    let current = resolvedRoot;
+    for (const segment of path.relative(resolvedRoot, absolute).split(path.sep)) {
+      if (!segment) continue;
+      current = path.join(current, segment);
+      try {
+        if (fs.lstatSync(current).isSymbolicLink()) {
+          throw new ExecutionBlockedError("findings file symlinks are rejected", ["findings symlink rejected"]);
+        }
+      } catch (error) {
+        if (error instanceof ExecutionBlockedError) throw error;
+        throw new ExecutionBlockedError("findings file is unavailable", ["findings file unavailable"]);
+      }
+    }
+    break;
+  }
+  return absolute;
+}
+
+export function assertSafeAssuranceFindingsFile(file: string, roots: string[]): string {
+  return safeFindingsFile(file, roots);
+}
+
+function parseFindings(raw: string | undefined, file: string | undefined, roots: string[]): ReviewFinding[] {
+  let text: string;
+  if (file) {
+    const safePath = safeFindingsFile(file, roots);
+    try {
+      text = fs.readFileSync(safePath, "utf8");
+    } catch {
+      throw new ExecutionBlockedError("findings file is unavailable", ["findings file unavailable"]);
+    }
+  } else {
+    text = raw ?? "[]";
+    if (Buffer.byteLength(text, "utf8") > MAX_FINDINGS_FILE_BYTES) {
+      throw new ExecutionBlockedError("inline findings exceed the bounded input size", ["findings input too large"]);
+    }
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    throw new ExecutionBlockedError("findings must be valid JSON", ["invalid findings JSON"]);
+  }
+  if (!Array.isArray(parsed) || parsed.length > MAX_FINDINGS) {
+    throw new ExecutionBlockedError("findings must be a bounded JSON array", ["invalid findings array"]);
   }
   return sanitizeOperationalValue(
     parsed.map((item) => {
-      const row = item as ReviewFinding;
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new ExecutionBlockedError("each finding must be an object", ["invalid finding"]);
+      }
+      const row = item as Partial<ReviewFinding>;
+      if (!["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(row.severity ?? "")) {
+        throw new ExecutionBlockedError("finding severity is not recognized", ["invalid finding severity"]);
+      }
       return {
-        severity: row.severity,
+        severity: row.severity as ReviewFinding["severity"],
         category: String(row.category ?? "general"),
         message: String(row.message ?? ""),
       };
@@ -1421,7 +1505,13 @@ export function runAssuranceRecord(input: {
 
   const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
   const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
-  assertCurrentSpecialistSelectionForAssurance(ctx.paths, workOrder, readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot), contextPlan, schemaRoot);
+  const specialistSelectionPlan = assertCurrentSpecialistSelectionForAssurance(
+    ctx.paths,
+    workOrder,
+    readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot),
+    contextPlan,
+    schemaRoot,
+  );
   const gateStates = deriveGateStates({
     selectedGates: run.selectedGates,
     digest: run.currentChangeDigest,
@@ -1435,7 +1525,7 @@ export function runAssuranceRecord(input: {
       schemaRoot,
     },
   });
-  const findings = parseFindings(input.findingsJson, input.findingsFile);
+  const findings = parseFindings(input.findingsJson, input.findingsFile, [ctx.repoRoot, ctx.paths.workspace]);
   const reasonCodes = findings.length === 0 && input.verdict === "BLOCKED"
     ? [ASSURANCE_REASON_CODES.REVIEW_BLOCKED]
     : findings.length === 0 && input.verdict === "CORRECTION_NEEDED"
@@ -1475,7 +1565,7 @@ export function runAssuranceRecord(input: {
     evidence,
     reviews,
     candidate: record,
-    specialistSelectionValid: true,
+    specialistSelectionPlan,
   });
   if (!assuranceSubmission.allowed) {
     throw new ExecutionBlockedError("assurance record rejected by deterministic policy", assuranceSubmission.blockers);
@@ -1591,9 +1681,9 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
   }
   const evidence = listEvidenceRecords(ctx.paths, run.executionRunId, schemaRoot);
   const reviews = listReviewRecords(ctx.paths, run.executionRunId, schemaRoot);
-  let specialistSelectionValid = true;
+  let specialistSelectionPlan: ReturnType<typeof assertSpecialistSelectionBoundToWorkOrder> | undefined;
   try {
-    assertCurrentSpecialistSelectionForAssurance(
+    specialistSelectionPlan = assertCurrentSpecialistSelectionForAssurance(
       ctx.paths,
       workOrder,
       readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRoot),
@@ -1601,7 +1691,7 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
       schemaRoot,
     );
   } catch (error) {
-    specialistSelectionValid = false;
+    specialistSelectionPlan = undefined;
     blockers.push(
       error instanceof ExecutionBlockedError
         ? error.blockers[0] ?? ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID
@@ -1629,7 +1719,7 @@ export function runFinalize(input: { cwd?: string; uadsHome?: string }): { run: 
     gateStates,
     evidence,
     reviews,
-    specialistSelectionValid,
+    specialistSelectionPlan,
   });
   blockers.push(...assuranceFinal.blockers);
   for (const gate of gateStates) {
@@ -1883,7 +1973,28 @@ export function loadExecutionView(input: { cwd?: string; uadsHome?: string }): E
     }
     const evidence = listEvidenceRecords(ctx.paths, run.executionRunId);
     const reviews = listReviewRecords(ctx.paths, run.executionRunId);
-    return buildExecutionResumeView(run, evidence, reviews, ctx.paths);
+    const view = buildExecutionResumeView(run, evidence, reviews, ctx.paths);
+    try {
+      const checkpoint = readCurrentCheckpoint(ctx.paths, schemaRootOf());
+      const workOrder = checkpoint?.workOrderId ? readWorkOrder(ctx.paths, checkpoint.workOrderId, schemaRootOf()) : null;
+      if (!checkpoint || !workOrder || !workOrder.routingDecisionId) {
+        throw new SpecialistSelectionPersistenceError("current assurance artifacts are unavailable");
+      }
+      const contextPlan = readContextPlan(ctx.paths);
+      if (!contextPlan) {
+        throw new SpecialistSelectionPersistenceError("current Context/Impact plan is unavailable");
+      }
+      const routing = readRoutingDecision(ctx.paths, workOrder.routingDecisionId, schemaRootOf());
+      assertCurrentSpecialistSelectionForAssurance(ctx.paths, workOrder, routing, contextPlan, schemaRootOf());
+      return view;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "current specialist selection is unavailable";
+      return {
+        ...view,
+        blockers: unique([...view.blockers, ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID]),
+        nextAction: `Assurance resume blocked: ${sanitizeOperationalText(reason)}`,
+      };
+    }
   } catch (error) {
     if (error instanceof InvalidOrchestrationStateError) {
       return {

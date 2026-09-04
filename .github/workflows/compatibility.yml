@@ -43,24 +43,37 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        id: npm_ci
         run: npm ci
 
       - name: Typecheck and build
+        id: typecheck_build
         run: |
           npm run typecheck
           npm run build
 
       - name: Adapter and root-binding smoke
+        id: adapter_eval
         run: npm run eval:adapters
 
       - name: Isolated global installation smoke
-        run: node scripts/github/compatibility-smoke.mjs --platform ${{ matrix.platform }}
+        id: isolated_install
+        run: node scripts/github/compatibility-smoke.mjs --platform ${{ matrix.platform }} --report "${{ runner.temp }}/uads-compatibility-smoke.json"
 
       - name: Write compatibility evidence
         if: always()
         env:
           UADS_COMPATIBILITY_STATUS: ${{ job.status }}
-        run: node scripts/github/generate-compatibility-evidence.mjs --platform ${{ matrix.platform }} --output "${{ runner.temp }}/uads-compatibility-evidence.json"
+          UADS_COMPATIBILITY_CHECKS: >-
+            {"npm-ci":"${{ steps.npm_ci.outcome }}","typecheck-build":"${{ steps.typecheck_build.outcome }}","adapter-eval":"${{ steps.adapter_eval.outcome }}"}
+        run: >-
+          node scripts/github/generate-compatibility-evidence.mjs
+          --platform "${{ matrix.platform }}"
+          --source-sha "${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}"
+          --source-tree-sha "$(git rev-parse HEAD^{tree})"
+          --job-name "${{ matrix.platform }} / Node 20"
+          --checks-file "${{ runner.temp }}/uads-compatibility-smoke.json"
+          --output "${{ runner.temp }}/uads-compatibility-evidence.json"
 
       - name: Upload compatibility evidence
         if: always()

@@ -3,8 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ASSURANCE_REASON_CODES, evaluateAssurancePolicy } from "../kernel/assurance-policy.js";
+import { assertSafeAssuranceFindingsFile } from "../kernel/execution.js";
 import type { EvidenceRecord, ExecutionRun, GateStateSnapshot, ReviewRecord } from "../kernel/execution-types.js";
+import { gateEvidence } from "../kernel/gates.js";
 import type { WorkOrder } from "../kernel/types.js";
+import type { SpecialistObligation, SpecialistSelectionPlan } from "../kernel/specialist-types.js";
+import { sha256Hex } from "../lib/hash.js";
 import { findPackageRoot } from "../lib/version.js";
 
 type EvalCase = { id: string; name: string };
@@ -60,6 +64,60 @@ function review(role: string, verdict: "APPROVED" | "CORRECTION_NEEDED" | "BLOCK
   };
 }
 
+function specialistPlan(current: WorkOrder): SpecialistSelectionPlan {
+  const roles = [...new Set(["implementation-agent", "test-engineer", ...current.assuranceReviewers])];
+  const assuranceRoles = new Set(["independent-reviewer", "security-reviewer", "performance-reviewer", "reliability-reviewer"]);
+  const selected = roles.map((specialistId) => ({
+    specialistId,
+    kind: assuranceRoles.has(specialistId) ? "assurance" as const : "core" as const,
+    role: specialistId,
+    required: true,
+    reasonCodes: ["fixture"],
+    coversDomains: ["general" as const],
+    coversGates: [],
+    independenceClass: specialistId === "implementation-agent" ? "implementation" as const : assuranceRoles.has(specialistId) ? "assurance" as const : specialistId === "independent-reviewer" ? "independent-review" as const : "support" as const,
+  }));
+  const requiredObligations: SpecialistObligation[] = [
+    ...current.qualityGates.map((gateId) => ({ obligationId: `gate:${gateId}`, kind: "gate" as const, domainId: null, gateId, evidenceId: gateEvidence(gateId), affectedArea: null, specialistId: null })),
+    ...current.assuranceReviewers.map((role) => ({ obligationId: `assurance:${role}`, kind: "assurance" as const, domainId: null, gateId: null, evidenceId: role === "independent-reviewer" ? "independent review" : role === "performance-reviewer" ? "performance evidence" : role === "reliability-reviewer" ? "reliability review" : "security review", affectedArea: null, specialistId: role })),
+  ];
+  const coveredObligations = requiredObligations.map((item) => ({
+    obligationId: item.obligationId,
+    gateId: item.gateId,
+    evidenceId: item.evidenceId,
+    specialistId: item.specialistId ?? (item.gateId === "security-review" ? "security-reviewer" : item.gateId === "performance-check" ? "performance-reviewer" : item.gateId === "rollback-validation" ? "reliability-reviewer" : "test-engineer"),
+    reasonCode: "fixture",
+    coverageKind: item.kind,
+  }));
+  const withoutDigest = {
+    schema: "uads.specialist-selection-plan" as const,
+    schemaVersion: "0.9.0" as const,
+    selectionPlanId: "sp-assurance-eval",
+    projectId: PROJECT,
+    workOrderId: current.workOrderId,
+    workOrderDigest: "work-order",
+    routingDigest: "routing",
+    registryDigest: "registry",
+    policyDigest: "policy",
+    changeDigest: DIGEST,
+    impactDigest: null,
+    gateContractDigest: "gate-contract",
+    selected,
+    assurance: selected.filter((item) => assuranceRoles.has(item.specialistId)),
+    assignments: [],
+    rejections: [],
+    unmetCoverage: [],
+    requiredObligations,
+    coveredObligations,
+    unmetObligations: [],
+    conflicts: [],
+    dispatch: { dependencyGroups: [], parallelEligibleGroups: [] },
+    status: "SELECTED" as const,
+    blockedReasonCodes: [],
+  };
+  return { ...withoutDigest, selectionDigest: sha256Hex(JSON.stringify(withoutDigest)) };
+}
+
 function evaluate(input: {
   mode?: "status" | "submission" | "finalize";
   workOrder?: Partial<WorkOrder>;
@@ -68,6 +126,7 @@ function evaluate(input: {
   gateStates?: GateStateSnapshot[];
   reviews?: ReviewRecord[];
   candidate?: ReviewRecord;
+  specialistSelectionPlan?: SpecialistSelectionPlan;
 } = {}) {
   const currentOrder = order(input.workOrder);
   const currentRun = run({ ...input.run, requiredReviewers: currentOrder.assuranceReviewers, selectedGates: currentOrder.qualityGates });
@@ -76,7 +135,7 @@ function evaluate(input: {
   return evaluateAssurancePolicy({
     mode: input.mode ?? "finalize", projectId: PROJECT, workOrder: currentOrder, run: currentRun,
     gateStates: states, evidence: currentEvidence, reviews: input.reviews ?? [review("independent-reviewer")],
-    candidate: input.candidate, specialistSelectionValid: true,
+    candidate: input.candidate, specialistSelectionPlan: input.specialistSelectionPlan ?? specialistPlan(currentOrder),
   });
 }
 
@@ -116,8 +175,48 @@ function runCase(id: string): void {
     const first = review("independent-reviewer");
     if (!evaluate({ reviews: [first] }).allowed) throw new Error("initial assurance was not valid");
     assertBlocked(evaluate({ reviews: [{ ...first, findings: [{ severity: "HIGH", category: "tamper", message: "persisted tamper" }] }] }), ASSURANCE_REASON_CODES.APPROVAL_CONTRADICTS_HIGH_FINDING);
+  } else if (id === "AS17") {
+    assertBlocked(evaluate({ workOrder: { assuranceReviewers: ["independent-reviewer", "security-reviewer"], requiredEvidence: ["authentication vulnerability review"] }, specialistSelectionPlan: specialistPlan(order()) }), ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID);
+  } else if (id === "AS18") {
+    assertBlocked(evaluate({ workOrder: { assuranceReviewers: ["independent-reviewer", "performance-reviewer"], qualityGates: ["unit-test"] }, reviews: [review("independent-reviewer"), review("performance-reviewer")] }), ASSURANCE_REASON_CODES.PERFORMANCE_EVIDENCE_MISSING);
+  } else if (id === "AS19") {
+    assertBlocked(evaluate({ workOrder: { assuranceReviewers: ["independent-reviewer", "reliability-reviewer"], qualityGates: ["unit-test"] }, reviews: [review("independent-reviewer"), review("reliability-reviewer")] }), ASSURANCE_REASON_CODES.TYPED_ASSURANCE_OBLIGATION_UNSATISFIED);
+  } else if (id === "AS20") {
+    const gates = ["unit-test", "security-review"];
+    const result = evaluate({ workOrder: { assuranceReviewers: ["independent-reviewer", "security-reviewer"], qualityGates: gates }, gateStates: gates.map((gateId) => ({ gateId, status: "PASS" as const, evidenceId: gateId === "unit-test" ? "ev-unit-test" : null })), reviews: [review("independent-reviewer"), review("security-reviewer")] });
+    if (!result.allowed) throw new Error(`typed security assurance was blocked: ${result.blockers.join(",")}`);
+  } else if (id === "AS21") {
+    const plan = specialistPlan(order());
+    plan.coveredObligations[0]!.specialistId = "security-reviewer";
+    assertBlocked(evaluate({ specialistSelectionPlan: plan }), ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID);
+  } else if (id === "AS22") {
+    const foreign = path.join(os.tmpdir(), `uads-assurance-foreign-${Date.now()}.json`);
+    fs.writeFileSync(foreign, "[]\n", "utf8");
+    try {
+      let rejected = false;
+      const packageRoot = findPackageRoot();
+      try { assertSafeAssuranceFindingsFile(foreign, [packageRoot]); } catch { rejected = true; }
+      if (!rejected) throw new Error("foreign findings file was accepted");
+      const link = path.join(packageRoot, `uads-assurance-link-${Date.now()}.json`);
+      if (tryCreateSymlink(foreign, link)) {
+        let symlinkRejected = false;
+        try { assertSafeAssuranceFindingsFile(link, [packageRoot]); } catch { symlinkRejected = true; }
+        fs.rmSync(link, { force: true });
+        if (!symlinkRejected) throw new Error("symlink findings file was accepted");
+      }
+    } finally { fs.rmSync(foreign, { force: true }); }
   } else {
     throw new Error(`unknown assurance case ${id}`);
+  }
+}
+
+function tryCreateSymlink(target: string, link: string): boolean {
+  try {
+    fs.symlinkSync(target, link, "file");
+    return true;
+  } catch {
+    fs.rmSync(link, { force: true });
+    return false;
   }
 }
 

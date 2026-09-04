@@ -8,6 +8,7 @@ import { resolveNpmInvocation } from "../lib/exec.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const platform = valueOf("--platform");
+const reportPath = valueOf("--report");
 if (platform !== "linux" && platform !== "windows") fail("--platform must be linux or windows");
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "uads-compatibility-smoke-"));
 try {
@@ -26,7 +27,15 @@ try {
   const cli = path.join(prefix, "node_modules", "uads", "dist", "cli.js");
   const help = execFileSync(process.execPath, [cli, "--help"], { cwd: root, encoding: "utf8", timeout: 30000, windowsHide: true, env: { ...process.env, UADS_HOME: home } });
   if (!help.includes("assurance") || !help.includes("adapters")) fail("isolated global CLI smoke did not expose expected commands");
+  const status = execFileSync(process.execPath, [cli, "status", "--json"], { cwd: root, encoding: "utf8", timeout: 30000, windowsHide: true, env: { ...process.env, UADS_HOME: home } });
+  const statusValue = JSON.parse(status);
+  if (statusValue.zeroProjectFootprint !== true) fail("isolated CLI violated zero-project-footprint contract");
+  if (status.includes(root) || status.includes(home) || help.includes(home)) fail("compatibility smoke exposed a host path");
+  writeReport({ "isolated-install": "success", "root-resolution": "success", "zero-project-footprint": "success", "privacy-path-assertion": "success" });
   process.stdout.write(`compatibility smoke PASS ${platform}\n`);
+} catch (error) {
+  writeReport({ "isolated-install": "failure", "root-resolution": "failure", "zero-project-footprint": "failure", "privacy-path-assertion": "failure" });
+  throw error;
 } finally {
   fs.rmSync(scratch, { recursive: true, force: true });
 }
@@ -38,4 +47,9 @@ function valueOf(name) {
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exit(1);
+}
+function writeReport(value) {
+  if (!reportPath) return;
+  fs.mkdirSync(path.dirname(path.resolve(reportPath)), { recursive: true });
+  fs.writeFileSync(path.resolve(reportPath), `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }

@@ -124,7 +124,14 @@
         "runId": { "type": ["integer", "null"], "minimum": 1 },
         "commitSha": { "$ref": "#/$defs/shaOrNull" },
         "htmlUrl": { "$ref": "#/$defs/urlOrNull" },
-        "reasonCode": { "type": ["string", "null"], "pattern": "^[A-Z0-9_:-]{1,100}$" }
+        "reasonCode": { "type": ["string", "null"], "pattern": "^[A-Z0-9_:-]{1,100}$" },
+        "runAttempt": { "type": ["integer", "null"], "minimum": 1 },
+        "artifactName": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]+$", "maxLength": 240 },
+        "artifactSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "evidenceDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "platform": { "enum": ["linux", "windows", null] },
+        "nodeVersion": { "type": ["string", "null"], "maxLength": 64 },
+        "checks": { "type": ["object", "null"], "additionalProperties": { "$ref": "#/$defs/outcome" }, "maxProperties": 16 }
       }
     },
     "securityWorkflows": {

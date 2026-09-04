@@ -2,8 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ASSURANCE_REASON_CODES, evaluateAssurancePolicy } from "../kernel/assurance-policy.js";
+import { runNormativeFaultInjectionCase } from "./fault-injection-normative.js";
 import type { EvidenceRecord, ExecutionRun, GateStateSnapshot, ReviewRecord } from "../kernel/execution-types.js";
+import { gateEvidence } from "../kernel/gates.js";
 import type { WorkOrder } from "../kernel/types.js";
+import type { SpecialistObligation, SpecialistSelectionPlan } from "../kernel/specialist-types.js";
+import { sha256Hex } from "../lib/hash.js";
 import { findPackageRoot } from "../lib/version.js";
 
 type EvalCase = { id: string; name: string };
@@ -13,7 +17,7 @@ type FixtureInput = {
   gateStates?: GateStateSnapshot[];
   evidence?: EvidenceRecord[];
   reviews?: ReviewRecord[];
-  specialistSelectionValid?: boolean;
+  specialistSelectionPlan?: SpecialistSelectionPlan;
 };
 
 const PROJECT = "fault-injection-eval-project";
@@ -65,13 +69,67 @@ function review(role = "independent-reviewer", overrides: Partial<ReviewRecord> 
   };
 }
 
+function specialistPlan(current: WorkOrder): SpecialistSelectionPlan {
+  const roles = [...new Set([IMPL, "test-engineer", ...current.assuranceReviewers])];
+  const assuranceRoles = new Set(["independent-reviewer", "security-reviewer", "performance-reviewer", "reliability-reviewer"]);
+  const selected = roles.map((specialistId) => ({
+    specialistId,
+    kind: assuranceRoles.has(specialistId) ? "assurance" as const : "core" as const,
+    role: specialistId,
+    required: true,
+    reasonCodes: ["fixture"],
+    coversDomains: ["general" as const],
+    coversGates: [],
+    independenceClass: specialistId === IMPL ? "implementation" as const : assuranceRoles.has(specialistId) ? "assurance" as const : specialistId === "independent-reviewer" ? "independent-review" as const : "support" as const,
+  }));
+  const requiredObligations: SpecialistObligation[] = [
+    ...current.qualityGates.map((gateId) => ({ obligationId: `gate:${gateId}`, kind: "gate" as const, domainId: null, gateId, evidenceId: gateEvidence(gateId), affectedArea: null, specialistId: null })),
+    ...current.assuranceReviewers.map((role) => ({ obligationId: `assurance:${role}`, kind: "assurance" as const, domainId: null, gateId: null, evidenceId: role === "independent-reviewer" ? "independent review" : role === "performance-reviewer" ? "performance evidence" : role === "reliability-reviewer" ? "reliability review" : "security review", affectedArea: null, specialistId: role })),
+  ];
+  const coveredObligations = requiredObligations.map((item) => ({
+    obligationId: item.obligationId,
+    gateId: item.gateId,
+    evidenceId: item.evidenceId,
+    specialistId: item.specialistId ?? (item.gateId === "security-review" ? "security-reviewer" : item.gateId === "performance-check" ? "performance-reviewer" : item.gateId === "rollback-validation" ? "reliability-reviewer" : "test-engineer"),
+    reasonCode: "fixture",
+    coverageKind: item.kind,
+  }));
+  const withoutDigest = {
+    schema: "uads.specialist-selection-plan" as const,
+    schemaVersion: "0.9.0" as const,
+    selectionPlanId: "sp-fault-injection-eval",
+    projectId: PROJECT,
+    workOrderId: current.workOrderId,
+    workOrderDigest: "work-order",
+    routingDigest: "routing",
+    registryDigest: "registry",
+    policyDigest: "policy",
+    changeDigest: DIGEST,
+    impactDigest: null,
+    gateContractDigest: "gate-contract",
+    selected,
+    assurance: selected.filter((item) => assuranceRoles.has(item.specialistId)),
+    assignments: [],
+    rejections: [],
+    unmetCoverage: [],
+    requiredObligations,
+    coveredObligations,
+    unmetObligations: [],
+    conflicts: [],
+    dispatch: { dependencyGroups: [], parallelEligibleGroups: [] },
+    status: "SELECTED" as const,
+    blockedReasonCodes: [],
+  };
+  return { ...withoutDigest, selectionDigest: sha256Hex(JSON.stringify(withoutDigest)) };
+}
+
 function evaluate(input: FixtureInput = {}) {
   const currentOrder = workOrder(input.workOrder);
   const currentRun = run({ ...input.run, requiredReviewers: currentOrder.assuranceReviewers, selectedGates: currentOrder.qualityGates });
   return evaluateAssurancePolicy({
     mode: "finalize", projectId: PROJECT, workOrder: currentOrder, run: currentRun,
     gateStates: input.gateStates ?? currentRun.selectedGates.map((gateId) => ({ gateId, status: "PASS", evidenceId: `ev-${gateId}` })),
-    evidence: input.evidence ?? [evidence()], reviews: input.reviews ?? [review()], specialistSelectionValid: input.specialistSelectionValid,
+    evidence: input.evidence ?? [evidence()], reviews: input.reviews ?? [review()], specialistSelectionPlan: input.specialistSelectionPlan ?? specialistPlan(currentOrder),
   });
 }
 
@@ -80,7 +138,7 @@ function blocked(input: FixtureInput, code: string): void {
   if (result.allowed || !result.reasonCodes.some((item) => item === code)) throw new Error(`expected ${code}, got ${result.reasonCodes.join(",")}`);
 }
 
-function runCase(id: string): void {
+function runLegacyCase(id: string): void {
   switch (id) {
     case "FI1": blocked({ run: { scopeViolations: [{ path: "outside.txt", classification: "out-of-scope", reason: "fixture" }] } }, ASSURANCE_REASON_CODES.SCOPE_VIOLATION); break;
     case "FI2": blocked({ gateStates: [{ gateId: "unit-test", status: "PENDING", evidenceId: null }], evidence: [] }, ASSURANCE_REASON_CODES.NON_REVIEW_GATE_NOT_PASS); break;
@@ -91,7 +149,7 @@ function runCase(id: string): void {
     case "FI7": blocked({ reviews: [review(), review("independent-reviewer", { reviewId: "rv-independent-reviewer-duplicate", reviewSessionId: "session-duplicate" })] }, ASSURANCE_REASON_CODES.DUPLICATE_REVIEW_APPROVAL); break;
     case "FI8": blocked({ reviews: [review("forged-reviewer")] }, ASSURANCE_REASON_CODES.UNKNOWN_REVIEWER_ROLE); break;
     case "FI9": blocked({ reviews: [review("independent-reviewer", { evidenceRefs: [`sidecar://execution-runs/${RUN}/evidence/missing.json`] })] }, ASSURANCE_REASON_CODES.EVIDENCE_REFERENCE_MISMATCH); break;
-    case "FI10": blocked({ specialistSelectionValid: false }, ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID); break;
+    case "FI10": blocked({ specialistSelectionPlan: { ...specialistPlan(workOrder()), status: "BLOCKED" } }, ASSURANCE_REASON_CODES.SPECIALIST_SELECTION_INVALID); break;
     case "FI11": blocked({ reviews: [review("independent-reviewer", { verdict: "CORRECTION_NEEDED", reasonCodes: [ASSURANCE_REASON_CODES.REVIEW_CORRECTION_REQUIRED] })] }, ASSURANCE_REASON_CODES.MISSING_REQUIRED_REVIEWER); break;
     case "FI12": blocked({ reviews: [review("independent-reviewer", { findings: [{ severity: "CRITICAL", category: "tamper", message: "fixture" }] })] }, ASSURANCE_REASON_CODES.APPROVAL_CONTRADICTS_CRITICAL_FINDING); break;
     case "FI13": blocked({ workOrder: { assuranceReviewers: ["independent-reviewer", "performance-reviewer"] }, reviews: [review(), review("security-reviewer")] }, ASSURANCE_REASON_CODES.REVIEWER_ROLE_NOT_REQUIRED); break;
@@ -105,6 +163,19 @@ function runCase(id: string): void {
     }
     default: throw new Error(`unknown fault-injection case ${id}`);
   }
+}
+
+function runCase(id: string): void {
+  const numericId = Number(id.slice(2));
+  if (numericId >= 1 && numericId <= 16) {
+    runNormativeFaultInjectionCase(id);
+    return;
+  }
+  if (numericId >= 17 && numericId <= 32) {
+    runLegacyCase(`FI${numericId - 16}`);
+    return;
+  }
+  throw new Error(`unknown fault-injection case ${id}`);
 }
 
 export function runFaultInjectionEvals(): number {

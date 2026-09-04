@@ -12,6 +12,7 @@ import {
   validateReceiptDigest,
 } from "./ci-gate-receipt-runtime.mjs";
 import { deriveGitComparison, validateComparison } from "./comparison-runtime.mjs";
+import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY;
@@ -20,6 +21,8 @@ const output = path.resolve(valueOf("--output") ?? path.join(process.env.RUNNER_
 const checksumOutput = path.resolve(valueOf("--checksum-output") ?? `${output}.sha256`);
 const sourceRunId = numberOrNull(valueOf("--source-run-id") ?? process.env.SOURCE_CI_RUN_ID);
 const sourceRunAttempt = numberOrNull(valueOf("--source-run-attempt") ?? process.env.SOURCE_CI_RUN_ATTEMPT);
+const compatibilityRunId = numberOrNull(valueOf("--compatibility-run-id") ?? process.env.COMPATIBILITY_RUN_ID);
+const compatibilityRunAttempt = numberOrNull(valueOf("--compatibility-run-attempt") ?? process.env.COMPATIBILITY_RUN_ATTEMPT);
 if (!repo || !sourceRunId || !sourceRunAttempt) fail("repository and exact source CI run identity are required");
 const receipt = readJson(receiptPath);
 const receiptErrors = validateReceiptDigest(receipt);
@@ -77,8 +80,8 @@ const directEvidence = createDirectReviewFromReceipt(receipt, {
     dependencyReview: workflowStatus(repo, "dependency-review.yml", receipt.commitSha),
   },
   compatibility: {
-    linux: compatibilityStatus(repo, receipt.commitSha, "linux"),
-    windows: compatibilityStatus(repo, receipt.commitSha, "windows"),
+    linux: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "linux", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
+    windows: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "windows", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
   },
 });
 if (directEvidence.finalVerdict === "INCOMPLETE" && receipt.finalVerdict === "PASS") fail("canonical direct-review identity is incomplete");
@@ -129,24 +132,6 @@ function workflowStatus(repository, workflowFile, expectedSha) {
   const run = (completed.length ? completed : candidates).sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
   const outcome = normalizeGitHubOutcome(run.conclusion);
   return { status: run.status === "completed" ? outcome : "pending", outcome, runId: numberOrNull(run.id), commitSha: safeSha(run.head_sha), htmlUrl: safeUrl(run.html_url), reasonCode: run.status === "completed" ? null : "SECURITY_RUN_PENDING" };
-}
-function compatibilityStatus(repository, expectedSha, platform) {
-  const runs = api(`repos/${repository}/actions/workflows/compatibility.yml/runs?per_page=100&head_sha=${expectedSha}`);
-  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
-  const completed = candidates.filter((run) => run.status === "completed").sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
-  const run = completed[0] ?? candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
-  if (!run) return { status: "unavailable", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "COMPATIBILITY_RUN_UNAVAILABLE" };
-  const jobs = api(`repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`);
-  const job = (jobs?.jobs ?? []).find((item) => item.name === `${platform} / Node 20`);
-  const outcome = normalizeGitHubOutcome(job?.conclusion ?? run.conclusion);
-  return {
-    status: job?.status === "completed" || run.status === "completed" ? outcome : "pending",
-    outcome,
-    runId: numberOrNull(run.id),
-    commitSha: safeSha(run.head_sha),
-    htmlUrl: safeUrl(run.html_url),
-    reasonCode: outcome === "success" ? null : job ? "COMPATIBILITY_JOB_NOT_SUCCESS" : "COMPATIBILITY_JOB_UNAVAILABLE",
-  };
 }
 function safeUrl(value) { return typeof value === "string" && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(value) ? value : null; }
 function api(endpoint) { const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 }); if (result.status !== 0) return null; try { return JSON.parse(result.stdout); } catch { return null; } }

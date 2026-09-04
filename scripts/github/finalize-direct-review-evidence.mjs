@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const evidencePath = required("--ci-evidence");
@@ -36,8 +37,8 @@ const securityWorkflows = {
   dependencyReview: workflowStatus(repo, "dependency-review.yml", commitSha),
 };
 const compatibility = {
-  linux: compatibilityStatus(repo, commitSha, "linux"),
-  windows: compatibilityStatus(repo, commitSha, "windows"),
+  linux: validateCompatibilityArtifact({ repository: repo, expectedSha: commitSha, expectedTreeSha: base.gitTreeSha, platform: "linux", expectedRunId: numberOrNull(base.compatibility?.linux?.runId), expectedRunAttempt: numberOrNull(base.compatibility?.linux?.runAttempt) }),
+  windows: validateCompatibilityArtifact({ repository: repo, expectedSha: commitSha, expectedTreeSha: base.gitTreeSha, platform: "windows", expectedRunId: numberOrNull(base.compatibility?.windows?.runId), expectedRunAttempt: numberOrNull(base.compatibility?.windows?.runAttempt) }),
 };
 const reasons = new Set(Array.isArray(base.reasonCodes) ? base.reasonCodes : []);
 const identityValues = [
@@ -153,24 +154,6 @@ function workflowStatus(targetRepo, workflowFile, expectedSha) {
   if (!run) return { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "SECURITY_RUN_UNAVAILABLE" };
   const outcome = normalizeOutcome(run.conclusion);
   return { status: run.status === "completed" ? outcome : normalizeOutcome(run.status), outcome, runId: numberOrNull(run.id), commitSha: run.head_sha ?? null, htmlUrl: run.html_url ?? null, reasonCode: null };
-}
-function compatibilityStatus(targetRepo, expectedSha, platform) {
-  const runs = api(`repos/${targetRepo}/actions/workflows/compatibility.yml/runs?per_page=100&head_sha=${expectedSha}`);
-  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
-  const completed = candidates.filter((run) => run.status === "completed").sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
-  const run = completed[0] ?? candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
-  if (!run) return { status: "unavailable", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "COMPATIBILITY_RUN_UNAVAILABLE" };
-  const jobs = api(`repos/${targetRepo}/actions/runs/${run.id}/jobs?per_page=100`);
-  const job = (jobs?.jobs ?? []).find((item) => item.name === `${platform} / Node 20`);
-  const outcome = normalizeOutcome(job?.conclusion ?? run.conclusion);
-  return {
-    status: job?.status === "completed" || run.status === "completed" ? outcome : "pending",
-    outcome,
-    runId: numberOrNull(run.id),
-    commitSha: sha(run.head_sha) ? run.head_sha.toLowerCase() : null,
-    htmlUrl: safeUrl(run.html_url),
-    reasonCode: outcome === "success" ? null : job ? "COMPATIBILITY_JOB_NOT_SUCCESS" : "COMPATIBILITY_JOB_UNAVAILABLE",
-  };
 }
 function normalizeOutcome(value) {
   return value === "success" || value === "failure" || value === "cancelled" || value === "skipped" ? value : "unknown";

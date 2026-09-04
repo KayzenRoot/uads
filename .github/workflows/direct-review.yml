@@ -60,7 +60,9 @@ jobs:
             --output "$RUNNER_TEMP/github-direct-review-evidence.json" \
             --checksum-output "$RUNNER_TEMP/github-direct-review-evidence.json.sha256" \
             --source-run-id "$SOURCE_CI_RUN_ID" \
-            --source-run-attempt "$SOURCE_CI_RUN_ATTEMPT"
+            --source-run-attempt "$SOURCE_CI_RUN_ATTEMPT" \
+            --compatibility-run-id "${{ github.event.workflow_run.id }}" \
+            --compatibility-run-attempt "${{ github.event.workflow_run.run_attempt }}"
 
       - name: Validate canonical Direct Review Evidence
         env:

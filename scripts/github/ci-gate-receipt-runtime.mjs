@@ -291,7 +291,7 @@ export function createDirectReviewFromReceipt(receipt, input) {
   };
   if (receipt.version === "0.11.0") {
     for (const platform of ["linux", "windows"]) {
-      if (compatibility[platform]?.outcome !== "success" || compatibility[platform]?.commitSha !== receipt.commitSha) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
+      if (!compatibilityProof(compatibility[platform], receipt.commitSha)) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
     }
   }
   const finalVerdict = receiptVerdict === "FAIL"
@@ -347,4 +347,12 @@ export function validateReceiptDigest(value) {
   errors.push(...validateComparison(value.comparison, { expectedHeadSha: value.commitSha, requireComplete: value.finalVerdict === "PASS" && value.event === "push" }));
   if (value.finalVerdict === "PASS" && value.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
   return errors;
+}
+
+function compatibilityProof(value, expectedSha) {
+  const checks = value?.checks;
+  const required = ["npm-ci", "typecheck-build", "adapter-eval", "isolated-install", "root-resolution", "zero-project-footprint", "privacy-path-assertion"];
+  return value?.outcome === "success" && value.commitSha === expectedSha && Number.isSafeInteger(value.runId) && Number.isSafeInteger(value.runAttempt) &&
+    typeof value.artifactName === "string" && /^[0-9a-f]{64}$/i.test(value.artifactSha256 ?? "") && /^[0-9a-f]{64}$/i.test(value.evidenceDigest ?? "") &&
+    (value.platform === "linux" || value.platform === "windows") && /^v20\./.test(value.nodeVersion ?? "") && required.every((key) => checks?.[key] === "success");
 }

@@ -14,5 +14,11 @@
   {"id":"AS13","name":"current fail or blocked gate dominates assurance"},
   {"id":"AS14","name":"corrupt or mismatched review fails closed"},
   {"id":"AS15","name":"duplicate review cannot counterfeit independence"},
-  {"id":"AS16","name":"finalize revalidates current assurance semantics"}
+  {"id":"AS16","name":"finalize revalidates current assurance semantics"},
+  {"id":"AS17","name":"arbitrary prose cannot satisfy typed assurance prerequisite"},
+  {"id":"AS18","name":"performance assurance cannot use unrelated unit evidence"},
+  {"id":"AS19","name":"reliability rollback assurance cannot use unrelated PASS"},
+  {"id":"AS20","name":"security assurance requires exact typed gate and obligation"},
+  {"id":"AS21","name":"stale or tampered specialist assurance obligations block"},
+  {"id":"AS22","name":"unsafe foreign or symlink findings file is rejected"}
 ]

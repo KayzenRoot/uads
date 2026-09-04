@@ -27,6 +27,13 @@ export type DirectReviewWorkflowStatus = {
   commitSha: string | null;
   htmlUrl: string | null;
   reasonCode: string | null;
+  runAttempt?: number | null;
+  artifactName?: string | null;
+  artifactSha256?: string | null;
+  evidenceDigest?: string | null;
+  platform?: "linux" | "windows" | null;
+  nodeVersion?: string | null;
+  checks?: Record<string, DirectReviewOutcome> | null;
 };
 
 export type DirectReviewComparison = {
@@ -329,7 +336,7 @@ function comparisonErrors(value: unknown, expectedHeadSha: string | null, requir
 
 function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkflowStatus {
   const hasValue = value && Object.values(value).some((item) => item !== null && item !== undefined && item !== "");
-  return {
+  const result: DirectReviewWorkflowStatus = {
     status: normalizeOutcome(value?.status),
     outcome: normalizeOutcome(value?.outcome),
     runId: safeRunId(value?.runId),
@@ -339,6 +346,23 @@ function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkfl
       ? value.reasonCode
       : hasValue ? "SECURITY_STATUS_UNAVAILABLE" : "NOT_EVALUATED_HERE",
   };
+  if (value?.runAttempt !== undefined) result.runAttempt = safeRunAttempt(value.runAttempt);
+  if (value?.artifactName !== undefined) result.artifactName = value.artifactName && safePath(value.artifactName) ? value.artifactName : null;
+  if (value?.artifactSha256 !== undefined) result.artifactSha256 = value.artifactSha256 && /^[0-9a-f]{64}$/i.test(value.artifactSha256) ? value.artifactSha256.toLowerCase() : null;
+  if (value?.evidenceDigest !== undefined) result.evidenceDigest = value.evidenceDigest && /^[0-9a-f]{64}$/i.test(value.evidenceDigest) ? value.evidenceDigest.toLowerCase() : null;
+  if (value?.platform !== undefined) result.platform = value.platform === "linux" || value.platform === "windows" ? value.platform : null;
+  if (value?.nodeVersion !== undefined) result.nodeVersion = safeText(value.nodeVersion, 64);
+  if (value?.checks !== undefined) result.checks = value.checks && typeof value.checks === "object" && !Array.isArray(value.checks) ? value.checks : null;
+  return result;
+}
+
+function compatibilityProof(value: DirectReviewWorkflowStatus | undefined, expectedSha: string | null | undefined): boolean {
+  const checks = value?.checks;
+  const expectedChecks = ["npm-ci", "typecheck-build", "adapter-eval", "isolated-install", "root-resolution", "zero-project-footprint", "privacy-path-assertion"];
+  return value?.outcome === "success" && value.commitSha === expectedSha && value.runId !== null && value.runAttempt !== null &&
+    Boolean(value.artifactName) && /^[0-9a-f]{64}$/i.test(value.artifactSha256 ?? "") && /^[0-9a-f]{64}$/i.test(value.evidenceDigest ?? "") &&
+    (value.platform === "linux" || value.platform === "windows") && /^v20\./.test(value.nodeVersion ?? "") &&
+    Boolean(checks) && expectedChecks.every((key) => checks?.[key] === "success");
 }
 
 function sortedObject(value: unknown): unknown {
@@ -521,7 +545,7 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   if (evidence.version === "0.11.0") {
     for (const key of ["linux", "windows"] as const) {
       const compatibility = evidence.compatibility?.[key];
-      if (compatibility?.outcome !== "success" || compatibility.commitSha !== evidence.commitSha) errors.push("compatibility-not-proven:" + key);
+      if (!compatibilityProof(compatibility, evidence.commitSha)) errors.push("compatibility-not-proven:" + key);
     }
   }
   void schemaRoot;
