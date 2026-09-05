@@ -19,6 +19,9 @@ Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that 
 - Windows code-signing of the CLI
 - Production deployment automation, wallet custody, on-chain execution
 - Formal waiver UX for selected gates
+- Provider/runtime negotiation beyond the bounded Linux/Windows Node 20 compatibility proof
+- Assurance dashboards, remote reviewer coordination, signed attestations, or a general policy-as-code engine
+- Prompt 012 capabilities and any deployment/provider gateway expansion
 
 If a change is useful but not required for the current DoD, add it here rather than expanding `src/`.
 # Specialist routing backlog boundaries

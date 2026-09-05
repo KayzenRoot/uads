@@ -4,6 +4,22 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-04
+
+### Highlights
+
+- Hardened assurance integrity with a central deterministic policy, bounded review packets, AS1–AS16 assurance evals, and FI1–FI16 adversarial fault-injection evals.
+- Added exact-SHA Linux and Windows Node.js 20 compatibility proof with isolated global-install smoke coverage.
+
+### Fixed
+
+- Implementer role/session, stale digest, evidence identity, contradictory verdict, cross-role, duplicate-session, and current FAIL/BLOCKED bypasses now fail closed at record and finalize seams.
+- CI receipts, Direct Review evidence, release validation, and release notes now include the assurance/fault-injection gates and compatibility statuses.
+
+### Verification
+
+- Release publication remains gated on the complete local validation matrix, exact-SHA CI/compatibility/Direct Review evidence, CodeQL/Scorecard, and maintainer independent review.
+
 ## [0.10.4] - 2026-09-04
 
 ### Highlights

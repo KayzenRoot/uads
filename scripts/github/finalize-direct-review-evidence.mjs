@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const evidencePath = required("--ci-evidence");
@@ -35,6 +36,10 @@ const securityWorkflows = {
   scorecard: workflowStatus(repo, "scorecard.yml", commitSha),
   dependencyReview: workflowStatus(repo, "dependency-review.yml", commitSha),
 };
+const compatibility = {
+  linux: validateCompatibilityArtifact({ repository: repo, expectedSha: commitSha, expectedTreeSha: base.gitTreeSha, platform: "linux", expectedRunId: numberOrNull(base.compatibility?.linux?.runId), expectedRunAttempt: numberOrNull(base.compatibility?.linux?.runAttempt) }),
+  windows: validateCompatibilityArtifact({ repository: repo, expectedSha: commitSha, expectedTreeSha: base.gitTreeSha, platform: "windows", expectedRunId: numberOrNull(base.compatibility?.windows?.runId), expectedRunAttempt: numberOrNull(base.compatibility?.windows?.runAttempt) }),
+};
 const reasons = new Set(Array.isArray(base.reasonCodes) ? base.reasonCodes : []);
 const identityValues = [
   ["DIRECT_REVIEW_COMMIT", commitSha],
@@ -48,11 +53,17 @@ const identityComplete = identityValues.every(([, value]) => sha(value));
 if (!identityComplete) reasons.add("IDENTITY_UNPROVEN");
 if (new Set(identityValues.map(([, value]) => value).filter(sha)).size > 1) reasons.add("IDENTITY_MISMATCH");
 if (base.finalVerdict !== "PASS") reasons.add("CI_DIRECT_REVIEW_NOT_PASS");
+if (version === "0.11.0") {
+  for (const platform of ["linux", "windows"]) {
+    if (compatibility[platform].outcome !== "success" || compatibility[platform].commitSha !== commitSha) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
+  }
+}
 
 const derivative = {
   ...base,
   generatedAt: new Date().toISOString(),
   securityWorkflows,
+  compatibility,
   release: {
     version,
     tag,
@@ -147,6 +158,7 @@ function workflowStatus(targetRepo, workflowFile, expectedSha) {
 function normalizeOutcome(value) {
   return value === "success" || value === "failure" || value === "cancelled" || value === "skipped" ? value : "unknown";
 }
+function safeUrl(value) { return typeof value === "string" && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(value) ? value : null; }
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exit(1);

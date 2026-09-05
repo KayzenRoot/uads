@@ -27,6 +27,13 @@ export type DirectReviewWorkflowStatus = {
   commitSha: string | null;
   htmlUrl: string | null;
   reasonCode: string | null;
+  runAttempt?: number | null;
+  artifactName?: string | null;
+  artifactSha256?: string | null;
+  evidenceDigest?: string | null;
+  platform?: "linux" | "windows" | null;
+  nodeVersion?: string | null;
+  checks?: Record<string, DirectReviewOutcome> | null;
 };
 
 export type DirectReviewComparison = {
@@ -73,6 +80,8 @@ export type DirectReviewEvidence = {
     modelRouting: DirectReviewSummary;
     specialistRouting: DirectReviewSummary;
     adapters: DirectReviewSummary;
+    assurance: DirectReviewSummary;
+    faultInjection: DirectReviewSummary;
     specialistPolicyDigest: string | null;
     builtinSpecialistCatalogDigest: string | null;
     npmAudit: {
@@ -87,6 +96,10 @@ export type DirectReviewEvidence = {
     codeql: DirectReviewWorkflowStatus;
     scorecard: DirectReviewWorkflowStatus;
     dependencyReview: DirectReviewWorkflowStatus;
+  };
+  compatibility: {
+    linux: DirectReviewWorkflowStatus;
+    windows: DirectReviewWorkflowStatus;
   };
   release: {
     version: string | null;
@@ -129,6 +142,8 @@ export const REQUIRED_DIRECT_REVIEW_GATES = [
   "eval-model-routing",
   "eval-specialist-routing",
   "eval-adapters",
+  "eval-assurance",
+  "eval-fault-injection",
   "skills-validation",
   "validate",
   "npm-audit",
@@ -321,7 +336,7 @@ function comparisonErrors(value: unknown, expectedHeadSha: string | null, requir
 
 function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkflowStatus {
   const hasValue = value && Object.values(value).some((item) => item !== null && item !== undefined && item !== "");
-  return {
+  const result: DirectReviewWorkflowStatus = {
     status: normalizeOutcome(value?.status),
     outcome: normalizeOutcome(value?.outcome),
     runId: safeRunId(value?.runId),
@@ -331,6 +346,23 @@ function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkfl
       ? value.reasonCode
       : hasValue ? "SECURITY_STATUS_UNAVAILABLE" : "NOT_EVALUATED_HERE",
   };
+  if (value?.runAttempt !== undefined) result.runAttempt = safeRunAttempt(value.runAttempt);
+  if (value?.artifactName !== undefined) result.artifactName = value.artifactName && safePath(value.artifactName) ? value.artifactName : null;
+  if (value?.artifactSha256 !== undefined) result.artifactSha256 = value.artifactSha256 && /^[0-9a-f]{64}$/i.test(value.artifactSha256) ? value.artifactSha256.toLowerCase() : null;
+  if (value?.evidenceDigest !== undefined) result.evidenceDigest = value.evidenceDigest && /^[0-9a-f]{64}$/i.test(value.evidenceDigest) ? value.evidenceDigest.toLowerCase() : null;
+  if (value?.platform !== undefined) result.platform = value.platform === "linux" || value.platform === "windows" ? value.platform : null;
+  if (value?.nodeVersion !== undefined) result.nodeVersion = safeText(value.nodeVersion, 64);
+  if (value?.checks !== undefined) result.checks = value.checks && typeof value.checks === "object" && !Array.isArray(value.checks) ? value.checks : null;
+  return result;
+}
+
+function compatibilityProof(value: DirectReviewWorkflowStatus | undefined, expectedSha: string | null | undefined): boolean {
+  const checks = value?.checks;
+  const expectedChecks = ["npm-ci", "typecheck-build", "adapter-eval", "isolated-install", "root-resolution", "zero-project-footprint", "privacy-path-assertion"];
+  return value?.outcome === "success" && value.commitSha === expectedSha && value.runId !== null && value.runAttempt !== null &&
+    Boolean(value.artifactName) && /^[0-9a-f]{64}$/i.test(value.artifactSha256 ?? "") && /^[0-9a-f]{64}$/i.test(value.evidenceDigest ?? "") &&
+    (value.platform === "linux" || value.platform === "windows") && /^v20\./.test(value.nodeVersion ?? "") &&
+    Boolean(checks) && expectedChecks.every((key) => checks?.[key] === "success");
 }
 
 function sortedObject(value: unknown): unknown {
@@ -357,6 +389,7 @@ export function createDirectReviewEvidence(input: {
   stepOutcomes?: Record<string, unknown>;
   logs?: Partial<Record<string, string>>;
   securityWorkflows?: Partial<DirectReviewEvidence["securityWorkflows"]>;
+  compatibility?: Partial<DirectReviewEvidence["compatibility"]>;
   specialistPolicyDigest?: string | null;
   builtinSpecialistCatalogDigest?: string | null;
   release?: Partial<DirectReviewEvidence["release"]>;
@@ -386,6 +419,8 @@ export function createDirectReviewEvidence(input: {
     modelRouting: parseEvalSummary(logs["eval-model-routing"] ?? ""),
     specialistRouting: parseEvalSummary(logs["eval-specialist-routing"] ?? ""),
     adapters: parseEvalSummary(logs["eval-adapters"] ?? ""),
+    assurance: parseEvalSummary(logs["eval-assurance"] ?? ""),
+    faultInjection: parseEvalSummary(logs["eval-fault-injection"] ?? ""),
   };
   for (const [id, summary] of Object.entries(evals)) {
     if (summary.passed === null || summary.failed === null || summary.total === null) reasons.push(`COUNT_PARSE_UNAVAILABLE:${id.toUpperCase()}`);
@@ -440,6 +475,8 @@ export function createDirectReviewEvidence(input: {
       modelRouting: evals.modelRouting,
       specialistRouting: evals.specialistRouting,
       adapters: evals.adapters,
+      assurance: evals.assurance,
+      faultInjection: evals.faultInjection,
       specialistPolicyDigest: input.specialistPolicyDigest ?? null,
       builtinSpecialistCatalogDigest: input.builtinSpecialistCatalogDigest ?? null,
       npmAudit: { outcome: parsedSteps["npm-audit"] ?? npmAudit.outcome, highOrGreaterVulnerabilities: npmAudit.highOrGreaterVulnerabilities },
@@ -449,6 +486,10 @@ export function createDirectReviewEvidence(input: {
       codeql: status(input.securityWorkflows?.codeql),
       scorecard: status(input.securityWorkflows?.scorecard),
       dependencyReview: status(input.securityWorkflows?.dependencyReview),
+    },
+    compatibility: {
+      linux: status(input.compatibility?.linux),
+      windows: status(input.compatibility?.windows),
     },
     release: {
       version: input.release?.version ?? null,
@@ -501,6 +542,12 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   const sourceIdentityProven = Boolean(safeSha(evidence.provenance?.sourceRunSha ?? undefined) && safeRunId(evidence.provenance?.sourceRunId ?? undefined) && safeRunAttempt(evidence.provenance?.sourceRunAttempt ?? undefined));
   if (evidence.finalVerdict === "PASS" && !sourceIdentityProven) errors.push("source-run-identity-unproven");
   if (evidence.finalVerdict === "PASS" && evidence.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
+  if (evidence.version === "0.11.0") {
+    for (const key of ["linux", "windows"] as const) {
+      const compatibility = evidence.compatibility?.[key];
+      if (!compatibilityProof(compatibility, evidence.commitSha)) errors.push("compatibility-not-proven:" + key);
+    }
+  }
   void schemaRoot;
   return errors;
 }

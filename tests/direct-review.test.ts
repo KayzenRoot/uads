@@ -14,7 +14,7 @@ const sha = "a".repeat(40);
 function steps(outcome: string | Record<string, string> = "success"): Record<string, string> {
   const ids = [
     "install", "lint", "typecheck", "build", "action-pins", "tests", "eval-orchestrator", "eval-execution",
-    "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "skills-validation", "validate", "npm-audit", "packaging",
+    "eval-context", "eval-fault", "eval-cost", "eval-model-routing", "eval-specialist-routing", "eval-adapters", "eval-assurance", "eval-fault-injection", "skills-validation", "validate", "npm-audit", "packaging",
   ];
   return Object.fromEntries(ids.map((id) => [id, typeof outcome === "string" ? outcome : outcome[id] ?? "success"]));
 }
@@ -40,6 +40,8 @@ function evidence(overrides: Record<string, unknown> = {}) {
       "eval-model-routing": "20 passed, 0 failed, 20 total",
       "eval-specialist-routing": "26 passed, 0 failed, 26 total",
       "eval-adapters": "36 passed, 0 failed, 36 total",
+      "eval-assurance": "16 passed, 0 failed, 16 total",
+      "eval-fault-injection": "16 passed, 0 failed, 16 total",
       "npm-audit": "found 0 vulnerabilities",
     },
     artifactName: `uads-direct-review-${sha}`,

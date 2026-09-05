@@ -174,6 +174,7 @@ export type ReviewRecord = {
   verdict: ReviewVerdict;
   summary: string;
   findings: ReviewFinding[];
+  reasonCodes?: string[];
   evidenceRefs: string[];
   createdAt: string;
 };
@@ -193,6 +194,11 @@ export type ReviewPacket = {
   evidenceRefs: string[];
   requiredReviewers: string[];
   riskLevel: RiskLevel;
+  roleToGateMapping?: Record<string, string[]>;
+  requiredEvidenceObligations?: string[];
+  unresolvedBlockers?: string[];
+  doNotImplement?: string[];
+  independentReviewInvariant?: string;
   nextAction: string;
 };
 

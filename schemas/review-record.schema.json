@@ -37,6 +37,7 @@
     "implementerSessionId": { "type": "string", "minLength": 1 },
     "verdict": { "type": "string", "enum": ["APPROVED", "CORRECTION_NEEDED", "BLOCKED"] },
     "summary": { "type": "string" },
+    "reasonCodes": { "type": "array", "maxItems": 64, "items": { "type": "string", "pattern": "^[A-Z0-9_:-]{1,120}$" } },
     "findings": {
       "type": "array",
       "items": {

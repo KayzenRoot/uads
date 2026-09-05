@@ -12,6 +12,7 @@ import {
   validateReceiptDigest,
 } from "./ci-gate-receipt-runtime.mjs";
 import { deriveGitComparison, validateComparison } from "./comparison-runtime.mjs";
+import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY;
@@ -20,6 +21,8 @@ const output = path.resolve(valueOf("--output") ?? path.join(process.env.RUNNER_
 const checksumOutput = path.resolve(valueOf("--checksum-output") ?? `${output}.sha256`);
 const sourceRunId = numberOrNull(valueOf("--source-run-id") ?? process.env.SOURCE_CI_RUN_ID);
 const sourceRunAttempt = numberOrNull(valueOf("--source-run-attempt") ?? process.env.SOURCE_CI_RUN_ATTEMPT);
+const compatibilityRunId = numberOrNull(valueOf("--compatibility-run-id") ?? process.env.COMPATIBILITY_RUN_ID);
+const compatibilityRunAttempt = numberOrNull(valueOf("--compatibility-run-attempt") ?? process.env.COMPATIBILITY_RUN_ATTEMPT);
 if (!repo || !sourceRunId || !sourceRunAttempt) fail("repository and exact source CI run identity are required");
 const receipt = readJson(receiptPath);
 const receiptErrors = validateReceiptDigest(receipt);
@@ -75,6 +78,10 @@ const directEvidence = createDirectReviewFromReceipt(receipt, {
     codeql: workflowStatus(repo, "codeql.yml", receipt.commitSha),
     scorecard: workflowStatus(repo, "scorecard.yml", receipt.commitSha),
     dependencyReview: workflowStatus(repo, "dependency-review.yml", receipt.commitSha),
+  },
+  compatibility: {
+    linux: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "linux", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
+    windows: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "windows", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
   },
 });
 if (directEvidence.finalVerdict === "INCOMPLETE" && receipt.finalVerdict === "PASS") fail("canonical direct-review identity is incomplete");
@@ -134,5 +141,5 @@ function required(name) { const value = valueOf(name); if (!value) fail(`${name}
 function valueOf(name) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : null; }
 function numberOrNull(value) { const number = Number(value); return Number.isSafeInteger(number) && number > 0 ? number : null; }
 function formatTests(validation) { return `${validation.testFilesPassed ?? "unknown"} files; ${validation.testsPassed ?? "unknown"} passed; ${validation.testsFailed ?? "unknown"} failed`; }
-function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
+function formatEvals(validation) { return ["orchestrator", "execution", "context", "fault", "cost", "modelRouting", "specialistRouting", "adapters", "assurance", "faultInjection"].map((key) => `${key} ${validation[key]?.passed ?? "unknown"}/${validation[key]?.total ?? "unknown"}`).join(", "); }
 function fail(message) { process.stderr.write(`${message}\n`); process.exit(1); }

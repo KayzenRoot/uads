@@ -2,7 +2,7 @@ name: UADS Direct Review Evidence
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [UADS Cross-Platform Compatibility]
     types: [completed]
 
 permissions:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   publish:
     name: Publish canonical evidence
-    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,9 +30,15 @@ jobs:
       - name: Download exact source CI gate receipt
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_CI_RUN_ID: ${{ github.event.workflow_run.id }}
           SOURCE_CI_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --commit "$SOURCE_CI_SHA" --json databaseId,status,conclusion,headSha,name,event,url > "$RUNNER_TEMP/uads-ci-runs.json"
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/uads-ci-runs.json','utf8')).filter(x=>x.name==='CI'&&x.headSha===process.env.SOURCE_CI_SHA&&x.status==='completed'&&x.conclusion==='success'&&x.event==='push'); if(a.length!==1) { console.error('expected exactly one successful source CI run, found '+a.length); process.exit(1); } fs.writeFileSync(process.env.RUNNER_TEMP+'/uads-source-ci-run.json', JSON.stringify(a[0]));"
+          SOURCE_CI_RUN_ID="$(node -e "const fs=require('fs'); process.stdout.write(String(JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/uads-source-ci-run.json','utf8')).databaseId))")"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_CI_RUN_ID" > "$RUNNER_TEMP/uads-source-ci-run-full.json"
+          SOURCE_CI_ATTEMPT="$(node -e "const fs=require('fs'); process.stdout.write(String(JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/uads-source-ci-run-full.json','utf8')).run_attempt))")"
+          echo "SOURCE_CI_RUN_ID=$SOURCE_CI_RUN_ID" >> "$GITHUB_ENV"
+          echo "SOURCE_CI_ATTEMPT=$SOURCE_CI_ATTEMPT" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/uads-source-receipt"
           gh run download "$SOURCE_CI_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "uads-ci-gate-receipt-$SOURCE_CI_SHA" --dir "$RUNNER_TEMP/uads-source-receipt"
           test -f "$RUNNER_TEMP/uads-source-receipt/uads-ci-gate-receipt.json"
@@ -40,13 +46,13 @@ jobs:
             --file "$RUNNER_TEMP/uads-source-receipt/uads-ci-gate-receipt.json" \
             --expected-sha "$SOURCE_CI_SHA" \
             --expected-run-id "$SOURCE_CI_RUN_ID" \
-            --expected-run-attempt "${{ github.event.workflow_run.run_attempt }}"
+            --expected-run-attempt "$SOURCE_CI_ATTEMPT"
 
       - name: Publish canonical Direct Review Evidence
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_CI_RUN_ID: ${{ github.event.workflow_run.id }}
-          SOURCE_CI_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          SOURCE_CI_RUN_ID: ${{ env.SOURCE_CI_RUN_ID }}
+          SOURCE_CI_RUN_ATTEMPT: ${{ env.SOURCE_CI_ATTEMPT }}
         run: |
           node scripts/github/publish-direct-review-evidence.mjs \
             --repo "$GITHUB_REPOSITORY" \
@@ -54,15 +60,21 @@ jobs:
             --output "$RUNNER_TEMP/github-direct-review-evidence.json" \
             --checksum-output "$RUNNER_TEMP/github-direct-review-evidence.json.sha256" \
             --source-run-id "$SOURCE_CI_RUN_ID" \
-            --source-run-attempt "$SOURCE_CI_RUN_ATTEMPT"
+            --source-run-attempt "$SOURCE_CI_RUN_ATTEMPT" \
+            --compatibility-run-id "${{ github.event.workflow_run.id }}" \
+            --compatibility-run-attempt "${{ github.event.workflow_run.run_attempt }}"
 
       - name: Validate canonical Direct Review Evidence
+        env:
+          SOURCE_CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_CI_RUN_ID: ${{ env.SOURCE_CI_RUN_ID }}
+          SOURCE_CI_ATTEMPT: ${{ env.SOURCE_CI_ATTEMPT }}
         run: |
           node scripts/github/validate-direct-review-standalone.mjs \
             --file "$RUNNER_TEMP/github-direct-review-evidence.json" \
-            --expected-sha "${{ github.event.workflow_run.head_sha }}" \
-            --expected-source-run-id "${{ github.event.workflow_run.id }}" \
-            --expected-source-run-attempt "${{ github.event.workflow_run.run_attempt }}" \
+            --expected-sha "$SOURCE_CI_SHA" \
+            --expected-source-run-id "$SOURCE_CI_RUN_ID" \
+            --expected-source-run-attempt "$SOURCE_CI_ATTEMPT" \
             --expected-version "$(node -p "require('./package.json').version")" \
             --expected-direct-run-id "$GITHUB_RUN_ID"
 
