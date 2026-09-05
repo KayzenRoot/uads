@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
+import { resolveSecurityWorkflowProofs } from "./security-proof.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const evidencePath = required("--ci-evidence");
@@ -20,6 +21,7 @@ const manifest = readJson(manifestPath);
 const binding = readJson(bindingPath);
 const validation = validationPath ? readJson(validationPath) : null;
 const { computeDirectReviewDigest, validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
+const { isCorrectedReleaseVersion, securityWorkflowAuthorizationErrors } = await import("../../dist/github/security-proof.js");
 const { validateGithubReviewIndex } = await import("../../dist/github/review-index.js");
 const { assertSchema } = await import("../../dist/lib/json-schema.js");
 
@@ -31,10 +33,11 @@ const tagTargetSha = resolveTagCommit(repo, tag);
 const release = api(`repos/${repo}/releases/tags/${tag}`);
 const releaseRunId = numberOrNull(process.env.GITHUB_RUN_ID) ?? numberOrNull(base.release?.releaseRunId);
 const releaseRun = releaseRunId ? api(`repos/${repo}/actions/runs/${releaseRunId}`) : null;
+const securityProofs = resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: commitSha });
 const securityWorkflows = {
-  codeql: workflowStatus(repo, "codeql.yml", commitSha),
-  scorecard: workflowStatus(repo, "scorecard.yml", commitSha),
-  dependencyReview: workflowStatus(repo, "dependency-review.yml", commitSha),
+  codeql: securityProofs.codeql,
+  scorecard: securityProofs.scorecard,
+  dependencyReview: securityProofs.dependencyReview,
 };
 const compatibility = {
   linux: validateCompatibilityArtifact({ repository: repo, expectedSha: commitSha, expectedTreeSha: base.gitTreeSha, platform: "linux", expectedRunId: numberOrNull(base.compatibility?.linux?.runId), expectedRunAttempt: numberOrNull(base.compatibility?.linux?.runAttempt) }),
@@ -53,6 +56,11 @@ const identityComplete = identityValues.every(([, value]) => sha(value));
 if (!identityComplete) reasons.add("IDENTITY_UNPROVEN");
 if (new Set(identityValues.map(([, value]) => value).filter(sha)).size > 1) reasons.add("IDENTITY_MISMATCH");
 if (base.finalVerdict !== "PASS") reasons.add("CI_DIRECT_REVIEW_NOT_PASS");
+const securityReasons = isCorrectedReleaseVersion(version)
+  ? securityWorkflowAuthorizationErrors(securityWorkflows, { repository: repo, finalCommitSha: commitSha, finalTreeSha: base.gitTreeSha })
+  : [];
+for (const reason of securityReasons) reasons.add(reason);
+const securityFailure = Object.values(securityWorkflows).some((status) => ["failure", "cancelled", "skipped"].includes(status.proof?.outcome));
 if (version === "0.11.0") {
   for (const platform of ["linux", "windows"]) {
     if (compatibility[platform].outcome !== "success" || compatibility[platform].commitSha !== commitSha) reasons.add(`COMPATIBILITY_NOT_PROVEN:${platform.toUpperCase()}`);
@@ -89,9 +97,10 @@ const derivative = {
   },
   finalVerdict: base.finalVerdict === "FAIL"
     ? "FAIL"
-    : identityComplete && !reasons.has("IDENTITY_MISMATCH") && base.finalVerdict === "PASS"
+    : identityComplete && !reasons.has("IDENTITY_MISMATCH") && base.finalVerdict === "PASS" && securityReasons.length === 0
       ? "PASS"
-      : "INCOMPLETE",
+      : securityFailure ? "FAIL"
+        : "INCOMPLETE",
   reasonCodes: [...reasons].sort(),
 };
 if (reviewIndexPath) {
@@ -100,6 +109,9 @@ if (reviewIndexPath) {
   const canonicalFileSha = crypto.createHash("sha256").update(fs.readFileSync(evidencePath)).digest("hex");
   if (reviewIndex.commitSha !== derivative.commitSha || reviewIndex.gitTreeSha !== derivative.gitTreeSha || reviewIndex.ciRunId !== derivative.provenance.sourceRunId || reviewIndex.ciRunAttempt !== derivative.provenance.sourceRunAttempt || reviewIndex.directReviewRunId !== derivative.workflow.runId || reviewIndex.directReviewArtifactName !== base.artifact?.name || reviewIndex.directReviewEvidenceSha256 !== canonicalFileSha || reviewIndex.releaseRunId !== releaseRunId || reviewIndex.expectedTagTargetSha !== tagTargetSha || reviewIndex.tag !== tag) {
     fail("GitHub review index is not bound to canonical direct-review/release identity");
+  }
+  for (const [key, proof] of [["codeql", derivative.securityWorkflows.codeql.proof], ["scorecard", derivative.securityWorkflows.scorecard.proof], ["dependencyReview", derivative.securityWorkflows.dependencyReview.proof]]) {
+    if (isCorrectedReleaseVersion(version) && proof?.proofDigest !== reviewIndex.securityProofs?.[key]?.proofDigest) fail(`GitHub review index security proof mismatch: ${key}`);
   }
   if (!reviewIndex.releaseAssetNames?.includes(path.basename(reviewIndexPath)) || !reviewIndex.releaseAssetNames.includes(path.basename(output)) || !reviewIndex.releaseAssetNames.includes(path.basename(checksumOutput))) fail("GitHub review index release asset list is incomplete");
 }
@@ -146,14 +158,6 @@ function resolveTagCommit(targetRepo, tagName) {
   if (!ref?.object?.sha) return null;
   if (ref.object.type === "commit") return ref.object.sha;
   return api(`repos/${targetRepo}/git/tags/${ref.object.sha}`)?.object?.sha ?? null;
-}
-function workflowStatus(targetRepo, workflowFile, expectedSha) {
-  const runs = api(`repos/${targetRepo}/actions/workflows/${workflowFile}/runs?per_page=100`);
-  const candidates = (runs?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
-  const run = candidates.sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
-  if (!run) return { status: "unknown", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "SECURITY_RUN_UNAVAILABLE" };
-  const outcome = normalizeOutcome(run.conclusion);
-  return { status: run.status === "completed" ? outcome : normalizeOutcome(run.status), outcome, runId: numberOrNull(run.id), commitSha: run.head_sha ?? null, htmlUrl: run.html_url ?? null, reasonCode: null };
 }
 function normalizeOutcome(value) {
   return value === "success" || value === "failure" || value === "cancelled" || value === "skipped" ? value : "unknown";

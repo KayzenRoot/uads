@@ -10,6 +10,7 @@ import { assertSchema } from "../../dist/lib/json-schema.js";
 import { validateDirectReviewEvidence } from "../../dist/github/direct-review.js";
 import { createGithubReviewIndex } from "../../dist/github/review-index.js";
 import { runNpm } from "../lib/exec.mjs";
+import { resolveSecurityWorkflowProofs } from "../github/security-proof.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const version = process.argv[2];
@@ -77,9 +78,19 @@ try {
 if (validateDirectReviewEvidence(directReview, root).length > 0 || directReview.finalVerdict !== "PASS" || directReview.commitSha !== commit || directReview.version !== version || directReview.provenance?.sourceRunId !== ciBinding.runId || (ciBinding.runAttempt && directReview.provenance?.sourceRunAttempt !== ciBinding.runAttempt)) {
   fail("direct review evidence is not a successful exact-SHA CI proof");
 }
-const codeqlStatus = githubWorkflowStatus(repository, "codeql.yml", commit);
-if (fs.existsSync(path.join(root, ".github", "workflows", "codeql.yml")) && codeqlStatus.status !== "success") fail("exact-SHA CodeQL is not completed successfully");
-const scorecardStatus = githubWorkflowStatus(repository, "scorecard.yml", commit);
+const securityModule = await import("../../dist/github/security-proof.js");
+const securityProofResult = securityModule.isCorrectedReleaseVersion(version)
+  ? resolveSecurityWorkflowProofs({ repository, finalCommitSha: commit })
+  : null;
+const codeqlStatus = securityProofResult?.codeql ?? githubWorkflowStatus(repository, "codeql.yml", commit);
+const scorecardStatus = securityProofResult?.scorecard ?? githubWorkflowStatus(repository, "scorecard.yml", commit);
+if (securityProofResult) {
+  const proofErrors = securityModule.securityWorkflowAuthorizationErrors({ codeql: securityProofResult.codeql, scorecard: securityProofResult.scorecard, dependencyReview: securityProofResult.dependencyReview }, { repository, finalCommitSha: commit, finalTreeSha: directReview.gitTreeSha });
+  if (proofErrors.length > 0) fail(`release security proof is not authorized: ${proofErrors.join(",")}`);
+  for (const [key, resolved] of [["codeql", securityProofResult.codeql], ["scorecard", securityProofResult.scorecard], ["dependencyReview", securityProofResult.dependencyReview]]) {
+    if (resolved.proof?.proofDigest !== directReview.securityWorkflows?.[key]?.proof?.proofDigest) fail(`direct-review security proof does not match independently reconstructed ${key} proof`);
+  }
+}
 const directReviewOutput = path.join(output, "github-direct-review-evidence.json");
 fs.copyFileSync(path.resolve(directReviewPath), directReviewOutput);
 assertReleaseTextSafe(fs.readFileSync(directReviewOutput, "utf8"));
@@ -107,6 +118,11 @@ const reviewIndex = createGithubReviewIndex({
     "github-direct-review-evidence.json", "github-review-index.json", "release-manifest.json", "SHA256SUMS.txt",
     "github-direct-review-evidence-final.json", "github-direct-review-evidence-final.json.sha256",
   ],
+  securityProofs: securityProofResult ? {
+    codeql: securityProofResult.codeql.proof,
+    scorecard: securityProofResult.scorecard.proof,
+    dependencyReview: securityProofResult.dependencyReview.proof,
+  } : undefined,
 });
 assertSchema("github-review-index.schema.json", reviewIndex, root);
 fs.writeFileSync(reviewIndexOutput, `${JSON.stringify(reviewIndex, null, 2)}\n`, "utf8");

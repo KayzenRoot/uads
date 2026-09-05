@@ -301,7 +301,7 @@ export function createDirectReviewFromReceipt(receipt, input) {
       : "PASS";
   const evidence = {
     schema: "uads.github-direct-review-evidence",
-    schemaVersion: "0.8.0",
+    schemaVersion: correctedReleaseVersion(input.version ?? receipt.version) ? "0.9.0" : "0.8.0",
     repository,
     branch: safeText(input.branch ?? receipt.branch, 128),
     commitSha,
@@ -355,4 +355,13 @@ function compatibilityProof(value, expectedSha) {
   return value?.outcome === "success" && value.commitSha === expectedSha && Number.isSafeInteger(value.runId) && Number.isSafeInteger(value.runAttempt) &&
     typeof value.artifactName === "string" && /^[0-9a-f]{64}$/i.test(value.artifactSha256 ?? "") && /^[0-9a-f]{64}$/i.test(value.evidenceDigest ?? "") &&
     (value.platform === "linux" || value.platform === "windows") && /^v20\./.test(value.nodeVersion ?? "") && required.every((key) => checks?.[key] === "success");
+}
+
+function correctedReleaseVersion(value) {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-|\+|$)/.exec(String(value ?? ""));
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major > 0 || minor > 11 || (minor === 11 && patch >= 1);
 }

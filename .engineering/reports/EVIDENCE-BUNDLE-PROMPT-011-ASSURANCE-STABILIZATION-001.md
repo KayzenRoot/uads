@@ -1,13 +1,60 @@
 # Evidence Bundle — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PRE-MERGE GATES PASS; SOLO-MAINTAINER GOVERNANCE CONFIGURED; PROMOTION PENDING`
+Status: `PROMOTION_COMPLETE; CORRECTION_05_SECURITY_PROOF_READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
-Baseline Git SHA: `2cd8fde252737f31a24cd5b13ed766675fd40d3f`
-Head Git SHA before governance correction: `b7d4041b202378508bfa1859073f56a4a6a4e62f`
-Hosted source/evidence SHA before governance correction: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
-Finalization note: Correction 03 changes governance documentation plus the existing branch-protection review requirements only; the resulting evidence-only PR head must be re-proven by the hosted matrix without changing source behavior.
+Baseline Git SHA for the corrected promotion: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
+Historical Prompt 011 source/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
+Correction 05 implementation/source commit: `a23903d0f8f137121eab7a1d631b294eba8e5946`
+Correction 05 implementation/source tree: `8ea08299ab9b68225f49a82e75990981e53b9c57`
+Evidence-recording commits are intentionally tracked separately from the implementation/source identity; a versioned record is not required to contain its own future commit SHA.
+Finalization note: the historical Prompt 011 promotion record above is retained; Correction 05 strengthens Correction 04 release security-proof authority and requires a fresh hosted matrix on its focused branch. No v0.11.0 artifact/tag/release is changed and v0.11.1 is not published here.
 
 This bundle records bounded evidence for Prompt 011. It separates locally reproducible evidence from exact-SHA GitHub evidence and maintainer-owned promotion actions.
+
+## Correction 04 — release security proof
+
+| Claim | Kind | Reference | Status | Notes |
+| --- | --- | --- | --- | --- |
+| CodeQL and Scorecard are authoritative exact-SHA proofs for corrected releases | source/schema/test | `src/github/security-proof.ts`, `scripts/github/security-proof.mjs`, Direct Review/release barriers | READY | Each proof binds repository, final commit/tree, source commit/tree, run/attempt, URL, outcome, and canonical digest; Scorecard is accepted only from push-to-main |
+| Dependency Review is authoritative by exact SHA or same-tree merged PR | source/schema/test | `src/github/security-proof.ts`, `scripts/github/security-proof.mjs` | READY | Same-tree mode requires exactly one merged PR into main, same repository, source SHA/tree, final SHA/tree, and exactly one successful pull-request run |
+| Missing, unknown, failed, ambiguous, mismatched, or tampered security evidence cannot authorize PASS | test | `tests/release-security-proof.test.ts` | PASS | RG1-RG10 and RG13 cover fail-closed cases; RG11 covers all-pass authorization |
+| Security proof digests agree across evidence/index/release seams | source/test | `src/github/direct-review.ts`, `src/github/review-index.ts`, `scripts/release/*.mjs`, `src/lib/release-review.ts` | READY | Independent reconstruction is performed before tag/release mutation and is checked again for derivatives |
+| v0.11.0 remains historical and immutable; v0.11.1 is prepared but unpublished | repository/version | tag/release inspection, `VERSION`, `CHANGELOG.md` | PASS_LOCAL | v0.11.0 baseline is `d5cb361274cb19f70c8bd02dd023b596b8babf13`; no v0.11.1 tag/release is created by this correction |
+
+Read-only reconstruction against the audited promoted `main` identity (`d5cb361274cb19f70c8bd02dd023b596b8babf13`, tree `0c9e06deedf40b9cbe55e784c74fbc4b63b8bebd`) produced the following observed proof inputs for the corrected contract. These are baseline observations, not a claim that the open Correction 05 branch has post-merge release evidence:
+
+| Workflow | Proof mode | Event / binding | Run / attempt | Source identity | Proof digest |
+| --- | --- | --- | --- | --- | --- |
+| CodeQL | exact-sha | `push` / `main` | `33941376769 / 1` | final/source `d5cb361…` / `0c9e06…` | `56b0dfffde15e804343d07cc9facec916361c44e49bb8873653c44c16e747de8` |
+| Scorecard | exact-sha | `push` / `main` | `33941376795 / 1` | final/source `d5cb361…` / `0c9e06…` | `66b11a4d833d360c283a106bbe5ebb590185a5414c1ce52008e4c75b4a8cba1d` |
+| Dependency Review | same-tree-pr, PR #12 | `pull_request` / base `KayzenRoot/uads:main`, source `feat/prompt-011-assurance-stabilization-001` | `33939630957 / 1` | source `2e62866…` / `0c9e06…`; final `d5cb361…` / `0c9e06…` | `94442788a641dbab7261ae51680ed2528f6db9a86f2a4c10c30f21d12696b108` |
+
+Correction 04 historical PR #14 pre-merge hosted validation is retained for its own snapshot at head `cd8ee842e2dee9a9162d65c4255721cb0296515d`, tree `ef45d07c5533a190097cedd859dea154abac407c`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`:
+
+| Check | Run / attempt | Job | Status | Boundary |
+| --- | --- | --- | --- | --- |
+| Foundation | `33961541316 / 1` | `101294155802` | PASS | full CI matrix, 48 files / 343 tests, evals, validators, receipt |
+| CodeQL | `33961541293 / 1` | `101294155748` | PASS | PR head validation; final release proof remains exact push-to-main |
+| Compatibility | `33961541317 / 1` | `101294155915` Linux; `101294155795` Windows | PASS | exact PR head/tree, Node 20 |
+| Dependency Review | `33961541306 / 1` | `101294155693` | PASS | pull request dependency review |
+
+Scorecard and Direct Review are intentionally not claimed for the open PR: Scorecard is push-to-main only, and Direct Review is triggered from the post-merge compatibility workflow. A maintainer must obtain those fresh post-merge observations before any corrected-release authorization.
+
+## Correction 05 — event/PR binding and post-main readiness
+
+| Finding | Fix | Stable contract/reason code | Test/evidence |
+| --- | --- | --- | --- |
+| C05-01 Scorecard event/ref gap | Exact candidate selection and full-run validation require `event=push` and `head_branch=main` for the final main SHA | `SCORECARD_EVENT_REF_MISMATCH`, `SCORECARD_RUN_AMBIGUOUS` | RG15-RG17 |
+| C05-02 Dependency Review cross-PR reuse | Independently reconstruct final-commit and source-commit PR associations; bind run PR metadata, source branch, base repo/ref, and trees | `DEPENDENCY_REVIEW_SOURCE_PR_AMBIGUOUS`, `DEPENDENCY_REVIEW_SOURCE_PR_MISMATCH`, `DEPENDENCY_REVIEW_RUN_PR_MISMATCH` | RG18-RG19 |
+| C05-03 latest-run trust | Select exactly one distinct authoritative run ID; allow only higher attempts of the same ID as a documented rerun identity | `SECURITY_RUN_AMBIGUOUS` | RG20 |
+| C05-04 post-main race | Direct Review builds the contract and performs bounded readiness polling before publication; timeout is non-authorizing | `SECURITY_PROOF_READINESS_TIMEOUT` | RG21-RG22 |
+| C05-05 identity drift | Work Order, Checkpoint, and Evidence Bundle distinguish implementation/source SHA from later evidence-recording commits | no stale `PENDING_*` identity | canonical record review |
+
+The corrected proof now records `event`, `headBranch`, `baseRepository`, `baseRef`, and `sourceBranch` in addition to the existing run, attempt, PR, SHA/tree, URL, outcome, and digest fields. The same-tree Dependency Review resolver does not rely solely on `workflow_run.pull_requests`; an omitted array is acceptable only when the independently reconstructed source-commit association is unique and all available branch/PR metadata agrees.
+
+The bounded readiness policy is 12 attempts with a 5-second interval in the hosted Direct Review workflow. Unit tests inject a no-op sleeper, so the pending-to-success and timeout cases are deterministic and do not wait in real time.
+
+Files changed by Correction 05 and purpose: `src/github/security-proof.ts` (typed event/ref fields, deterministic selectors, PR binding, readiness helper); `scripts/github/security-proof.mjs` (GitHub API reconstruction and fail-closed workflow-specific filtering); `scripts/github/publish-direct-review-evidence.mjs` and `.github/workflows/direct-review.yml` (bounded post-main readiness and runner build); `schemas/github-direct-review-evidence.schema.json`, `schemas/github-review-index.schema.json`, `schemas/README.md` (contract fields); `tests/release-security-proof.test.ts` (RG15-RG22); `docs/08-SECURITY.md`, `docs/15-GITHUB-DIRECT-REVIEW.md`, `RELEASING.md` (security/release semantics).
 
 ## Claims
 
@@ -20,13 +67,13 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | Review packets are bounded and schema-validated | schema/source/test | `schemas/review-packet.schema.json`, `src/kernel/execution-persist.ts` | PASS | No secrets, prompts, arbitrary commands, or absolute host paths |
 | New assurance gates are part of CI receipt and Direct Review | workflow/source/test | `.github/workflows/ci.yml`, `.github/workflows/direct-review.yml` | PASS | `eval-assurance` and `eval-fault-injection` are required |
 | Linux/Windows Node 20 compatibility is required for v0.11.0 evidence | workflow/schema/source | `.github/workflows/compatibility.yml`, `schemas/compatibility-evidence.schema.json`, `scripts/github/compatibility-artifacts.mjs` | PASS | Exact SHA/tree/run/attempt/job/platform/artifact/digest binding is implemented and proved by run `33930026912` on `4061946…` |
-| Release title and version sources are coherent | source/test | `src/release/release-title.ts`, `VERSION`, `package.json` | PASS | v0.11.0 title is canonicalized |
+| Release title and version sources are coherent | source/test | `src/release/release-title.ts`, `VERSION`, `package.json` | PASS | Historical v0.11.0 remains canonical; corrected 0.11.1 metadata is coherent and unpublished |
 | Historical v0.10.4 tag is immutable | repository inspection | `src/release/semver.ts`, tag inspection | PASS | Existing tag target `0936f818...` was not moved |
 | Solo-maintainer governance is internally consistent | GitHub protection/API and documentation | `GOVERNANCE.md`, `.github/CODEOWNERS`, `main` branch protection | PASS | Mode `SOLO_MAINTAINER`; before: approvals `1`, code-owner review `true`; after: approvals `0`, code-owner review `false`; only `KayzenRoot` is review-eligible |
 | Existing branch protections remain intact | GitHub protection/API | `main` branch protection | PASS | PR required; strict `Foundation checks` required; stale dismissal, linear history, conversation resolution preserved; force pushes/deletion forbidden; administrator enforcement unchanged (`false`); restrictions unchanged (`null`) |
 | Documentation drift and Prompt 011 obligations are recorded | documentation | `README.md`, `docs/07-QUALITY-GATES.md`, `docs/08-SECURITY.md`, `docs/09-PERFORMANCE.md`, `docs/13-DEFINITION-OF-DONE.md`, `docs/14-BACKLOG.md`, `docs/15-GITHUB-DIRECT-REVIEW.md` | PASS | Bounded scope and deferred Prompt 012 items are explicit |
 | Local foundation and regression gates pass | command/output | `npm run validate` component sequence and CLI smoke | PASS_WITH_RECONSTRUCTED_COMPLETION | The first wrapper run was interrupted by user follow-up during `eval:fault`; the interrupted family was rerun 18/18 and every remaining wrapper command plus all four CLI smoke checks passed |
-| Package and dependency smoke pass | command/output | `npm audit --audit-level=high`, `npm pack --dry-run` | PASS | 0 vulnerabilities; package smoke completed for `uads@0.11.0` |
+| Package and dependency smoke pass | command/output | `npm audit --audit-level=high`, `npm pack --dry-run` | PASS | 0 vulnerabilities; corrected package smoke completed for `uads@0.11.1` |
 | C1 typed assurance evidence binding | source/evaluation | `src/kernel/assurance-policy.ts`, `src/kernel/execution.ts`, AS17-AS21 | PASS | Canonical typed Specialist Selection Plan is re-read/revalidated; prose and caller booleans are non-authoritative |
 | C2 normative FI1-FI16 meanings and real boundaries | evaluation | `src/eval/fault-injection-normative.ts`, `evals/fault-injection/cases.json` | PASS | 16 normative cases plus FI17-FI32 retained legacy coverage |
 | C3 exact-SHA compatibility artifact proof | source/schema/workflow | `scripts/github/generate-compatibility-evidence.mjs`, `scripts/github/compatibility-artifacts.mjs` | PASS | Explicit event-aware SHA, checkout/tree equality, exact run/job/artifact and digest validation |
@@ -44,30 +91,32 @@ Correction 03 selected `SOLO_MAINTAINER` from the bounded pre-flight: repository
 
 Before the change, classic protection for `main` required pull requests, one approving review, code-owner review, stale-review dismissal, strict `Foundation checks`, linear history, conversation resolution, and prohibited force pushes/deletion. Administrator enforcement was disabled and restrictions were null. After the change, only the impossible review requirements changed: required approvals are `0` and code-owner review is `false`. All other recorded protection values remain unchanged. PR #12 reports `mergeable=true` and `mergeable_state=clean` while remaining open.
 
-The hosted exact-head matrix must be checked again for the bounded evidence-only documentation commit; no runtime source, schema, test, adapter, kernel, evaluation semantic, package version, or workflow file is changed by Correction 03.
+The Correction 05 implementation/source snapshot is `a23903d0f8f137121eab7a1d631b294eba8e5946` / `8ea08299ab9b68225f49a82e75990981e53b9c57`. The final pre-record hosted matrix above is a separate Correction 05 result, not a replacement for the historical tables. Unlike Correction 03, this correction intentionally changes runtime release-proof source, schemas, tests, security/releasing documentation, and Direct Review workflow readiness; no historical tag or release is changed.
 
 ## Local verification record
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | TypeScript build/typecheck | PASS | `npm run build`, `npm run typecheck` after final source review |
-| Full Vitest regression suite | PASS | 47 files, 329 tests; 1948.16s |
+| Full Vitest regression suite | PASS | 48 files, 351 tests; final full validation completed without failures |
 | Legacy evaluations | PASS | Orchestrator 9/9; Execution 9/9; Context 19/19; Fault 18/18; Cost 27/27; Model Routing 22/22; Specialist Routing 26/26; Adapters 40/40 |
 | Assurance evaluation | PASS | `npm run eval:assurance`, 22/22 |
 | Fault-injection evaluation | PASS | `npm run eval:fault-injection`, normative FI1-FI16 + legacy FI17-FI32, 32/32 |
-| Focused assurance/execution/review/release tests | PASS | focused Vitest runs |
+| Focused security-proof regression | PASS | `npm run test:security-proof`, RG1-RG22, 22/22 |
 | Windows compatibility smoke | PASS | `node scripts/github/compatibility-smoke.mjs --platform windows` |
 | Action pins | PASS | `npm run validate:actions` |
 | CI receipt fixture | PASS | `npm run validate:ci-receipt` |
 | Direct Review fixture | PASS | `npm run validate:direct-review` |
-| Dependency audit | PASS | `npm audit --audit-level=high` |
-| Package smoke | PASS | `npm pack --dry-run`, `uads@0.11.0`, 586 files |
-| Clean dependency install | PASS | `npm ci`, 56 packages, 0 vulnerabilities |
 | Dependency audit | PASS | `npm audit --audit-level=high`, 0 vulnerabilities |
+| Package smoke | PASS | `npm pack --dry-run`, `uads@0.11.1`, 590 files |
+| Clean dependency install | PASS | `npm ci`, 56 packages, 0 vulnerabilities |
+| Full foundation validation | PASS | `npm run validate`, including all evals and engineering/skills/actions/Direct Review/CI receipt validators |
+| Correction 05 binding/readiness semantics | PASS | Scorecard push/main, Dependency Review exact PR/run binding, distinct-run ambiguity, and bounded pending/timeout behavior covered by RG15-RG22 |
+| Corrected release metadata | PASS_LOCAL | package/VERSION/lock/changelog/schema/title support `0.11.1`; publication intentionally deferred |
 
 ## Hosted exact-SHA record
 
-The hosted correction run is `UADS Cross-Platform Compatibility` run `33930026912`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, source tree SHA `c806ab2cde22f414e34d2dfda79f4ee2832b4f97`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33930026912`. Both jobs completed successfully: Linux job `101206556191` and Windows job `101206556350`, each named `<platform> / Node 20`, running Node `v20.20.2`.
+The hosted historical correction run is `UADS Cross-Platform Compatibility` run `33930026912`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, source tree SHA `c806ab2cde22f414e34d2dfda79f4ee2832b4f97`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33930026912`. Both jobs completed successfully: Linux job `101206556191` and Windows job `101206556350`, each named `<platform> / Node 20`, running Node `v20.20.2`. This is historical evidence for the already-promoted Prompt 011 snapshot and is retained unchanged.
 
 | Platform | Artifact | Artifact service digest | Downloaded evidence file SHA-256 | Evidence digest | Fixed checks |
 | --- | --- | --- | --- | --- | --- |
@@ -76,7 +125,21 @@ The hosted correction run is `UADS Cross-Platform Compatibility` run `3393002691
 
 The CI Foundation run is `33930026879`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, job `101206556051`, and conclusion PASS. Its exact-SHA receipt artifact is `uads-ci-gate-receipt-3d9b693c19a34acd2ad2ce72facdd7b2b6837a26` with service digest `sha256:392f6fbf6068c51c57eb1440b592cd582951886282cbb1a9eef0eded1e73219f`; the receipt itself records all required gates PASS, 47/47 files, 329/329 tests, AS 22/22, FI 32/32, and no high-or-greater npm vulnerabilities. The PR receipt necessarily records the GitHub `pull_request` merge ref `3d9b693c…`; the compatibility artifacts above are the separate exact head-SHA proof required for the correction.
 
-CodeQL run `33930026878` concluded PASS for the correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, `continue-on-error`, or fabricated PASS was introduced.
+CodeQL run `33930026878` concluded PASS for the historical correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, fabricated PASS, or PR Scorecard result was introduced.
+
+### Correction 05 final hosted PR record
+
+The final pre-record hosted review snapshot is PR #14 at head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, tree `489d4c546d9a380b856d39ea12e735f91e6ff169`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`. All required checks completed successfully on attempt `1`:
+
+| Check | Run | Job |
+| --- | ---: | ---: |
+| Foundation checks | `33964494290` | `101302068914` |
+| CodeQL analysis (javascript-typescript) | `33964494328` | `101302069020` |
+| Dependency review | `33964494330` | `101302068873` |
+| Compatibility Linux / Node 20 | `33964494340` | `101302069143` |
+| Compatibility Windows / Node 20 | `33964494340` | `101302069166` |
+
+Each run resolved to the exact final pre-record head SHA above and concluded `success`. The subsequent record-only commit containing this evidence is intentionally not used as the implementation/source identity or as a self-referential proof input.
 
 The literal aggregate wrapper did not emit its final line because the user interrupted the first long-running process while it was in `eval:fault`. This is recorded as an execution interruption, not a test failure: the exact missing family and every subsequent command in the wrapper sequence were rerun and passed, including CLI `--help`, `doctor`, `status`, and `inspect --json`.
 
@@ -84,4 +147,4 @@ The literal aggregate wrapper did not emit its final line because the user inter
 
 - Durable assurance packets and review records are bounded by schemas and contain no credentials, raw tokens, private keys, full prompts, arbitrary commands, or absolute host paths.
 - Synthetic secret-like values exist only in isolated evaluation fixtures and are not evidence claims or credentials.
-- No provider network call, deployment, dashboard, marketplace, runtime/source change, historical tag movement, or destructive external action was performed. The only external change was the bounded solo-maintainer branch-protection adjustment recorded above.
+- No provider network call, deployment, dashboard, marketplace, historical tag movement, or destructive external action was performed. The only external change from the completed historical Prompt 011 delivery was the bounded solo-maintainer branch-protection adjustment recorded above. Correction 05 has not performed a merge, tag, release, or v0.11.1 publication.

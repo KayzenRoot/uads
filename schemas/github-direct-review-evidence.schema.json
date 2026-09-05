@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schema": { "const": "uads.github-direct-review-evidence" },
-    "schemaVersion": { "const": "0.8.0" },
+    "schemaVersion": { "enum": ["0.8.0", "0.9.0"] },
     "repository": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
     "branch": { "type": ["string", "null"], "maxLength": 128 },
     "commitSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
@@ -32,6 +32,22 @@
     "reasonCodes": { "type": "array", "maxItems": 128, "items": { "type": "string", "pattern": "^[A-Z0-9_:-]{1,120}$" } },
     "evidenceContractDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "schemaVersion": { "const": "0.9.0" } } },
+      "then": {
+        "properties": {
+          "securityWorkflows": {
+            "properties": {
+              "codeql": { "properties": { "proof": { "$ref": "#/$defs/securityWorkflowProof" } }, "required": ["proof"] },
+              "scorecard": { "properties": { "proof": { "$ref": "#/$defs/securityWorkflowProof" } }, "required": ["proof"] },
+              "dependencyReview": { "properties": { "proof": { "$ref": "#/$defs/securityWorkflowProof" } }, "required": ["proof"] }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "outcome": { "enum": ["success", "failure", "cancelled", "skipped", "unknown"] },
     "shaOrNull": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
@@ -131,7 +147,32 @@
         "evidenceDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "platform": { "enum": ["linux", "windows", null] },
         "nodeVersion": { "type": ["string", "null"], "maxLength": 64 },
-        "checks": { "type": ["object", "null"], "additionalProperties": { "$ref": "#/$defs/outcome" }, "maxProperties": 16 }
+        "checks": { "type": ["object", "null"], "additionalProperties": { "$ref": "#/$defs/outcome" }, "maxProperties": 16 },
+        "proof": { "anyOf": [{ "$ref": "#/$defs/securityWorkflowProof" }, { "type": "null" }] }
+      }
+    },
+    "securityWorkflowProof": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workflow", "proofMode", "outcome", "repository", "event", "headBranch", "baseRepository", "baseRef", "sourceBranch", "finalCommitSha", "finalTreeSha", "sourceCommitSha", "sourceTreeSha", "runId", "runAttempt", "pullRequestNumber", "htmlUrl", "proofDigest"],
+      "properties": {
+        "workflow": { "enum": ["codeql", "scorecard", "dependency-review"] },
+        "proofMode": { "enum": ["exact-sha", "same-tree-pr"] },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "event": { "type": "string", "pattern": "^[a-z0-9_-]{1,80}$" },
+        "headBranch": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
+        "baseRepository": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "baseRef": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
+        "sourceBranch": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
+        "finalCommitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "finalTreeSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "sourceCommitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "sourceTreeSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "runId": { "type": "integer", "minimum": 1 },
+        "runAttempt": { "type": "integer", "minimum": 1 },
+        "pullRequestNumber": { "type": ["integer", "null"], "minimum": 1 },
+        "htmlUrl": { "type": "string", "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/[0-9]+$" },
+        "proofDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
     },
     "securityWorkflows": {

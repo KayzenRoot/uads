@@ -60,7 +60,9 @@ jobs:
           test -f tmp/direct-review/github-direct-review-evidence.json
       - name: Run complete release validation
         run: npm run release:validate -- --output tmp/release-validation-report.json --ci-binding tmp/ci-binding.json --direct-review tmp/direct-review/github-direct-review-evidence.json
-      - name: Verify release metadata and provenance
+      - name: Verify release metadata, provenance, and security proofs before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: npm run release:verify -- "${{ inputs.version }}" --ci-binding tmp/ci-binding.json --direct-review tmp/direct-review/github-direct-review-evidence.json
       - name: Build release artifacts
         env:

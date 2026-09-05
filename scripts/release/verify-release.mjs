@@ -9,6 +9,8 @@ const { validateReleaseMetadata } = await import("../../dist/release/semver.js")
 const { createCiBinding } = await import("../../dist/release/ci-binding.js");
 const { assertSchema } = await import("../../dist/lib/json-schema.js");
 const { validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
+const securityProofModule = await import("../../dist/github/security-proof.js");
+const { resolveSecurityWorkflowProofs } = await import("../github/security-proof.mjs");
 
 const version = process.argv[2];
 if (!version) fail("usage: node scripts/release/verify-release.mjs X.Y.Z [--ci-binding file] [--historical]");
@@ -140,6 +142,14 @@ function verifyDirectReview(file, expectedSha, expectedVersion, bindingFile) {
       const rawBinding = JSON.parse(fs.readFileSync(path.resolve(bindingFile), "utf8"));
       const binding = createCiBinding(rawBinding, expectedSha, "KayzenRoot/uads");
       if (evidence.provenance?.sourceRunId !== binding.runId || (binding.runAttempt && evidence.provenance?.sourceRunAttempt !== binding.runAttempt)) return false;
+    }
+    if (securityProofModule.isCorrectedReleaseVersion(expectedVersion)) {
+      const resolved = resolveSecurityWorkflowProofs({ repository: "KayzenRoot/uads", finalCommitSha: expectedSha });
+      const proofErrors = securityProofModule.securityWorkflowAuthorizationErrors({ codeql: resolved.codeql, scorecard: resolved.scorecard, dependencyReview: resolved.dependencyReview }, { repository: "KayzenRoot/uads", finalCommitSha: expectedSha, finalTreeSha: evidence.gitTreeSha });
+      if (proofErrors.length > 0) return false;
+      for (const [key, status] of [["codeql", resolved.codeql], ["scorecard", resolved.scorecard], ["dependencyReview", resolved.dependencyReview]]) {
+        if (status.proof?.proofDigest !== evidence.securityWorkflows?.[key]?.proof?.proofDigest) return false;
+      }
     }
     return true;
   } catch {

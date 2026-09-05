@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { assertCiBinding } from "../release/ci-binding.js";
+import { isCorrectedReleaseVersion } from "../github/security-proof.js";
+import { validateDirectReviewEvidence } from "../github/direct-review.js";
 import { validateGithubReviewIndex } from "../github/review-index.js";
 
 export const CANONICAL_GITHUB_FILES = [
@@ -232,7 +234,9 @@ function requiresDirectReview(version: string): boolean {
 function validateDirectReviewIdentity(files: JsonMap, direct: any, releaseDirect: any, final: any, reviewIndex: any, binding: any, release: any, releaseRun: any, manifest: any, validation: any, errors: string[]): void {
   for (const [label, item] of [["audit", direct], ["release", releaseDirect], ["final", final]] as const) {
     if (item?.finalVerdict !== "PASS") errors.push("direct-review-not-pass:" + label);
-    if (item?.schema !== "uads.github-direct-review-evidence" || item?.schemaVersion !== "0.8.0") errors.push("direct-review-schema-mismatch:" + label);
+    if (item?.schema !== "uads.github-direct-review-evidence" || !["0.8.0", "0.9.0"].includes(item?.schemaVersion)) errors.push("direct-review-schema-mismatch:" + label);
+    const directErrors = validateDirectReviewEvidence(item);
+    if (directErrors.length > 0) errors.push("direct-review-contract-invalid:" + label);
   }
   try { validateGithubReviewIndex(reviewIndex); } catch { errors.push("github-review-index-invalid"); }
   if (direct?.provenance?.sourceRunId !== binding?.runId || releaseDirect?.provenance?.sourceRunId !== binding?.runId || final?.provenance?.sourceRunId !== binding?.runId) errors.push("direct-review-ci-binding-run-mismatch");
@@ -246,7 +250,13 @@ function validateDirectReviewIdentity(files: JsonMap, direct: any, releaseDirect
   if (!directText || reviewIndex?.directReviewEvidenceSha256 !== crypto.createHash("sha256").update(directText).digest("hex")) errors.push("github-review-index-evidence-digest-mismatch");
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json")) errors.push("direct-review-final-asset-not-indexed");
   if (final?.release?.assetNames && !final.release.assetNames.includes("github-direct-review-evidence-final.json.sha256")) errors.push("direct-review-final-checksum-not-indexed");
-  if (final?.securityWorkflows?.codeql?.outcome !== "success") errors.push("direct-review-codeql-not-success");
+  if (isCorrectedReleaseVersion(manifest?.version)) {
+    for (const [key, proof] of [["codeql", final?.securityWorkflows?.codeql?.proof], ["scorecard", final?.securityWorkflows?.scorecard?.proof], ["dependencyReview", final?.securityWorkflows?.dependencyReview?.proof]]) {
+      if (proof?.proofDigest !== reviewIndex?.securityProofs?.[key]?.proofDigest) errors.push("security-proof-index-mismatch:" + key);
+    }
+  } else if (final?.securityWorkflows?.codeql?.outcome !== "success") {
+    errors.push("direct-review-codeql-not-success");
+  }
   if (manifest?.version === "0.11.0") {
     for (const label of ["audit", "release", "final"] as const) {
       const item = label === "audit" ? direct : label === "release" ? releaseDirect : final;
