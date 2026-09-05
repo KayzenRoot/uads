@@ -1,13 +1,14 @@
 # Work Order — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `COMPLETED_WITH_CORRECTION_05_OPEN`
+Status: `COMPLETED_WITH_CORRECTION_06_OPEN`
 Repository: `KayzenRoot/uads`
-Branch: `fix/prompt-011-release-security-proof`
+Branch: `fix/prompt-011-promotion-closeout`
 Baseline Git SHA: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
 Implementation/source Git SHA: `a23903d0f8f137121eab7a1d631b294eba8e5946`
 Evidence-recording commits are tracked separately and are not treated as implementation identity.
 Scope class: `cross-cutting`
 Risk: `HIGH`
+Correction 06 risk: `LOW / EVIDENCE-SENSITIVE`
 
 ## Objective
 
@@ -20,6 +21,10 @@ Close the remaining release-authorization gap by making CodeQL, Scorecard, and D
 ### Correction 05 amendment — event/PR binding and post-main readiness
 
 Close the independent review findings for the existing PR #14 by binding Scorecard proofs to `push` on `main`, binding same-tree Dependency Review to one exact merged/source PR and its run metadata, rejecting distinct authoritative run IDs as ambiguous, and adding bounded readiness polling before canonical post-main Direct Review publication. Keep the proof contract fail-closed, preserve the immutable v0.11.0 record, and do not publish or tag v0.11.1.
+
+### Correction 06 amendment — promotion closeout
+
+Close the documentation/evidence drift after the successful v0.11.1 promotion. Synchronize the existing Checkpoint, Evidence Bundle, Work Order, and `CHANGELOG.md` to the already-proven exact main SHA/tree, post-main proof runs, release/tag identity, and immutable asset snapshot. Update only the live v0.11.1 release description to remove the stale unpublished statement and record RG1-RG22 completion. Do not change runtime code, schemas, workflows, tests, dependencies, versions, release artifacts, tags, attestations, or begin Prompt 012.
 
 ## Included scope
 
@@ -35,6 +40,7 @@ Close the independent review findings for the existing PR #14 by binding Scoreca
 - Independent security-proof reconstruction in Direct Review, release verification/build/publish barriers, and final release-review validation; no v0.11.0 mutation and no v0.11.1 publication in this correction.
 - RG1-RG14 adversarial coverage for failed/unknown/ambiguous/mismatched/tampered security evidence and historical immutability.
 - Correction 05 event/ref and exact PR/run binding, deterministic candidate selection, bounded readiness, and RG15-RG22 adversarial coverage.
+- Correction 06 canonical documentation/evidence closeout and truthful public v0.11.1 release notes, with historical pre-promotion evidence retained as historical.
 
 ## Explicitly out of scope
 
@@ -72,8 +78,9 @@ Close the independent review findings for the existing PR #14 by binding Scoreca
 - [x] RG1-RG14 regression tests cover failure, unknown, exact-SHA, same-tree PR, mismatch, ambiguity, tampering, all-pass, and v0.11.0 immutability cases.
 - [x] Correction 05 binds Scorecard to push/main, binds same-tree Dependency Review to the exact merged/source PR and run metadata, rejects distinct authoritative run IDs, and adds bounded readiness handling.
 - [x] RG15-RG22 cover non-push Scorecard, cross-PR reuse, ambiguous source PRs/runs, and pending-to-success/timeout readiness.
-- [x] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks passed on final pre-record head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, all attempt `1`; no merge, tag, or v0.11.1 release is authorized by this worktree.
-- [ ] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence remain required before any v0.11.1 publication.
+- [x] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks passed on the final pre-record head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, all attempt `1`; this remains historical pre-promotion evidence.
+- [x] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence are satisfied by merged PR #14 and runs `33969035984` / `33969337749`; Dependency Review is bound by same-tree PR #14 run `33967128218`, compatibility by run `33969242069`, and publication by release run `33969445797`.
+- [x] Prompt 011 / v0.11.1 promotion is complete at main `db904219a691dea9509f04ff44ac9e8dff5563fa` / tree `0a4ef8e7e8354d4a90d8fc3db6fe19d70734c42f`; canonical records and public release notes are synchronized by Correction 06, pending independent audit of this closeout delta.
 
 ## Required gates and evidence
 
@@ -91,13 +98,14 @@ Close the independent review findings for the existing PR #14 by binding Scoreca
 
 ## Autonomy boundary
 
-- Safe autonomous actions: inspect, create the bounded branch and records, edit in-scope source/tests/docs/workflows, apply the documented solo-maintainer protection adjustment after pre-flight, run isolated local validation, commit, push the focused branch, and open/update a review request.
-- Requires maintainer/owner action: independent review and merge of Correction 05, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any future v0.11.1 tag/release after fresh post-merge external proof. This implementation does not merge, tag, or publish.
+- Safe autonomous actions: inspect, create the bounded closeout branch and records, edit only the in-scope documentation/evidence files, prepare and update the truthful v0.11.1 release description after branch durability, run isolated local validation, commit, push the focused branch, and open/update a review request.
+- Requires maintainer/owner action: independent audit and merge of the Correction 06 closeout PR, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any later increment. The executor does not merge the closeout PR, alter immutable release identity/assets, or start Prompt 012.
 
 ## Review and delivery
 
 - Independent technical audit: recorded on PR #12 as comment/review evidence `5119401125`; GitHub human APPROVE is intentionally not required in current solo-maintainer mode.
 - Historical PR #12 title: `feat: harden assurance and adversarial stabilization` (promotion completed and retained as history).
-- Correction 04/05 PR title: `fix: bind release authorization to security proof`
+- Correction 04/05 PR title: `fix: bind release authorization to security proof` (PR #14, merged to the exact reviewed tree)
+- Correction 06 PR title: `docs: close Prompt 011 v0.11.1 promotion record` (focused closeout branch; independent review required)
 - Evidence Bundle: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
