@@ -79,3 +79,24 @@ Only **NECESSARY** work enters the current Work Order. IMPORTANT/FUTURE items ar
 The built-in catalog contains 11 core roles and 14 domain profiles. Security, performance, and reliability assurance remain distinct from implementation and support. UGAS and game-assets are explicitly outside this catalog and do not receive automatic integration or project footprint.
 
 Selection uses a bounded minimum-sufficient greedy algorithm. It covers only domains, affected areas, risk signals, gates, dependencies, and evidence obligations present in the Work Order. Missing required coverage blocks dispatch rather than causing an unrelated specialist expansion.
+
+## Prompt 012 scope freeze (planning only; implementation not started)
+
+The sole NECESSARY next capability is a bounded, provider-neutral host
+execution and receipt boundary for an already validated sidecar Host Dispatch
+Bundle. The future implementation may deepen the existing Cursor, Codex, and
+Generic Agent Skills adapter contract only enough to accept an explicit,
+identity-bound handoff and persist a bounded execution receipt. It must not
+turn the kernel into a provider gateway or autonomous approval authority.
+
+This planning decision does not add runtime behavior, a new project footprint,
+credentials, provider calls, or release artifacts. The future Work Order must
+retain global-first state, zero project footprint, current Work Order/routing/
+specialist/model/host-root identity checks, explicit approval ownership, and
+fail-closed behavior for stale, replayed, tampered, cross-project, or
+ambiguous receipts.
+
+UGAS integration, provider API clients or invocation gateways, dashboards,
+marketplaces, deployment automation, deep specialist expansion, and other
+unselected capabilities remain IMPORTANT, FUTURE, or OUT_OF_SCOPE according
+to the decision matrix and are not part of Prompt 012.

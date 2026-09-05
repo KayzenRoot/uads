@@ -30,8 +30,31 @@ Deterministic evidence reuse with content-aware validity, conservative gate poli
 
 1. Broader specialist catalog (still not a marketplace)
 2. Provider adapters mapping capability classes to models
-3. Cursor adapter depth + generic/Codex execution
+3. Cursor adapter depth + generic/Codex execution — **selected as the sole Prompt 012 capability**
 4. UGAS integration (reserved under `integrations/ugas/`)
+
+## Prompt 012 — Scope freeze (planning only)
+
+Prompt 012 freezes exactly one next capability for a later implementation
+increment: a bounded, provider-neutral host execution and receipt boundary
+for an already validated Host Dispatch Bundle. This is a planning decision,
+not an implementation claim. The current release remains `0.11.1` and the
+current host adapters still stop at sidecar-only preparation.
+
+The selection is NECESSARY for the staged adapter-depth roadmap item because
+the current product can prepare an identity-bound handoff but cannot yet
+execute that handoff through an ownership-safe host boundary or record a
+bounded completion/failure receipt. The selected capability must preserve
+global-first state, zero project footprint, provider neutrality, explicit
+approval ownership, and fail-closed identity checks.
+
+UGAS integration is not a prerequisite for the staged adapter-depth work and
+remains FUTURE/OUT_OF_SCOPE for Prompt 012. Provider gateways, dashboards,
+marketplaces, deployment automation, and other expansions remain excluded.
+
+The frozen Work Order is
+`ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`; implementation must not begin
+until its independent review is complete.
 
 ## Explicitly later
 

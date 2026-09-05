@@ -222,4 +222,17 @@ Complete only when all are true:
 - Linux and Windows Node.js 20 compatibility workflow may PASS only for an exact source SHA with exact tree/run/attempt/job/artifact identity, fixed checks, Node 20, and validated evidence digest; absent or ambiguous proof is incomplete.
 - CI receipt, Direct Review, release validation, and release notes include the assurance/fault-injection gates and compatibility status without fabricating unavailable external evidence.
 - README and release title are generic/canonical; v0.11.0 metadata is updated only after the complete local and external exact-SHA validation chain passes.
-- Prompt 012, provider gateways, dashboards, deployment, marketplace, and other non-required expansions remain out of scope.
+- Provider gateways, dashboards, deployment, marketplace, and other non-required expansions remain out of scope.
+
+## Prompt 012 pre-implementation scope freeze
+
+The sole selected capability is a bounded, provider-neutral host execution and
+receipt boundary for an already validated Host Dispatch Bundle. The future
+implementation is complete only when it proves current identity binding,
+ownership-safe handoff, bounded sidecar-only receipts, replay/staleness/tamper
+rejection, explicit approval ownership, zero project footprint, and complete
+adapter compatibility without provider calls from the kernel.
+
+This section records selection criteria, not completed product behavior. UGAS,
+provider gateways, dashboards, marketplaces, deployment automation, and other
+unselected roadmap items remain outside Prompt 012.
