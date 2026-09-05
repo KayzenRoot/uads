@@ -1,11 +1,11 @@
 # Evidence Bundle — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `LOCAL GATES PASS; INDEPENDENT REVIEW PENDING`
+Status: `PRE-MERGE GATES PASS; SOLO-MAINTAINER GOVERNANCE CONFIGURED; PROMOTION PENDING`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `2cd8fde252737f31a24cd5b13ed766675fd40d3f`
-Head Git SHA at source/evidence snapshot: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
-Hosted correction/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
-Finalization note: the remaining delivery change is evidence-only bookkeeping; its new PR head must be re-proven by the hosted matrix without changing source behavior.
+Head Git SHA before governance correction: `b7d4041b202378508bfa1859073f56a4a6a4e62f`
+Hosted source/evidence SHA before governance correction: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
+Finalization note: Correction 03 changes governance documentation plus the existing branch-protection review requirements only; the resulting evidence-only PR head must be re-proven by the hosted matrix without changing source behavior.
 
 This bundle records bounded evidence for Prompt 011. It separates locally reproducible evidence from exact-SHA GitHub evidence and maintainer-owned promotion actions.
 
@@ -22,6 +22,8 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | Linux/Windows Node 20 compatibility is required for v0.11.0 evidence | workflow/schema/source | `.github/workflows/compatibility.yml`, `schemas/compatibility-evidence.schema.json`, `scripts/github/compatibility-artifacts.mjs` | PASS | Exact SHA/tree/run/attempt/job/platform/artifact/digest binding is implemented and proved by run `33930026912` on `4061946…` |
 | Release title and version sources are coherent | source/test | `src/release/release-title.ts`, `VERSION`, `package.json` | PASS | v0.11.0 title is canonicalized |
 | Historical v0.10.4 tag is immutable | repository inspection | `src/release/semver.ts`, tag inspection | PASS | Existing tag target `0936f818...` was not moved |
+| Solo-maintainer governance is internally consistent | GitHub protection/API and documentation | `GOVERNANCE.md`, `.github/CODEOWNERS`, `main` branch protection | PASS | Mode `SOLO_MAINTAINER`; before: approvals `1`, code-owner review `true`; after: approvals `0`, code-owner review `false`; only `KayzenRoot` is review-eligible |
+| Existing branch protections remain intact | GitHub protection/API | `main` branch protection | PASS | PR required; strict `Foundation checks` required; stale dismissal, linear history, conversation resolution preserved; force pushes/deletion forbidden; administrator enforcement unchanged (`false`); restrictions unchanged (`null`) |
 | Documentation drift and Prompt 011 obligations are recorded | documentation | `README.md`, `docs/07-QUALITY-GATES.md`, `docs/08-SECURITY.md`, `docs/09-PERFORMANCE.md`, `docs/13-DEFINITION-OF-DONE.md`, `docs/14-BACKLOG.md`, `docs/15-GITHUB-DIRECT-REVIEW.md` | PASS | Bounded scope and deferred Prompt 012 items are explicit |
 | Local foundation and regression gates pass | command/output | `npm run validate` component sequence and CLI smoke | PASS_WITH_RECONSTRUCTED_COMPLETION | The first wrapper run was interrupted by user follow-up during `eval:fault`; the interrupted family was rerun 18/18 and every remaining wrapper command plus all four CLI smoke checks passed |
 | Package and dependency smoke pass | command/output | `npm audit --audit-level=high`, `npm pack --dry-run` | PASS | 0 vulnerabilities; package smoke completed for `uads@0.11.0` |
@@ -34,7 +36,15 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | CodeQL passes for correction SHA | GitHub output | CodeQL run `33930026878` | PASS | Exact head SHA `4061946…` |
 | Historical Dependency Review attempt 1 | GitHub output | Dependency Review run `33930026983`, attempt `1` | RESOLVED | Attempt 1 failed because Dependency Graph was disabled; after enablement, attempt 2 on the same exact SHA passed |
 | Scorecard and post-main Direct Review | GitHub output | repository workflows | NOT_APPLICABLE_FOR_OPEN_PR | These are post-main/release-chain evidence and cannot be claimed from this open PR |
-| Independent review and maintainer promotion exist | review | PR review/checkpoint | PENDING_MAINTAINER | Implementer cannot self-approve, merge, or publish |
+| Independent technical audit and maintainer promotion exist | review | PR comment/review `5119401125`, checkpoint | AUDIT_RECORDED; PROMOTION_PENDING | Audit is recorded; GitHub APPROVE is intentionally not required in current solo-maintainer mode; implementer cannot merge or publish |
+
+## Governance correction record
+
+Correction 03 selected `SOLO_MAINTAINER` from the bounded pre-flight: repository `KayzenRoot/uads` is public, the default branch is `main`, the PR author is `KayzenRoot`, the only API-exposed collaborator is `KayzenRoot` with admin permission, and `.github/CODEOWNERS` assigns every listed path plus the wildcard to `@KayzenRoot`.
+
+Before the change, classic protection for `main` required pull requests, one approving review, code-owner review, stale-review dismissal, strict `Foundation checks`, linear history, conversation resolution, and prohibited force pushes/deletion. Administrator enforcement was disabled and restrictions were null. After the change, only the impossible review requirements changed: required approvals are `0` and code-owner review is `false`. All other recorded protection values remain unchanged. PR #12 reports `mergeable=true` and `mergeable_state=clean` while remaining open.
+
+The hosted exact-head matrix must be checked again for the bounded evidence-only documentation commit; no runtime source, schema, test, adapter, kernel, evaluation semantic, package version, or workflow file is changed by Correction 03.
 
 ## Local verification record
 
@@ -74,4 +84,4 @@ The literal aggregate wrapper did not emit its final line because the user inter
 
 - Durable assurance packets and review records are bounded by schemas and contain no credentials, raw tokens, private keys, full prompts, arbitrary commands, or absolute host paths.
 - Synthetic secret-like values exist only in isolated evaluation fixtures and are not evidence claims or credentials.
-- No provider network call, deployment, dashboard, marketplace, branch-protection change, historical tag movement, or destructive external action was performed.
+- No provider network call, deployment, dashboard, marketplace, runtime/source change, historical tag movement, or destructive external action was performed. The only external change was the bounded solo-maintainer branch-protection adjustment recorded above.

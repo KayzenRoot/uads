@@ -25,8 +25,10 @@ Canonical promotion: `PENDING_MAINTAINER`
 - The corrected source and hosted evidence snapshot are committed at `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`; the corrected full Vitest suite completed at 47 files/329 tests with 0 failures.
 - The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
+- Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.
+- The existing classic branch-protection mechanism now reports `mergeable=true` and `mergeable_state=clean` for PR #12. The governance documentation update is bounded and evidence-only; its new exact head must retain the same green check matrix before any promotion.
 - The focused branch remains open for independent maintainer review; only then may a maintainer merge or publish v0.11.0. Scorecard, Direct Review, and release-validation evidence remain post-merge/release-chain concerns and are not claimable from this open PR.
 
 ## Safety statement
 
-This delta proposes repository changes and evidence only. It does not promote canonical sidecar truth, self-approve the implementation, merge to `main`, alter branch/security settings, move historical tags, or publish a release.
+This delta proposes a bounded repository governance/evidence correction. It changes only the impossible solo-maintainer approval/code-owner requirements in the existing classic branch protection; it does not promote canonical sidecar truth, self-approve the implementation, merge to `main`, weaken required status checks or other protections, move historical tags, or publish a release.

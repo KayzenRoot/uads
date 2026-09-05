@@ -29,7 +29,7 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 - Provider API clients, model-invocation gateway, dashboard/control plane, marketplace, enterprise policy server, deep UGAS integration, deployment automation, wallet custody, or financial execution.
 - macOS as a required release platform.
 - Arbitrary external commands for probing reviewers or runtimes.
-- Dependency upgrades, migrations, broad cleanup, historical tag movement, or branch-protection changes. Enabling external GitHub security settings remains maintainer-owned; the correction records the supported configuration attempt and any remaining repository limitation.
+- Dependency upgrades, migrations, broad cleanup, historical tag movement, or branch-protection changes beyond the bounded Correction 03 solo-maintainer governance adjustment. That adjustment may change only the impossible approval/code-owner requirements after a documented pre-flight proves that one eligible maintainer owns the repository; all other branch protections remain unchanged.
 - Publishing a misleading release when exact-SHA Linux/Windows, Direct Review, CodeQL, Scorecard, or release evidence is unavailable.
 
 ## Dependencies and assumptions
@@ -37,7 +37,7 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 - Prompt 010 baseline is represented by main SHA `0936f818ba8dc938b1b2ad41ffab0450c8fb30eb`; this worktree also contains the approved governed-delivery adoption at `2cd8fde252737f31a24cd5b13ed766675fd40d3f`.
 - Node.js 20 and npm are available locally and in GitHub Actions.
 - GitHub Actions, CodeQL, Scorecard, and Direct Review results must be observed from exact SHA; no result may be fabricated.
-- Independent review remains a required maintainer action; the implementer cannot self-approve or promote canonical truth.
+- Independent technical audit and exact-SHA evidence remain required before promotion; the implementer cannot self-approve, fabricate a GitHub APPROVE, or promote canonical truth.
 
 ## Acceptance criteria
 
@@ -70,12 +70,12 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 
 ## Autonomy boundary
 
-- Safe autonomous actions: inspect, create the bounded branch and records, edit in-scope source/tests/docs/workflows, run isolated local validation, commit, push the focused branch, and open/update a review request.
-- Requires maintainer/owner action: independent approval, promotion of checkpoint/canonical truth, merge to `main`, enabling repository security settings, and publishing v0.11.0 if any required external evidence is not independently satisfied.
+- Safe autonomous actions: inspect, create the bounded branch and records, edit in-scope source/tests/docs/workflows, apply the documented solo-maintainer protection adjustment after pre-flight, run isolated local validation, commit, push the focused branch, and open/update a review request.
+- Requires maintainer/owner action: promotion of checkpoint/canonical truth, merge to `main`, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and publishing v0.11.0 if any required external evidence is not independently satisfied.
 
 ## Review and delivery
 
-- Independent reviewer: `independent-reviewer` plus required role-specific assurance reviewers.
+- Independent technical audit: recorded on PR #12 as comment/review evidence `5119401125`; GitHub human APPROVE is intentionally not required in current solo-maintainer mode.
 - PR title: `feat: harden assurance and adversarial stabilization`
 - Evidence Bundle: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`

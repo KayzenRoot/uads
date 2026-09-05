@@ -9,12 +9,13 @@ Generated at: `2026-09-04T00:00:00.000Z`
 
 | Source | Relative path or deterministic sentinel | SHA-256 |
 | --- | --- | --- |
-| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `ce15fb43fc125ed31242aeF531be1e8a41ddbbc04bc317f5398b48211849c2c1` |
+| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `fff1be5468d0136a1f5fa7dc0a6bf32c7d5ebf19d4258bdc928ed3c3f4494036` |
 | Decisions | `.engineering/DECISIONS.md` | `eacbe3d47b1295561d9673338d2580c305575286fb01a95859c975c2176e1e6a` |
-| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b515f32f8cd6b45ea644bf7f78b39ad6a422422631f9e3e797d5b28ecf5115e3` |
+| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `825a963f87729befc4ca2e0f47fb6c842039b1afcfb8155a7d1f6dc25f0ff79b` |
 | Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `fb92a45e7a5233e82fc48d2e731b312ebfb4100394d76bcfaee6b99f90ff6c57` |
 | Architecture | `docs/04-ARCHITECTURE.md` | `575e46f741a47a2227bf13e6dab21d882cde2a494a4aa7a4ec4385eb8dc61ca0` |
 | Project overview | `README.md` | `fb3dcb8a051dc68b9fcd19f7a048c16205d90e326292017b40fc3d34d0aed8b3` |
+| Governance | `GOVERNANCE.md` | `5c45d9f54aba5c08f8fa6e2f84eeee8ead92af34ccca582ccbc1dafd08c4bb68` |
 | Quality gates | `docs/07-QUALITY-GATES.md` | `751d8dde295c5fc696516ffcfe2b0404048cfb6aa380189e1401141d6e6d97a6` |
 | Executor rules | `.cursorrules` | `7c70f6d93d061f986ea1a0079faa6bf88c0d88504123807694526d7b2a87a711` |
 | Delivery protocol | `.engineering/PROTOCOL.md` | `f1ccaf41ae75ba578ed0d548e0d601ed56fe30dd0eff9d7cef00028ec71a60cf` |
@@ -26,7 +27,7 @@ Generated at: `2026-09-04T00:00:00.000Z`
 | Compatibility workflow | `.github/workflows/compatibility.yml` | `41fdd64b75526a6ac09f708457dee3c177dc99cf50e60530cea5d9593fba825a` |
 | Assurance eval | `src/eval/assurance.ts` | `1229811d750b70bcd322808cc679a74fc19de5c60d27513a5ab24a9e9be6a522` |
 | Fault-injection eval | `src/eval/fault-injection.ts` | `c45b94a5a57617f78d9ff81e03ca71e9c717aa9d203325672e9a744783eea3f7` |
-| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `75e1548da3d661362cdc048447662a59adac7f2525f64357e239e6fdca66221` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `3553721a3db3c5d45fe2a11612cb4942c3d97cdda814d88926a1846e6696b6f2` |
 
 ## Stale events
 
