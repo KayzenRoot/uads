@@ -1,6 +1,6 @@
 # Checkpoint Delta — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PROMOTED; CORRECTION_04_READY_FOR_REVIEW`
+Status: `PROMOTED; CORRECTION_05_READY_FOR_REVIEW`
 Canonical promotion: `COMPLETED_FOR_V0.11.0`
 
 ## Lifecycle transition
@@ -8,6 +8,7 @@ Canonical promotion: `COMPLETED_FOR_V0.11.0`
 - Before: `approved Prompt 010 / v0.10.4 baseline with no active Prompt 011 stabilization record`
 - After proposed: `Prompt 011 assurance stabilization implemented locally; review / READY_FOR_REVIEW pending independent maintainer review`
 - Correction 04 after: `v0.11.0 promotion is recorded as complete; corrected 0.11.1 security-proof semantics are prepared on a focused branch and require fresh independent review/hosted checks`
+- Correction 05 after: `security proof event/ref and merged-PR binding plus bounded post-main readiness are implemented on PR #14 and require independent review and fresh hosted checks`
 
 ## Completed steps
 
@@ -22,17 +23,18 @@ Canonical promotion: `COMPLETED_FOR_V0.11.0`
 - Ran local typecheck/build, focused regression tests, legacy evaluations, new evaluations, action/receipt/Direct Review validators, Windows compatibility smoke, audit, and package smoke.
 - Recorded the successful v0.11.0 promotion at the audited main identity `d5cb361274cb19f70c8bd02dd023b596b8babf13`; historical release/tag/assets are preserved unchanged.
 - Added Correction 04 typed security proofs, independent reconstruction barriers, 0.9.0 schemas, release 0.11.1 preparation, and RG1-RG14 adversarial tests.
+- Added Correction 05 event/ref fields, push-to-main Scorecard selection, exact merged/source PR and Dependency Review run binding, explicit distinct-run ambiguity, bounded Direct Review readiness, and RG15-RG22 tests.
 
 ## Open items
 
 - Historical Prompt 011 source/evidence snapshot `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` and its hosted matrix are retained as the pre-promotion record; the promoted main identity is `d5cb361274cb19f70c8bd02dd023b596b8babf13`.
-- Correction 04 branch head is `cd8ee842e2dee9a9162d65c4255721cb0296515d` with tree `ef45d07c5533a190097cedd859dea154abac407c`; PR #14 pre-merge Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks are green (runs `33961541316`, `33961541293`, `33961541317`, `33961541306`).
-- Local RG1-RG14 and full validation results are recorded in the companion Evidence Bundle. Scorecard and Direct Review remain intentionally unclaimed until post-merge main evidence.
+- Correction 05 implementation/source commit is `a23903d0f8f137121eab7a1d631b294eba8e5946` with tree `8ea08299ab9b68225f49a82e75990981e53b9c57`; later evidence-recording commits are intentionally distinguished from this source identity. PR #14 remains open on `fix/prompt-011-release-security-proof`; its final post-push hosted matrix is required before this delta can be independently reviewed.
+- Local RG1-RG22 and full validation results are recorded in the companion Evidence Bundle. Scorecard and Direct Review remain intentionally unclaimed until post-merge main evidence.
 - The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
 - Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.
 - The existing classic branch-protection mechanism now reports `mergeable=true` and `mergeable_state=clean` for PR #12. The governance documentation update is bounded and evidence-only; its new exact head must retain the same green check matrix before any promotion.
-- Historical PR #12 promotion is complete. The Correction 04 branch remains open for independent maintainer review; only after a fresh post-merge proof may a maintainer consider v0.11.1 publication. This task does not merge, tag, or publish.
+- Historical PR #12 promotion is complete. The Correction 05 branch remains open for independent maintainer review; only after a fresh post-merge proof may a maintainer consider v0.11.1 publication. This task does not merge, tag, or publish.
 
 ## Safety statement
 

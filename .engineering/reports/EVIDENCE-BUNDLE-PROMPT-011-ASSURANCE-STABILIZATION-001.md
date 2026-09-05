@@ -1,11 +1,13 @@
 # Evidence Bundle — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PROMOTION_COMPLETE; CORRECTION_04_SECURITY_PROOF_READY_FOR_REVIEW`
+Status: `PROMOTION_COMPLETE; CORRECTION_05_SECURITY_PROOF_READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA for the corrected promotion: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
 Historical Prompt 011 source/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
-Correction 04 branch head: `cd8ee842e2dee9a9162d65c4255721cb0296515d`
-Finalization note: the historical Prompt 011 promotion record above is retained; Correction 04 adds release security-proof authority and requires a fresh hosted matrix on its focused branch. No v0.11.0 artifact/tag/release is changed and v0.11.1 is not published here.
+Correction 05 implementation/source commit: `a23903d0f8f137121eab7a1d631b294eba8e5946`
+Correction 05 implementation/source tree: `8ea08299ab9b68225f49a82e75990981e53b9c57`
+Evidence-recording commits are intentionally tracked separately from the implementation/source identity; a versioned record is not required to contain its own future commit SHA.
+Finalization note: the historical Prompt 011 promotion record above is retained; Correction 05 strengthens Correction 04 release security-proof authority and requires a fresh hosted matrix on its focused branch. No v0.11.0 artifact/tag/release is changed and v0.11.1 is not published here.
 
 This bundle records bounded evidence for Prompt 011. It separates locally reproducible evidence from exact-SHA GitHub evidence and maintainer-owned promotion actions.
 
@@ -19,7 +21,7 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | Security proof digests agree across evidence/index/release seams | source/test | `src/github/direct-review.ts`, `src/github/review-index.ts`, `scripts/release/*.mjs`, `src/lib/release-review.ts` | READY | Independent reconstruction is performed before tag/release mutation and is checked again for derivatives |
 | v0.11.0 remains historical and immutable; v0.11.1 is prepared but unpublished | repository/version | tag/release inspection, `VERSION`, `CHANGELOG.md` | PASS_LOCAL | v0.11.0 baseline is `d5cb361274cb19f70c8bd02dd023b596b8babf13`; no v0.11.1 tag/release is created by this correction |
 
-Read-only reconstruction against the audited promoted `main` identity (`d5cb361274cb19f70c8bd02dd023b596b8babf13`, tree `0c9e06deedf40b9cbe55e784c74fbc4b63b8bebd`) produced the following observed proof inputs for the corrected contract. These are baseline observations, not a claim that the open Correction 04 branch has post-merge release evidence:
+Read-only reconstruction against the audited promoted `main` identity (`d5cb361274cb19f70c8bd02dd023b596b8babf13`, tree `0c9e06deedf40b9cbe55e784c74fbc4b63b8bebd`) produced the following observed proof inputs for the corrected contract. These are baseline observations, not a claim that the open Correction 05 branch has post-merge release evidence:
 
 | Workflow | Proof mode | Run / attempt | Source identity | Proof digest |
 | --- | --- | --- | --- | --- |
@@ -27,7 +29,7 @@ Read-only reconstruction against the audited promoted `main` identity (`d5cb3612
 | Scorecard | exact-sha | `33941376795 / 1` | final/source `d5cb361…` / `0c9e06…` | `0034ec1c86d1758a7bf433fa21cee1df6dce48cba963edd2586ebad12d661640` |
 | Dependency Review | same-tree-pr, PR #12 | `33939630957 / 1` | source `2e62866…` / `0c9e06…`; final `d5cb361…` / `0c9e06…` | `af2b1c8f872afb0cf0821f4a6b68191a2514dda390543aed2b8a96f323ed3f34` |
 
-Correction 04 PR #14 pre-merge hosted validation is green for head `cd8ee842e2dee9a9162d65c4255721cb0296515d`, tree `ef45d07c5533a190097cedd859dea154abac407c`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`:
+Correction 04 historical PR #14 pre-merge hosted validation is retained for its own snapshot at head `cd8ee842e2dee9a9162d65c4255721cb0296515d`, tree `ef45d07c5533a190097cedd859dea154abac407c`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`:
 
 | Check | Run / attempt | Job | Status | Boundary |
 | --- | --- | --- | --- | --- |
@@ -37,6 +39,22 @@ Correction 04 PR #14 pre-merge hosted validation is green for head `cd8ee842e2de
 | Dependency Review | `33961541306 / 1` | `101294155693` | PASS | pull request dependency review |
 
 Scorecard and Direct Review are intentionally not claimed for the open PR: Scorecard is push-to-main only, and Direct Review is triggered from the post-merge compatibility workflow. A maintainer must obtain those fresh post-merge observations before any corrected-release authorization.
+
+## Correction 05 — event/PR binding and post-main readiness
+
+| Finding | Fix | Stable contract/reason code | Test/evidence |
+| --- | --- | --- | --- |
+| C05-01 Scorecard event/ref gap | Exact candidate selection and full-run validation require `event=push` and `head_branch=main` for the final main SHA | `SCORECARD_EVENT_REF_MISMATCH`, `SCORECARD_RUN_AMBIGUOUS` | RG15-RG17 |
+| C05-02 Dependency Review cross-PR reuse | Independently reconstruct final-commit and source-commit PR associations; bind run PR metadata, source branch, base repo/ref, and trees | `DEPENDENCY_REVIEW_SOURCE_PR_AMBIGUOUS`, `DEPENDENCY_REVIEW_SOURCE_PR_MISMATCH`, `DEPENDENCY_REVIEW_RUN_PR_MISMATCH` | RG18-RG19 |
+| C05-03 latest-run trust | Select exactly one distinct authoritative run ID; allow only higher attempts of the same ID as a documented rerun identity | `SECURITY_RUN_AMBIGUOUS` | RG20 |
+| C05-04 post-main race | Direct Review builds the contract and performs bounded readiness polling before publication; timeout is non-authorizing | `SECURITY_PROOF_READINESS_TIMEOUT` | RG21-RG22 |
+| C05-05 identity drift | Work Order, Checkpoint, and Evidence Bundle distinguish implementation/source SHA from later evidence-recording commits | no stale `PENDING_*` identity | canonical record review |
+
+The corrected proof now records `event`, `headBranch`, `baseRepository`, `baseRef`, and `sourceBranch` in addition to the existing run, attempt, PR, SHA/tree, URL, outcome, and digest fields. The same-tree Dependency Review resolver does not rely solely on `workflow_run.pull_requests`; an omitted array is acceptable only when the independently reconstructed source-commit association is unique and all available branch/PR metadata agrees.
+
+The bounded readiness policy is 12 attempts with a 5-second interval in the hosted Direct Review workflow. Unit tests inject a no-op sleeper, so the pending-to-success and timeout cases are deterministic and do not wait in real time.
+
+Files changed by Correction 05 and purpose: `src/github/security-proof.ts` (typed event/ref fields, deterministic selectors, PR binding, readiness helper); `scripts/github/security-proof.mjs` (GitHub API reconstruction and fail-closed workflow-specific filtering); `scripts/github/publish-direct-review-evidence.mjs` and `.github/workflows/direct-review.yml` (bounded post-main readiness and runner build); `schemas/github-direct-review-evidence.schema.json`, `schemas/github-review-index.schema.json`, `schemas/README.md` (contract fields); `tests/release-security-proof.test.ts` (RG15-RG22); `docs/08-SECURITY.md`, `docs/15-GITHUB-DIRECT-REVIEW.md`, `RELEASING.md` (security/release semantics).
 
 ## Claims
 
@@ -73,7 +91,7 @@ Correction 03 selected `SOLO_MAINTAINER` from the bounded pre-flight: repository
 
 Before the change, classic protection for `main` required pull requests, one approving review, code-owner review, stale-review dismissal, strict `Foundation checks`, linear history, conversation resolution, and prohibited force pushes/deletion. Administrator enforcement was disabled and restrictions were null. After the change, only the impossible review requirements changed: required approvals are `0` and code-owner review is `false`. All other recorded protection values remain unchanged. PR #12 reports `mergeable=true` and `mergeable_state=clean` while remaining open.
 
-The hosted exact-head matrix must be checked for the Correction 04 branch after push. Unlike Correction 03, this correction intentionally changes runtime release-proof source, schemas, tests, release metadata, and release workflow enforcement; no historical tag or release is changed.
+The Correction 05 implementation/source snapshot is `a23903d0f8f137121eab7a1d631b294eba8e5946` / `8ea08299ab9b68225f49a82e75990981e53b9c57`. The hosted exact-head matrix for the final evidence-recording head is appended after push; it must be read as a separate Correction 05 result, not as a replacement for the historical Correction 04 table. Unlike Correction 03, this correction intentionally changes runtime release-proof source, schemas, tests, security/releasing documentation, and Direct Review workflow readiness; no historical tag or release is changed.
 
 ## Local verification record
 
@@ -94,7 +112,8 @@ The hosted exact-head matrix must be checked for the Correction 04 branch after 
 | Clean dependency install | PASS | `npm ci`, 56 packages, 0 vulnerabilities |
 | Dependency audit | PASS | `npm audit --audit-level=high`, 0 vulnerabilities |
 
-| Security-proof focused regression | PASS | `npm run test:security-proof`, RG1-RG14, 14/14 |
+| Security-proof focused regression | PASS | `npm run test:security-proof`, RG1-RG22, 22/22 |
+| Correction 05 binding/readiness semantics | PASS | Scorecard push/main, Dependency Review exact PR/run binding, distinct-run ambiguity, and bounded pending/timeout behavior covered by RG15-RG22 |
 | Corrected release metadata | PASS_LOCAL | package/VERSION/lock/changelog/schema/title support `0.11.1`; publication intentionally deferred |
 
 ## Hosted exact-SHA record
@@ -108,7 +127,7 @@ The hosted historical correction run is `UADS Cross-Platform Compatibility` run 
 
 The CI Foundation run is `33930026879`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, job `101206556051`, and conclusion PASS. Its exact-SHA receipt artifact is `uads-ci-gate-receipt-3d9b693c19a34acd2ad2ce72facdd7b2b6837a26` with service digest `sha256:392f6fbf6068c51c57eb1440b592cd582951886282cbb1a9eef0eded1e73219f`; the receipt itself records all required gates PASS, 47/47 files, 329/329 tests, AS 22/22, FI 32/32, and no high-or-greater npm vulnerabilities. The PR receipt necessarily records the GitHub `pull_request` merge ref `3d9b693c…`; the compatibility artifacts above are the separate exact head-SHA proof required for the correction.
 
-CodeQL run `33930026878` concluded PASS for the historical correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, fabricated PASS, or PR Scorecard result was introduced. The Correction 04 hosted run IDs, proof observations, and final PR identity must be appended after the branch is pushed; until then they are not claimable.
+CodeQL run `33930026878` concluded PASS for the historical correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, fabricated PASS, or PR Scorecard result was introduced. Correction 05 hosted run IDs and the final PR identity are recorded only after pushing the final evidence-recording commit; until then they are not claimable.
 
 The literal aggregate wrapper did not emit its final line because the user interrupted the first long-running process while it was in `eval:fault`. This is recorded as an execution interruption, not a test failure: the exact missing family and every subsequent command in the wrapper sequence were rerun and passed, including CLI `--help`, `doctor`, `status`, and `inspect --json`.
 
@@ -116,4 +135,4 @@ The literal aggregate wrapper did not emit its final line because the user inter
 
 - Durable assurance packets and review records are bounded by schemas and contain no credentials, raw tokens, private keys, full prompts, arbitrary commands, or absolute host paths.
 - Synthetic secret-like values exist only in isolated evaluation fixtures and are not evidence claims or credentials.
-- No provider network call, deployment, dashboard, marketplace, historical tag movement, or destructive external action was performed. The only external change from the completed historical Prompt 011 delivery was the bounded solo-maintainer branch-protection adjustment recorded above. Correction 04 has not performed a merge, tag, release, or v0.11.1 publication.
+- No provider network call, deployment, dashboard, marketplace, historical tag movement, or destructive external action was performed. The only external change from the completed historical Prompt 011 delivery was the bounded solo-maintainer branch-protection adjustment recorded above. Correction 05 has not performed a merge, tag, release, or v0.11.1 publication.

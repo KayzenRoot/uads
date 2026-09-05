@@ -1,10 +1,11 @@
 # Work Order — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `COMPLETED_WITH_CORRECTION_04_OPEN`
+Status: `COMPLETED_WITH_CORRECTION_05_OPEN`
 Repository: `KayzenRoot/uads`
 Branch: `fix/prompt-011-release-security-proof`
 Baseline Git SHA: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
-Head Git SHA at source/evidence snapshot: `PENDING_CORRECTION_04_COMMIT`
+Implementation/source Git SHA: `a23903d0f8f137121eab7a1d631b294eba8e5946`
+Evidence-recording commits are tracked separately and are not treated as implementation identity.
 Scope class: `cross-cutting`
 Risk: `HIGH`
 
@@ -15,6 +16,10 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 ### Correction 04 amendment — release security proof
 
 Close the remaining release-authorization gap by making CodeQL, Scorecard, and Dependency Review authoritative typed proofs for corrected-release PASS. Preserve the already-published v0.11.0 evidence and release exactly, prepare the 0.11.1 contract without publishing or tagging it here, and record successful v0.11.0 promotion without rewriting the historical pre-promotion record.
+
+### Correction 05 amendment — event/PR binding and post-main readiness
+
+Close the independent review findings for the existing PR #14 by binding Scorecard proofs to `push` on `main`, binding same-tree Dependency Review to one exact merged/source PR and its run metadata, rejecting distinct authoritative run IDs as ambiguous, and adding bounded readiness polling before canonical post-main Direct Review publication. Keep the proof contract fail-closed, preserve the immutable v0.11.0 record, and do not publish or tag v0.11.1.
 
 ## Included scope
 
@@ -29,6 +34,7 @@ Close the remaining release-authorization gap by making CodeQL, Scorecard, and D
 - Typed 0.9.0 security proofs: exact-SHA CodeQL/Scorecard and exact-SHA or same-tree PR Dependency Review, with repository, final/source SHA/tree, run/attempt, PR, URL, and digest binding.
 - Independent security-proof reconstruction in Direct Review, release verification/build/publish barriers, and final release-review validation; no v0.11.0 mutation and no v0.11.1 publication in this correction.
 - RG1-RG14 adversarial coverage for failed/unknown/ambiguous/mismatched/tampered security evidence and historical immutability.
+- Correction 05 event/ref and exact PR/run binding, deterministic candidate selection, bounded readiness, and RG15-RG22 adversarial coverage.
 
 ## Explicitly out of scope
 
@@ -64,14 +70,16 @@ Close the remaining release-authorization gap by making CodeQL, Scorecard, and D
 - [x] v0.11.0 promotion completed on the audited exact SHA; the release/tag/assets remain immutable.
 - [x] Corrected v0.11.1 semantics require all three reconstructable security proofs for final PASS.
 - [x] RG1-RG14 regression tests cover failure, unknown, exact-SHA, same-tree PR, mismatch, ambiguity, tampering, all-pass, and v0.11.0 immutability cases.
-- [x] Correction 04 PR #14 receives green pre-merge Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks; no merge, tag, or v0.11.1 release is authorized by this worktree.
+- [x] Correction 05 binds Scorecard to push/main, binds same-tree Dependency Review to the exact merged/source PR and run metadata, rejects distinct authoritative run IDs, and adds bounded readiness handling.
+- [x] RG15-RG22 cover non-push Scorecard, cross-PR reuse, ambiguous source PRs/runs, and pending-to-success/timeout readiness.
+- [ ] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks remain required after the final evidence-recording push; no merge, tag, or v0.11.1 release is authorized by this worktree.
 - [ ] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence remain required before any v0.11.1 publication.
 
 ## Required gates and evidence
 
 - Gates: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm test`, all legacy evals, `npm run eval:assurance`, `npm run eval:fault-injection`, `npm run validate:skills`, `npm run validate`, `npm audit --audit-level=high`, `npm pack --dry-run`, C1-C4 local checks, exact-SHA Linux/Windows compatibility artifacts, CodeQL, Scorecard, Direct Review, and release validation. Dependency Review must not remain red at merge/release time.
 - Evidence: bounded command outputs, focused tests, privacy assertions, exact-SHA CI/compatibility receipts, Direct Review evidence, release manifest/checksums/SBOM, and an independent review.
-- Correction 04 evidence additionally requires proof digests to agree across canonical Direct Review, review index, release builder, publisher, and final derivative; Scorecard must be observed only from its push-to-main workflow.
+- Correction 05 evidence additionally requires proof event/ref fields, exact merged/source PR and run binding, explicit uniqueness/ambiguity reason codes, bounded readiness evidence, and proof digests to agree across canonical Direct Review, review index, release builder, publisher, and final derivative. Scorecard must be observed only from its push-to-main workflow.
 
 ## Stop conditions
 
@@ -79,17 +87,17 @@ Close the remaining release-authorization gap by making CodeQL, Scorecard, and D
 - Assurance can approve unresolved HIGH/CRITICAL findings, current FAIL/BLOCKED evidence is bypassed, reviewer independence weakens, or security/performance/reliability roles cross-satisfy.
 - Any FI case fails to block, ZPF/privacy is violated, secrets/absolute paths enter durable evidence, provider/network behavior is introduced, historical tags would move, or a destructive external action is required.
 - Exact-SHA Linux/Windows compatibility or required GitHub evidence is missing or red; any required GitHub gate is missing or red; or C1-C4 evidence identity cannot be independently reconstructed.
-- Any corrected-release security proof is missing, unknown, failed, ambiguous, source/tree mismatched, digest-tampered, or inferred from a PR Scorecard result.
+- Any corrected-release security proof is missing, unknown, failed, ambiguous, source/tree mismatched, event/ref or PR/run mismatched, digest-tampered, or inferred from a non-push Scorecard result.
 
 ## Autonomy boundary
 
 - Safe autonomous actions: inspect, create the bounded branch and records, edit in-scope source/tests/docs/workflows, apply the documented solo-maintainer protection adjustment after pre-flight, run isolated local validation, commit, push the focused branch, and open/update a review request.
-- Requires maintainer/owner action: independent review and merge of Correction 04, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any future v0.11.1 tag/release after fresh post-merge external proof. This implementation does not merge, tag, or publish.
+- Requires maintainer/owner action: independent review and merge of Correction 05, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any future v0.11.1 tag/release after fresh post-merge external proof. This implementation does not merge, tag, or publish.
 
 ## Review and delivery
 
 - Independent technical audit: recorded on PR #12 as comment/review evidence `5119401125`; GitHub human APPROVE is intentionally not required in current solo-maintainer mode.
 - Historical PR #12 title: `feat: harden assurance and adversarial stabilization` (promotion completed and retained as history).
-- Correction 04 PR title: `fix: bind release authorization to security proof`
+- Correction 04/05 PR title: `fix: bind release authorization to security proof`
 - Evidence Bundle: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
