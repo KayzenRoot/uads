@@ -26,7 +26,8 @@ Canonical promotion: `COMPLETED_FOR_V0.11.0`
 ## Open items
 
 - Historical Prompt 011 source/evidence snapshot `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` and its hosted matrix are retained as the pre-promotion record; the promoted main identity is `d5cb361274cb19f70c8bd02dd023b596b8babf13`.
-- Correction 04 branch head is `PENDING_CORRECTION_04_COMMIT`; local RG1-RG14 and full validation results are recorded in the companion Evidence Bundle after execution.
+- Correction 04 branch head is `cd8ee842e2dee9a9162d65c4255721cb0296515d` with tree `ef45d07c5533a190097cedd859dea154abac407c`; PR #14 pre-merge Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks are green (runs `33961541316`, `33961541293`, `33961541317`, `33961541306`).
+- Local RG1-RG14 and full validation results are recorded in the companion Evidence Bundle. Scorecard and Direct Review remain intentionally unclaimed until post-merge main evidence.
 - The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
 - Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.

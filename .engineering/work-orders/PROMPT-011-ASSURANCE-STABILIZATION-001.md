@@ -64,7 +64,8 @@ Close the remaining release-authorization gap by making CodeQL, Scorecard, and D
 - [x] v0.11.0 promotion completed on the audited exact SHA; the release/tag/assets remain immutable.
 - [x] Corrected v0.11.1 semantics require all three reconstructable security proofs for final PASS.
 - [x] RG1-RG14 regression tests cover failure, unknown, exact-SHA, same-tree PR, mismatch, ambiguity, tampering, all-pass, and v0.11.0 immutability cases.
-- [ ] Correction 04 branch receives independent review and hosted green checks before maintainer merge; no merge, tag, or v0.11.1 release is authorized by this worktree.
+- [x] Correction 04 PR #14 receives green pre-merge Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks; no merge, tag, or v0.11.1 release is authorized by this worktree.
+- [ ] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence remain required before any v0.11.1 publication.
 
 ## Required gates and evidence
 

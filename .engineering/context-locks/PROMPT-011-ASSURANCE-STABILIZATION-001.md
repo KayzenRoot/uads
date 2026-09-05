@@ -9,9 +9,9 @@ Generated at: `2026-09-05T00:00:00.000Z`
 
 | Source | Relative path or deterministic sentinel | SHA-256 |
 | --- | --- | --- |
-| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `51b23cb07872c5c5266a2792fe73ca51359f404e8a2c05987f9ab8e3afba526d` |
+| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `8c91fff4674c57c7b9b2361ee899b81b885d336aa234ad5954d8e47119c8f7aa` |
 | Decisions | `.engineering/DECISIONS.md` | `eacbe3d47b1295561d9673338d2580c305575286fb01a95859c975c2176e1e6a` |
-| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `6573e55dbf1b7e530dfe2444893e88fe186c88275912427f81128413c06145a1` |
+| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `d9269474e453f16f8dabbb11442af1d5e0f279068ba68cc0f2bb553b7dc359f9` |
 | Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `fb92a45e7a5233e82fc48d2e731b312ebfb4100394d76bcfaee6b99f90ff6c57` |
 | Architecture | `docs/04-ARCHITECTURE.md` | `575e46f741a47a2227bf13e6dab21d882cde2a494a4aa7a4ec4385eb8dc61ca0` |
 | Project overview | `README.md` | `fb3dcb8a051dc68b9fcd19f7a048c16205d90e326292017b40fc3d34d0aed8b3` |
@@ -27,7 +27,7 @@ Generated at: `2026-09-05T00:00:00.000Z`
 | Compatibility workflow | `.github/workflows/compatibility.yml` | `41fdd64b75526a6ac09f708457dee3c177dc99cf50e60530cea5d9593fba825a` |
 | Assurance eval | `src/eval/assurance.ts` | `1229811d750b70bcd322808cc679a74fc19de5c60d27513a5ab24a9e9be6a522` |
 | Fault-injection eval | `src/eval/fault-injection.ts` | `c45b94a5a57617f78d9ff81e03ca71e9c717aa9d203325672e9a744783eea3f7` |
-| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b0d28b4030f20d14d4d91b97b4a29d0e1fdc779251bfd2aebe141cb84b3d0f07` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `d1eb4bb90683d56c7df8cf5efd89eb41e5adbab8f5a55aebaa45395b535caaf7` |
 
 Correction 04 adds these critical locked sources; their final fingerprints are recomputed after the complete correction edit set:
 

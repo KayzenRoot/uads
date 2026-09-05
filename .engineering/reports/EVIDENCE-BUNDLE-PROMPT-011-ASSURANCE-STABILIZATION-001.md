@@ -4,7 +4,7 @@ Status: `PROMOTION_COMPLETE; CORRECTION_04_SECURITY_PROOF_READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA for the corrected promotion: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
 Historical Prompt 011 source/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
-Correction 04 branch head: `PENDING_CORRECTION_04_COMMIT`
+Correction 04 branch head: `cd8ee842e2dee9a9162d65c4255721cb0296515d`
 Finalization note: the historical Prompt 011 promotion record above is retained; Correction 04 adds release security-proof authority and requires a fresh hosted matrix on its focused branch. No v0.11.0 artifact/tag/release is changed and v0.11.1 is not published here.
 
 This bundle records bounded evidence for Prompt 011. It separates locally reproducible evidence from exact-SHA GitHub evidence and maintainer-owned promotion actions.
@@ -26,6 +26,17 @@ Read-only reconstruction against the audited promoted `main` identity (`d5cb3612
 | CodeQL | exact-sha | `33941376769 / 1` | final/source `d5cb361…` / `0c9e06…` | `50ea73e6093d3c210e77fc9a7c02af184b92f3c917847e82201008fbab05eafa` |
 | Scorecard | exact-sha | `33941376795 / 1` | final/source `d5cb361…` / `0c9e06…` | `0034ec1c86d1758a7bf433fa21cee1df6dce48cba963edd2586ebad12d661640` |
 | Dependency Review | same-tree-pr, PR #12 | `33939630957 / 1` | source `2e62866…` / `0c9e06…`; final `d5cb361…` / `0c9e06…` | `af2b1c8f872afb0cf0821f4a6b68191a2514dda390543aed2b8a96f323ed3f34` |
+
+Correction 04 PR #14 pre-merge hosted validation is green for head `cd8ee842e2dee9a9162d65c4255721cb0296515d`, tree `ef45d07c5533a190097cedd859dea154abac407c`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`:
+
+| Check | Run / attempt | Job | Status | Boundary |
+| --- | --- | --- | --- | --- |
+| Foundation | `33961541316 / 1` | `101294155802` | PASS | full CI matrix, 48 files / 343 tests, evals, validators, receipt |
+| CodeQL | `33961541293 / 1` | `101294155748` | PASS | PR head validation; final release proof remains exact push-to-main |
+| Compatibility | `33961541317 / 1` | `101294155915` Linux; `101294155795` Windows | PASS | exact PR head/tree, Node 20 |
+| Dependency Review | `33961541306 / 1` | `101294155693` | PASS | pull request dependency review |
+
+Scorecard and Direct Review are intentionally not claimed for the open PR: Scorecard is push-to-main only, and Direct Review is triggered from the post-merge compatibility workflow. A maintainer must obtain those fresh post-merge observations before any corrected-release authorization.
 
 ## Claims
 
