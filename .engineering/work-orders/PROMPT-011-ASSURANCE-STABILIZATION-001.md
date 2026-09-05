@@ -4,7 +4,7 @@ Status: `ACTIVE`
 Repository: `KayzenRoot/uads`
 Branch: `feat/prompt-011-assurance-stabilization-001`
 Baseline Git SHA: `2cd8fde252737f31a24cd5b13ed766675fd40d3f`
-Head Git SHA: `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`
+Head Git SHA at source/evidence snapshot: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
 Scope class: `cross-cutting`
 Risk: `HIGH`
 
@@ -52,7 +52,7 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 - [x] C2 normative FI meanings and real-boundary fixtures are recorded and mapped to FI1-FI16.
 - [x] C3 compatibility evidence requires event-aware exact SHA/tree/run/attempt/job/platform/artifact identity, Node 20, fixed checks, and digest validation.
 - [x] C4 `--findings-file` accepts only bounded ordinary JSON files under managed repository/sidecar roots and rejects traversal, symlink escape, foreign roots, invalid JSON, and oversize input without leaking paths.
-- [ ] C5 Dependency Review is green; the repository security setting remains a one-time maintainer action when not exposed through the authenticated API.
+- [x] C5 Dependency Graph is enabled and Dependency Review is green on exact SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`: workflow run `33930026983`, attempt `2`, job `101229407580`, conclusion `success`. Attempt 1 is retained only as historical failure evidence: the graph was disabled, then enabled and successfully rerun.
 - [x] README release drift and release-title single source are corrected without a manual-version trap.
 - [ ] v0.11.0 metadata/release is created only from the final exact SHA after local and external evidence is complete.
 
@@ -66,7 +66,7 @@ Harden assurance integrity, add deterministic assurance and adversarial fault-in
 - Any v0.10.4 invariant or prior eval count regresses without a justified replacement.
 - Assurance can approve unresolved HIGH/CRITICAL findings, current FAIL/BLOCKED evidence is bypassed, reviewer independence weakens, or security/performance/reliability roles cross-satisfy.
 - Any FI case fails to block, ZPF/privacy is violated, secrets/absolute paths enter durable evidence, provider/network behavior is introduced, historical tags would move, or a destructive external action is required.
-- Exact-SHA Linux/Windows compatibility or required GitHub evidence is missing or red; Dependency Review remains red; or C1-C4 evidence identity cannot be independently reconstructed.
+- Exact-SHA Linux/Windows compatibility or required GitHub evidence is missing or red; any required GitHub gate is missing or red; or C1-C4 evidence identity cannot be independently reconstructed.
 
 ## Autonomy boundary
 

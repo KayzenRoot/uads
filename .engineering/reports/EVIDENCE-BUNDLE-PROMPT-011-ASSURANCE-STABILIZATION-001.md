@@ -3,9 +3,9 @@
 Status: `LOCAL GATES PASS; INDEPENDENT REVIEW PENDING`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `2cd8fde252737f31a24cd5b13ed766675fd40d3f`
-Head Git SHA at local validation snapshot: `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`
-Hosted correction/evidence SHA: `3e06aa9d1fdcdee371b1d4cca41222d052072d5f`
-Final PR head at hosted validation snapshot: `3e06aa9d1fdcdee371b1d4cca41222d052072d5f` (subsequent evidence-only record commit is documented as non-code bookkeeping)
+Head Git SHA at source/evidence snapshot: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
+Hosted correction/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
+Finalization note: the remaining delivery change is evidence-only bookkeeping; its new PR head must be re-proven by the hosted matrix without changing source behavior.
 
 This bundle records bounded evidence for Prompt 011. It separates locally reproducible evidence from exact-SHA GitHub evidence and maintainer-owned promotion actions.
 
@@ -19,7 +19,7 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | Normative fault-injection cases remain fail-closed | evaluation | `evals/fault-injection/cases.json`, `src/eval/fault-injection.ts`, `src/eval/fault-injection-normative.ts` | PASS | FI1-FI16 normative real-boundary cases; FI17-FI32 legacy regressions |
 | Review packets are bounded and schema-validated | schema/source/test | `schemas/review-packet.schema.json`, `src/kernel/execution-persist.ts` | PASS | No secrets, prompts, arbitrary commands, or absolute host paths |
 | New assurance gates are part of CI receipt and Direct Review | workflow/source/test | `.github/workflows/ci.yml`, `.github/workflows/direct-review.yml` | PASS | `eval-assurance` and `eval-fault-injection` are required |
-| Linux/Windows Node 20 compatibility is required for v0.11.0 evidence | workflow/schema/source | `.github/workflows/compatibility.yml`, `schemas/compatibility-evidence.schema.json`, `scripts/github/compatibility-artifacts.mjs` | PASS | Exact SHA/tree/run/attempt/job/platform/artifact/digest binding is implemented; hosted run still pending |
+| Linux/Windows Node 20 compatibility is required for v0.11.0 evidence | workflow/schema/source | `.github/workflows/compatibility.yml`, `schemas/compatibility-evidence.schema.json`, `scripts/github/compatibility-artifacts.mjs` | PASS | Exact SHA/tree/run/attempt/job/platform/artifact/digest binding is implemented and proved by run `33930026912` on `4061946…` |
 | Release title and version sources are coherent | source/test | `src/release/release-title.ts`, `VERSION`, `package.json` | PASS | v0.11.0 title is canonicalized |
 | Historical v0.10.4 tag is immutable | repository inspection | `src/release/semver.ts`, tag inspection | PASS | Existing tag target `0936f818...` was not moved |
 | Documentation drift and Prompt 011 obligations are recorded | documentation | `README.md`, `docs/07-QUALITY-GATES.md`, `docs/08-SECURITY.md`, `docs/09-PERFORMANCE.md`, `docs/13-DEFINITION-OF-DONE.md`, `docs/14-BACKLOG.md`, `docs/15-GITHUB-DIRECT-REVIEW.md` | PASS | Bounded scope and deferred Prompt 012 items are explicit |
@@ -29,10 +29,10 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 | C2 normative FI1-FI16 meanings and real boundaries | evaluation | `src/eval/fault-injection-normative.ts`, `evals/fault-injection/cases.json` | PASS | 16 normative cases plus FI17-FI32 retained legacy coverage |
 | C3 exact-SHA compatibility artifact proof | source/schema/workflow | `scripts/github/generate-compatibility-evidence.mjs`, `scripts/github/compatibility-artifacts.mjs` | PASS | Explicit event-aware SHA, checkout/tree equality, exact run/job/artifact and digest validation |
 | C4 managed findings-file path safety | source/evaluation | `src/kernel/execution.ts`, AS22 | PASS | Bounded ordinary JSON under managed repo/sidecar roots only; traversal/symlink/foreign/invalid/oversize inputs reject safely |
-| C5 Dependency Graph/Dependency Review enabled | GitHub security setting | repository Settings / Dependency Review workflow | BLOCKED_MAINTAINER | Authenticated API did not expose/enable the setting; maintainer-only UI action remains visible, so the red check is preserved |
-| Exact-SHA Linux/Windows Node 20 compatibility runs pass | GitHub output | `.github/workflows/compatibility.yml`, run `33929589660` | PASS | Both jobs and downloaded artifacts validate against SHA/tree/run/attempt; see hosted record below |
-| CodeQL passes for correction SHA | GitHub output | CodeQL run `33929589758` | PASS | Exact head SHA `3e06aa9d…` |
-| Dependency Review / Dependency Graph | GitHub output | Dependency Review run `33929589724` | BLOCKED_MAINTAINER | Exact failure: Dependency review is not supported because Dependency Graph is not enabled/exposed |
+| C5 Dependency Graph/Dependency Review enabled | GitHub security setting/workflow | repository Settings / Dependency Review workflow `33930026983` | PASS | Dependency Graph was enabled and the same exact head `4061946…` passed on attempt `2`, job `101229407580`; attempt 1 failure is historical and explicitly resolved |
+| Exact-SHA Linux/Windows Node 20 compatibility runs pass | GitHub output | `.github/workflows/compatibility.yml`, run `33930026912` | PASS | Both jobs and downloaded artifacts validate against SHA/tree/run/attempt; see hosted record below |
+| CodeQL passes for correction SHA | GitHub output | CodeQL run `33930026878` | PASS | Exact head SHA `4061946…` |
+| Historical Dependency Review attempt 1 | GitHub output | Dependency Review run `33930026983`, attempt `1` | RESOLVED | Attempt 1 failed because Dependency Graph was disabled; after enablement, attempt 2 on the same exact SHA passed |
 | Scorecard and post-main Direct Review | GitHub output | repository workflows | NOT_APPLICABLE_FOR_OPEN_PR | These are post-main/release-chain evidence and cannot be claimed from this open PR |
 | Independent review and maintainer promotion exist | review | PR review/checkpoint | PENDING_MAINTAINER | Implementer cannot self-approve, merge, or publish |
 
@@ -57,16 +57,16 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 
 ## Hosted exact-SHA record
 
-The hosted correction run is `UADS Cross-Platform Compatibility` run `33929589660`, attempt `1`, head SHA `3e06aa9d1fdcdee371b1d4cca41222d052072d5f`, source tree SHA `42b5d629527824296e3d63b67f7f9d922c480f05`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33929589660`. Both jobs completed successfully: Linux job `101205304485` and Windows job `101205304637`, each named `<platform> / Node 20`, running Node `v20.20.2`.
+The hosted correction run is `UADS Cross-Platform Compatibility` run `33930026912`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, source tree SHA `c806ab2cde22f414e34d2dfda79f4ee2832b4f97`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33930026912`. Both jobs completed successfully: Linux job `101206556191` and Windows job `101206556350`, each named `<platform> / Node 20`, running Node `v20.20.2`.
 
 | Platform | Artifact | Artifact service digest | Downloaded evidence file SHA-256 | Evidence digest | Fixed checks |
 | --- | --- | --- | --- | --- | --- |
-| Linux | `uads-compatibility-linux-3e06aa9d1fdcdee371b1d4cca41222d052072d5f` | `sha256:9f54f3410fc6f01dfc08df480fa868f0a8fbdf8e7129e4b76397ea8743d710ae` | `5de47923b63dea9723c512f41f18d67adf6db77921accbc65188244b293407bf` | `9e095c3cd1064973f4522a04837fe1f334d2cab4c9d7a4fed32defdcea39da65` | npm-ci, typecheck-build, adapter-eval, isolated-install, root-resolution, zero-project-footprint, privacy-path-assertion = success |
-| Windows | `uads-compatibility-windows-3e06aa9d1fdcdee371b1d4cca41222d052072d5f` | `sha256:e933d842ddfa8a8f882588046e91143cd4a794be828f6c483046cba608d835d9` | `e5f114efdde54c686e1f46385032088bd75f2339384cfa525500e6adbe107e3e` | `7e4d37a970c557967ffd1c5943d7aede5b38be6738c2e58d133bd727fb33a949` | npm-ci, typecheck-build, adapter-eval, isolated-install, root-resolution, zero-project-footprint, privacy-path-assertion = success |
+| Linux | `uads-compatibility-linux-4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` | `sha256:d81ccf5655bc7102bbbecd240f98a7ff5c99a96aaa3478ad66cdacf6066deddf` | `24e96de90b0fcdb1faca8d11f7e8216578fe5da0c9d8651c26987cc3af02433d` | `ca4d802cc97684f8e981baadefb7ab970aed459b169c4e8e1da3fafc95bc40ba` | npm-ci, typecheck-build, adapter-eval, isolated-install, root-resolution, zero-project-footprint, privacy-path-assertion = success |
+| Windows | `uads-compatibility-windows-4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` | `sha256:f03ea6989fa60a25b9f66ad26b4cb2f0578fff415dc8c4d02745c4ace6c82070` | `517742869de565ead6ebe2e60e7040d195aba4076c3710fafda0648e8ff5502e` | `203922bad55de4eabfcaa1bc688c2047a73a9bd66796abdb7da12be0227a7591` | npm-ci, typecheck-build, adapter-eval, isolated-install, root-resolution, zero-project-footprint, privacy-path-assertion = success |
 
-The CI Foundation run is `33929589679`, attempt `1`, head SHA `3e06aa9d1fdcdee371b1d4cca41222d052072d5f`, job `101205351361`, and conclusion PASS. Its exact-SHA receipt artifact is `uads-ci-gate-receipt-d002468b59476dabfcca31787f662df8c3594b2b` with service digest `sha256:3cf9941f7b691cae1c4313989854d6ff3421b4f23ae545ee34f9985f760b4202`; the receipt itself records all required gates PASS, 47/47 files, 329/329 tests, AS 22/22, FI 32/32, and no high-or-greater npm vulnerabilities. The PR receipt necessarily records the GitHub `pull_request` merge ref `d002468b…`; the compatibility artifacts above are the separate exact head-SHA proof required for the correction.
+The CI Foundation run is `33930026879`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, job `101206556051`, and conclusion PASS. Its exact-SHA receipt artifact is `uads-ci-gate-receipt-3d9b693c19a34acd2ad2ce72facdd7b2b6837a26` with service digest `sha256:392f6fbf6068c51c57eb1440b592cd582951886282cbb1a9eef0eded1e73219f`; the receipt itself records all required gates PASS, 47/47 files, 329/329 tests, AS 22/22, FI 32/32, and no high-or-greater npm vulnerabilities. The PR receipt necessarily records the GitHub `pull_request` merge ref `3d9b693c…`; the compatibility artifacts above are the separate exact head-SHA proof required for the correction.
 
-CodeQL run `33929589758` concluded PASS for the correction SHA. Dependency Review run `33929589724` concluded FAIL with the repository capability error; no workflow relaxation, `continue-on-error`, or fabricated PASS was introduced.
+CodeQL run `33930026878` concluded PASS for the correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, `continue-on-error`, or fabricated PASS was introduced.
 
 The literal aggregate wrapper did not emit its final line because the user interrupted the first long-running process while it was in `eval:fault`. This is recorded as an execution interruption, not a test failure: the exact missing family and every subsequent command in the wrapper sequence were rerun and passed, including CLI `--help`, `doctor`, `status`, and `inspect --json`.
 

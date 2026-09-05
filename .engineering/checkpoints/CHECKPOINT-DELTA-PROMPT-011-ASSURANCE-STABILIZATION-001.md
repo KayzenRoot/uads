@@ -22,11 +22,10 @@ Canonical promotion: `PENDING_MAINTAINER`
 
 ## Open items
 
- - The corrected source is committed at `12b70f9d0fc54bce87dcfe31fc3b4cae59b09a56`; the corrected full Vitest suite completed at 47 files/329 tests with 0 failures.
-- Push the focused branch and open the authorized review request if GitHub access is available.
-- Observe exact-SHA Linux and Windows Node 20 compatibility, CodeQL, Scorecard, Direct Review, and release-validation evidence on GitHub.
-- Obtain an independent maintainer review and acceptance; only then may a maintainer merge or publish v0.11.0.
- - Dependency Review is currently red because the repository Dependency Graph capability is not exposed/enabled through the authenticated API. The GitHub settings page exposes a maintainer-only “Enable dependency graph” action; until that is completed, the check remains red and cannot be represented as PASS.
+- The corrected source and hosted evidence snapshot are committed at `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`; the corrected full Vitest suite completed at 47 files/329 tests with 0 failures.
+- The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
+- Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
+- The focused branch remains open for independent maintainer review; only then may a maintainer merge or publish v0.11.0. Scorecard, Direct Review, and release-validation evidence remain post-merge/release-chain concerns and are not claimable from this open PR.
 
 ## Safety statement
 
