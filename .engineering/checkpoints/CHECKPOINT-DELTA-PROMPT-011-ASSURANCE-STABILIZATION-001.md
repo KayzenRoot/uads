@@ -30,7 +30,7 @@ Canonical promotion: `COMPLETED_FOR_V0.11.1`
 - Observed post-main Foundation CI `33969035968`, CodeQL `33969035966`, OpenSSF Scorecard `33969035984`, compatibility `33969242069` on Linux and Windows Node 20, and Direct Review `33969337749`; all required outcomes are successful and Direct Review is `finalVerdict=PASS`.
 - Verified same-tree Dependency Review proof from PR #14 run `33967128218`, then verified release workflow `33969445797` published the annotated `v0.11.1` tag to the exact final main commit with all 10 expected assets and a successful attestation step.
 - Verified the immutable `v0.11.0` tag/release and all historical assets remain unchanged; no `v0.11.2` exists and Prompt 012 has not begun.
-- Published the focused Correction 06 branch at commit `bbfdc209d692e65b9e79526a09b319a35bcb06de` / tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc` as PR #15; its Foundation, CodeQL, and Linux/Windows Node 20 hosted checks passed on attempt `1`.
+- Published the focused Correction 06 branch at initial commit `bbfdc209d692e65b9e79526a09b319a35bcb06de` / tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc` as PR #15; its final head is `0fe2b0ac0770a2a98a21e4fcbf906c3c51010c8d` / tree `8af717e17de4cf1922a3d3c4df765af16385d649`, and its Foundation, CodeQL, and Linux/Windows Node 20 hosted checks passed on attempt `1`.
 - Updated the live v0.11.1 release description to the truthful post-promotion record and reverified that only the release body changed; title, prerelease state, target, annotated tag, all 10 assets/digests, and attestations are unchanged.
 
 ## Open items

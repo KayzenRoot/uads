@@ -157,7 +157,7 @@ This section is a new temporal slice. Historical pre-promotion claims above rema
 | PR #14 merge | squash merge at `2026-09-05T13:29:22Z`; parent `d5cb361274cb19f70c8bd02dd023b596b8babf13` |
 | Final main SHA / tree | `db904219a691dea9509f04ff44ac9e8dff5563fa` / `0a4ef8e7e8354d4a90d8fc3db6fe19d70734c42f` |
 | Same-tree provenance | reviewed PR head and final squash commit share the exact reviewed tree |
-| Closeout branch / PR | commit `bbfdc209d692e65b9e79526a09b319a35bcb06de`, tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`; PR #15 `docs: close Prompt 011 v0.11.1 promotion record` |
+| Closeout branch / PR | initial commit `bbfdc209d692e65b9e79526a09b319a35bcb06de`, tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`; final head `0fe2b0ac0770a2a98a21e4fcbf906c3c51010c8d`, tree `8af717e17de4cf1922a3d3c4df765af16385d649`; PR #15 `docs: close Prompt 011 v0.11.1 promotion record` |
 
 ### Post-main gates and security proof
 
