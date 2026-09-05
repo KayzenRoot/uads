@@ -49,8 +49,9 @@ global-first state, zero project footprint, provider neutrality, explicit
 approval ownership, and fail-closed identity checks.
 
 UGAS integration is not a prerequisite for the staged adapter-depth work and
-remains FUTURE/OUT_OF_SCOPE for Prompt 012. Provider gateways, dashboards,
-marketplaces, deployment automation, and other expansions remain excluded.
+remains FUTURE; deep UGAS work is excluded from Prompt 012. Provider gateways,
+dashboards, marketplaces, deployment automation, and other expansions remain
+excluded.
 
 The frozen Work Order is
 `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`; implementation must not begin
