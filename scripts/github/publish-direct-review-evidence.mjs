@@ -14,6 +14,7 @@ import {
 import { deriveGitComparison, validateComparison } from "./comparison-runtime.mjs";
 import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
 import { resolveSecurityWorkflowProofs } from "./security-proof.mjs";
+const { isCorrectedReleaseVersion, waitForSecurityProofReadiness } = await import("../../dist/github/security-proof.js");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY;
@@ -53,7 +54,15 @@ if (comparisonErrors.length) fail(`canonical comparison is invalid: ${comparison
 
 const directRunId = numberOrNull(process.env.GITHUB_RUN_ID);
 const directRunAttempt = numberOrNull(process.env.GITHUB_RUN_ATTEMPT);
-const securityProofs = resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: receipt.commitSha });
+const securityReadiness = isCorrectedReleaseVersion(receipt.version)
+  ? await waitForSecurityProofReadiness({
+      resolve: () => resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: receipt.commitSha }),
+      maxAttempts: numberOrNull(process.env.UADS_SECURITY_PROOF_MAX_ATTEMPTS) ?? 12,
+      intervalMs: numberOrNull(process.env.UADS_SECURITY_PROOF_POLL_MS) ?? 5_000,
+    })
+  : { ready: true, attempts: 1, resolution: resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: receipt.commitSha }), reasonCode: null };
+if (!securityReadiness.ready) fail(`security proof readiness failed after ${securityReadiness.attempts} attempt(s): ${securityReadiness.reasonCode ?? "SECURITY_PROOF_NOT_READY"}`);
+const securityProofs = securityReadiness.resolution;
 const directEvidence = createDirectReviewFromReceipt(receipt, {
   repository: repo,
   branch: process.env.GITHUB_REF_NAME ?? "main",
@@ -103,6 +112,7 @@ const summary = [
   `- Tests: ${formatTests(receipt.validation)}`,
   `- Evals: ${formatEvals(receipt.validation)}`,
   `- npm audit: ${receipt.validation.npmAudit?.outcome ?? "unknown"}`,
+  `- Security proof readiness: ${securityReadiness.attempts} bounded attempt(s)`,
   `- Reason codes: ${directEvidence.reasonCodes.join(", ") || "none"}`,
   `- Evidence SHA-256: ${fileSha256}`,
   `- Artifact: ${directEvidence.artifact.name}`,

@@ -29,12 +29,17 @@
   "$defs": {
     "securityProof": {
       "type": "object", "additionalProperties": false,
-      "required": ["workflow", "proofMode", "outcome", "repository", "finalCommitSha", "finalTreeSha", "sourceCommitSha", "sourceTreeSha", "runId", "runAttempt", "pullRequestNumber", "htmlUrl", "proofDigest"],
+      "required": ["workflow", "proofMode", "outcome", "repository", "event", "headBranch", "baseRepository", "baseRef", "sourceBranch", "finalCommitSha", "finalTreeSha", "sourceCommitSha", "sourceTreeSha", "runId", "runAttempt", "pullRequestNumber", "htmlUrl", "proofDigest"],
       "properties": {
         "workflow": { "enum": ["codeql", "scorecard", "dependency-review"] },
         "proofMode": { "enum": ["exact-sha", "same-tree-pr"] },
         "outcome": { "enum": ["success", "failure", "cancelled", "skipped", "unknown"] },
         "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "event": { "type": "string", "pattern": "^[a-z0-9_-]{1,80}$" },
+        "headBranch": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
+        "baseRepository": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "baseRef": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
+        "sourceBranch": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9._/-]{1,255}$" },
         "finalCommitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "finalTreeSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "sourceCommitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },

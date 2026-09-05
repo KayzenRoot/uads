@@ -4,10 +4,14 @@ import { assertSchema } from "../src/lib/json-schema.js";
 import { createDirectReviewEvidence, validateDirectReviewEvidence } from "../src/github/direct-review.js";
 import {
   createSecurityWorkflowProof,
+  selectUniqueMergedDependencyReviewPullRequest,
+  selectUniqueSecurityRun,
   isCorrectedReleaseVersion,
   selectUniqueDependencyReviewRun,
   securityWorkflowAuthorizationErrors,
   validateSecurityWorkflowProof,
+  validateDependencyReviewRunBinding,
+  waitForSecurityProofReadiness,
   type SecurityWorkflowProof,
 } from "../src/github/security-proof.js";
 import { createGithubReviewIndex, validateGithubReviewIndex } from "../src/github/review-index.js";
@@ -24,6 +28,11 @@ function proof(workflow: SecurityWorkflowProof["workflow"], outcome: SecurityWor
     proofMode: mode,
     outcome,
     repository,
+    event: workflow === "scorecard" ? "push" : mode === "same-tree-pr" ? "pull_request" : "push",
+    headBranch: workflow === "scorecard" ? "main" : mode === "same-tree-pr" ? "feature/security-proof" : "main",
+    baseRepository: mode === "same-tree-pr" ? repository : null,
+    baseRef: mode === "same-tree-pr" ? "main" : null,
+    sourceBranch: mode === "same-tree-pr" ? "feature/security-proof" : null,
     finalCommitSha,
     finalTreeSha,
     sourceCommitSha: sameTree ? sourceCommitSha : finalCommitSha,
@@ -60,7 +69,7 @@ function correctedEvidence(securityWorkflows?: Record<string, unknown>) {
   });
 }
 
-describe("RG1-RG14 release security proof", () => {
+describe("RG1-RG22 release security proof", () => {
   it("RG1 fails closed for a CodeQL failure", () => {
     const errors = securityWorkflowAuthorizationErrors({ codeql: { proof: proof("codeql", "failure") } }, { repository, finalCommitSha, finalTreeSha });
     expect(errors).toContain("CODEQL_NOT_PROVEN");
@@ -151,5 +160,75 @@ describe("RG1-RG14 release security proof", () => {
     expect(isCorrectedReleaseVersion("0.11.0")).toBe(false);
     const remoteTag = execFileSync("git", ["ls-remote", "origin", "refs/tags/v0.11.0^{}"], { encoding: "utf8" }).trim().split(/\s+/)[0];
     expect(remoteTag).toBe("d5cb361274cb19f70c8bd02dd023b596b8babf13");
+  });
+
+  it("RG15 rejects a Scorecard exact-SHA schedule run", () => {
+    expect(selectUniqueSecurityRun([{ id: 201, headSha: finalCommitSha, status: "completed", conclusion: "success", runAttempt: 1, event: "schedule", headBranch: "main" }], finalCommitSha, {
+      expectedEvent: "push", expectedHeadBranch: "main", eventRefMismatchReasonCode: "SCORECARD_EVENT_REF_MISMATCH",
+    })).toEqual({ run: null, reasonCode: "SCORECARD_EVENT_REF_MISMATCH" });
+  });
+
+  it("RG16 rejects a Scorecard exact-SHA branch_protection_rule run", () => {
+    expect(selectUniqueSecurityRun([{ id: 202, headSha: finalCommitSha, status: "completed", conclusion: "success", runAttempt: 1, event: "branch_protection_rule", headBranch: "main" }], finalCommitSha, {
+      expectedEvent: "push", expectedHeadBranch: "main", eventRefMismatchReasonCode: "SCORECARD_EVENT_REF_MISMATCH",
+    })).toEqual({ run: null, reasonCode: "SCORECARD_EVENT_REF_MISMATCH" });
+  });
+
+  it("RG17 accepts only a Scorecard exact-SHA push on main", () => {
+    expect(selectUniqueSecurityRun([{ id: 203, headSha: finalCommitSha, status: "completed", conclusion: "success", runAttempt: 1, event: "push", headBranch: "main" }], finalCommitSha, {
+      expectedEvent: "push", expectedHeadBranch: "main",
+    })).toEqual(expect.objectContaining({ reasonCode: null, run: expect.objectContaining({ id: 203 }) }));
+    expect(validateSecurityWorkflowProof(proof("scorecard"), { workflow: "scorecard", repository, finalCommitSha, finalTreeSha })).toEqual([]);
+    expect(validateSecurityWorkflowProof({ ...proof("scorecard"), event: "schedule", proofDigest: "0".repeat(64) }, { workflow: "scorecard", repository, finalCommitSha, finalTreeSha })).toEqual(expect.arrayContaining(["SCORECARD_EVENT_REF_MISMATCH"]));
+  });
+
+  it("RG18 rejects a Dependency Review run attributed to a different PR", () => {
+    expect(validateDependencyReviewRunBinding({ id: 204, headSha: sourceCommitSha, status: "completed", conclusion: "success", runAttempt: 1, event: "pull_request", headBranch: "feature/security-proof", pullRequestMetadata: "present", pullRequestNumbers: [13] }, {
+      pullRequestNumber: 12, sourceBranch: "feature/security-proof",
+    })).toBe("DEPENDENCY_REVIEW_RUN_PR_MISMATCH");
+  });
+
+  it("RG19 rejects an ambiguous source-commit PR association", () => {
+    const candidate = { number: 12, state: "closed", mergedAt: "2026-09-05T00:00:00Z", mergeCommitSha: finalCommitSha, baseRepository: repository, baseRef: "main", headRepository: repository, headRef: "feature/security-proof", headSha: sourceCommitSha };
+    expect(selectUniqueMergedDependencyReviewPullRequest([candidate, { ...candidate, number: 13 }], { repository, finalCommitSha, sourceCommitSha })).toEqual({ pullRequest: null, reasonCode: "DEPENDENCY_REVIEW_PR_AMBIGUOUS" });
+  });
+
+  it("RG20 rejects multiple distinct authoritative exact-run candidates", () => {
+    expect(selectUniqueSecurityRun([
+      { id: 205, headSha: finalCommitSha, status: "completed", conclusion: "success", runAttempt: 1 },
+      { id: 206, headSha: finalCommitSha, status: "completed", conclusion: "success", runAttempt: 1 },
+    ], finalCommitSha)).toEqual({ run: null, reasonCode: "SECURITY_RUN_AMBIGUOUS" });
+  });
+
+  it("RG21 accepts pending -> success readiness without real-time sleeping", async () => {
+    let calls = 0;
+    const result = await waitForSecurityProofReadiness({
+      maxAttempts: 3,
+      intervalMs: 60_000,
+      sleep: async () => undefined,
+      resolve: () => {
+        calls += 1;
+        return {
+          codeql: { proof: { outcome: "success" } },
+          scorecard: calls === 1 ? { outcome: "unknown", reasonCode: "SECURITY_RUN_PENDING" } : { proof: { outcome: "success" } },
+          dependencyReview: { proof: { outcome: "success" } },
+        };
+      },
+    });
+    expect(result).toMatchObject({ ready: true, attempts: 2, reasonCode: null });
+  });
+
+  it("RG22 times out readiness explicitly without converting it to PASS", async () => {
+    const result = await waitForSecurityProofReadiness({
+      maxAttempts: 2,
+      intervalMs: 60_000,
+      sleep: async () => undefined,
+      resolve: () => ({
+        codeql: { proof: { outcome: "success" } },
+        scorecard: { outcome: "unknown", reasonCode: "SECURITY_RUN_PENDING" },
+        dependencyReview: { proof: { outcome: "success" } },
+      }),
+    });
+    expect(result).toMatchObject({ ready: false, attempts: 2, reasonCode: "SECURITY_PROOF_READINESS_TIMEOUT" });
   });
 });
