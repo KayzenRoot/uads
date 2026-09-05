@@ -28,13 +28,14 @@ Canonical promotion: `COMPLETED_FOR_V0.11.0`
 ## Open items
 
 - Historical Prompt 011 source/evidence snapshot `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` and its hosted matrix are retained as the pre-promotion record; the promoted main identity is `d5cb361274cb19f70c8bd02dd023b596b8babf13`.
-- Correction 05 implementation/source commit is `a23903d0f8f137121eab7a1d631b294eba8e5946` with tree `8ea08299ab9b68225f49a82e75990981e53b9c57`; later evidence-recording commits are intentionally distinguished from this source identity. PR #14 remains open on `fix/prompt-011-release-security-proof`; its final post-push hosted matrix is required before this delta can be independently reviewed.
+- Correction 05 implementation/source commit is `a23903d0f8f137121eab7a1d631b294eba8e5946` with tree `8ea08299ab9b68225f49a82e75990981e53b9c57`; later evidence-recording commits are intentionally distinguished from this source identity. PR #14 remains open on `fix/prompt-011-release-security-proof`; its final pre-record hosted matrix is green, while independent maintainer review remains required.
 - Local RG1-RG22 and full validation results are recorded in the companion Evidence Bundle. Scorecard and Direct Review remain intentionally unclaimed until post-merge main evidence.
 - The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
 - Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.
 - The existing classic branch-protection mechanism now reports `mergeable=true` and `mergeable_state=clean` for PR #12. The governance documentation update is bounded and evidence-only; its new exact head must retain the same green check matrix before any promotion.
 - Historical PR #12 promotion is complete. The Correction 05 branch remains open for independent maintainer review; only after a fresh post-merge proof may a maintainer consider v0.11.1 publication. This task does not merge, tag, or publish.
+- Correction 05 final pre-record hosted matrix is green on head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, tree `489d4c546d9a380b856d39ea12e735f91e6ff169`: Foundation `33964494290` / job `101302068914`; CodeQL `33964494328` / job `101302069020`; Dependency Review `33964494330` / job `101302068873`; compatibility `33964494340` / jobs `101302069143`, `101302069166`, all attempt `1` and PASS.
 
 ## Safety statement
 

@@ -9,9 +9,9 @@ Generated at: `2026-09-05T00:00:00.000Z`
 
 | Source | Relative path or deterministic sentinel | SHA-256 |
 | --- | --- | --- |
-| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `1298d7dd654d60b639abe1c7aba47669b177f40517c0f84c030a52c314c2bb0f` |
+| Checkpoint | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `34503b30036f23a8346fc91daa27cc3497ccdc8e1fd725c7aeac4d61d047622d` |
 | Decisions | `.engineering/DECISIONS.md` | `eacbe3d47b1295561d9673338d2580c305575286fb01a95859c975c2176e1e6a` |
-| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b5a7ad7a9bb4925ba4f2cd226bff707f89cf26b4d34dedfa4c87578ee7f9bd44` |
+| Scope | `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `229a374a169f1bd0d0c27b3435693d5f4e9ca3fd540bdb9962a0a88151506fc9` |
 | Definition of Done | `docs/13-DEFINITION-OF-DONE.md` | `fb92a45e7a5233e82fc48d2e731b312ebfb4100394d76bcfaee6b99f90ff6c57` |
 | Architecture | `docs/04-ARCHITECTURE.md` | `575e46f741a47a2227bf13e6dab21d882cde2a494a4aa7a4ec4385eb8dc61ca0` |
 | Project overview | `README.md` | `fb3dcb8a051dc68b9fcd19f7a048c16205d90e326292017b40fc3d34d0aed8b3` |
@@ -27,7 +27,7 @@ Generated at: `2026-09-05T00:00:00.000Z`
 | Compatibility workflow | `.github/workflows/compatibility.yml` | `41fdd64b75526a6ac09f708457dee3c177dc99cf50e60530cea5d9593fba825a` |
 | Assurance eval | `src/eval/assurance.ts` | `1229811d750b70bcd322808cc679a74fc19de5c60d27513a5ab24a9e9be6a522` |
 | Fault-injection eval | `src/eval/fault-injection.ts` | `c45b94a5a57617f78d9ff81e03ca71e9c717aa9d203325672e9a744783eea3f7` |
-| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `0011f395e26292ccedd2369b98679ab2689e43b7574fb2ad0d9dd41abad8072f` |
+| Evidence Bundle | `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md` | `b96336346d22c7126fb7dfef831c3c8db7dfe9390bc69d6c94692bb1a84dd5be` |
 
 Correction 04 adds these critical locked sources; their final fingerprints are recomputed after the complete correction edit set:
 
@@ -61,9 +61,9 @@ Record every critical source change after the lock. Do not continue silently.
 - Action: preserve the historical pre-promotion records, record v0.11.0 promotion at `d5cb361274cb19f70c8bd02dd023b596b8babf13`, add typed proof/reconstruction barriers and RG1-RG14, and relock all changed fingerprints before push/review
 - Source: Prompt 011 Correction 05 security-proof event/ref binding, exact merged-PR/run binding, ambiguity semantics, readiness handling, and evidence records
 - Reason: independent review identified non-push Scorecard acceptance, cross-PR Dependency Review reuse, silent latest-run selection, post-main Scorecard timing race, and stale identity wording
-- Action: implement and test the correction at source commit `a23903d0f8f137121eab7a1d631b294eba8e5946`, update canonical security/releasing records, and relock changed fingerprints before the final hosted review
+- Action: implement and test the correction at source commit `a23903d0f8f137121eab7a1d631b294eba8e5946`, update canonical security/releasing records, record the final pre-record hosted review matrix separately, and relock changed fingerprints after the evidence-record refresh
 
 ## Relock evidence
 
 - Re-inspection commands: `git status --short`, `git diff --check`, targeted `rg` review, `npm run lint`, `npm run typecheck`, `npm run build`, `npm test`, `npm run test:security-proof`, all legacy/new evals, AS1-AS22, normative FI1-FI16 plus legacy FI17-FI32, CLI smoke, `npm ci`, `npm audit --audit-level=high`, `npm pack --dry-run`, and the engineering/skills/actions/Direct Review/CI receipt validators. Correction 05 adds RG15-RG22 and bounded readiness tests; final hosted checks remain an external post-push gate.
-- New lock or reason blocked: `RELOCKED`; corrected source, schemas, Direct Review workflow/publisher, security/releasing documentation, tests, and Prompt 011 records match the fingerprints above before push. Hosted checks remain an external post-push gate.
+- New lock or reason blocked: `RELOCKED`; corrected source, schemas, Direct Review workflow/publisher, security/releasing documentation, tests, and Prompt 011 records match the fingerprints above. The final pre-record hosted checks are green; independent maintainer review and post-merge evidence remain external gates.

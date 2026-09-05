@@ -23,11 +23,11 @@ This bundle records bounded evidence for Prompt 011. It separates locally reprod
 
 Read-only reconstruction against the audited promoted `main` identity (`d5cb361274cb19f70c8bd02dd023b596b8babf13`, tree `0c9e06deedf40b9cbe55e784c74fbc4b63b8bebd`) produced the following observed proof inputs for the corrected contract. These are baseline observations, not a claim that the open Correction 05 branch has post-merge release evidence:
 
-| Workflow | Proof mode | Run / attempt | Source identity | Proof digest |
-| --- | --- | --- | --- | --- |
-| CodeQL | exact-sha | `33941376769 / 1` | final/source `d5cb361…` / `0c9e06…` | `50ea73e6093d3c210e77fc9a7c02af184b92f3c917847e82201008fbab05eafa` |
-| Scorecard | exact-sha | `33941376795 / 1` | final/source `d5cb361…` / `0c9e06…` | `0034ec1c86d1758a7bf433fa21cee1df6dce48cba963edd2586ebad12d661640` |
-| Dependency Review | same-tree-pr, PR #12 | `33939630957 / 1` | source `2e62866…` / `0c9e06…`; final `d5cb361…` / `0c9e06…` | `af2b1c8f872afb0cf0821f4a6b68191a2514dda390543aed2b8a96f323ed3f34` |
+| Workflow | Proof mode | Event / binding | Run / attempt | Source identity | Proof digest |
+| --- | --- | --- | --- | --- | --- |
+| CodeQL | exact-sha | `push` / `main` | `33941376769 / 1` | final/source `d5cb361…` / `0c9e06…` | `56b0dfffde15e804343d07cc9facec916361c44e49bb8873653c44c16e747de8` |
+| Scorecard | exact-sha | `push` / `main` | `33941376795 / 1` | final/source `d5cb361…` / `0c9e06…` | `66b11a4d833d360c283a106bbe5ebb590185a5414c1ce52008e4c75b4a8cba1d` |
+| Dependency Review | same-tree-pr, PR #12 | `pull_request` / base `KayzenRoot/uads:main`, source `feat/prompt-011-assurance-stabilization-001` | `33939630957 / 1` | source `2e62866…` / `0c9e06…`; final `d5cb361…` / `0c9e06…` | `94442788a641dbab7261ae51680ed2528f6db9a86f2a4c10c30f21d12696b108` |
 
 Correction 04 historical PR #14 pre-merge hosted validation is retained for its own snapshot at head `cd8ee842e2dee9a9162d65c4255721cb0296515d`, tree `ef45d07c5533a190097cedd859dea154abac407c`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`:
 
@@ -91,34 +91,32 @@ Correction 03 selected `SOLO_MAINTAINER` from the bounded pre-flight: repository
 
 Before the change, classic protection for `main` required pull requests, one approving review, code-owner review, stale-review dismissal, strict `Foundation checks`, linear history, conversation resolution, and prohibited force pushes/deletion. Administrator enforcement was disabled and restrictions were null. After the change, only the impossible review requirements changed: required approvals are `0` and code-owner review is `false`. All other recorded protection values remain unchanged. PR #12 reports `mergeable=true` and `mergeable_state=clean` while remaining open.
 
-The Correction 05 implementation/source snapshot is `a23903d0f8f137121eab7a1d631b294eba8e5946` / `8ea08299ab9b68225f49a82e75990981e53b9c57`. The hosted exact-head matrix for the final evidence-recording head is appended after push; it must be read as a separate Correction 05 result, not as a replacement for the historical Correction 04 table. Unlike Correction 03, this correction intentionally changes runtime release-proof source, schemas, tests, security/releasing documentation, and Direct Review workflow readiness; no historical tag or release is changed.
+The Correction 05 implementation/source snapshot is `a23903d0f8f137121eab7a1d631b294eba8e5946` / `8ea08299ab9b68225f49a82e75990981e53b9c57`. The final pre-record hosted matrix above is a separate Correction 05 result, not a replacement for the historical tables. Unlike Correction 03, this correction intentionally changes runtime release-proof source, schemas, tests, security/releasing documentation, and Direct Review workflow readiness; no historical tag or release is changed.
 
 ## Local verification record
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | TypeScript build/typecheck | PASS | `npm run build`, `npm run typecheck` after final source review |
-| Full Vitest regression suite | PASS | 48 files, 343 tests; 1477.73s; +14 RG tests documented |
+| Full Vitest regression suite | PASS | 48 files, 351 tests; final full validation completed without failures |
 | Legacy evaluations | PASS | Orchestrator 9/9; Execution 9/9; Context 19/19; Fault 18/18; Cost 27/27; Model Routing 22/22; Specialist Routing 26/26; Adapters 40/40 |
 | Assurance evaluation | PASS | `npm run eval:assurance`, 22/22 |
 | Fault-injection evaluation | PASS | `npm run eval:fault-injection`, normative FI1-FI16 + legacy FI17-FI32, 32/32 |
-| Focused assurance/execution/review/release tests | PASS | focused Vitest runs |
+| Focused security-proof regression | PASS | `npm run test:security-proof`, RG1-RG22, 22/22 |
 | Windows compatibility smoke | PASS | `node scripts/github/compatibility-smoke.mjs --platform windows` |
 | Action pins | PASS | `npm run validate:actions` |
 | CI receipt fixture | PASS | `npm run validate:ci-receipt` |
 | Direct Review fixture | PASS | `npm run validate:direct-review` |
-| Dependency audit | PASS | `npm audit --audit-level=high` |
+| Dependency audit | PASS | `npm audit --audit-level=high`, 0 vulnerabilities |
 | Package smoke | PASS | `npm pack --dry-run`, `uads@0.11.1`, 590 files |
 | Clean dependency install | PASS | `npm ci`, 56 packages, 0 vulnerabilities |
-| Dependency audit | PASS | `npm audit --audit-level=high`, 0 vulnerabilities |
-
-| Security-proof focused regression | PASS | `npm run test:security-proof`, RG1-RG22, 22/22 |
+| Full foundation validation | PASS | `npm run validate`, including all evals and engineering/skills/actions/Direct Review/CI receipt validators |
 | Correction 05 binding/readiness semantics | PASS | Scorecard push/main, Dependency Review exact PR/run binding, distinct-run ambiguity, and bounded pending/timeout behavior covered by RG15-RG22 |
 | Corrected release metadata | PASS_LOCAL | package/VERSION/lock/changelog/schema/title support `0.11.1`; publication intentionally deferred |
 
 ## Hosted exact-SHA record
 
-The hosted historical correction run is `UADS Cross-Platform Compatibility` run `33930026912`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, source tree SHA `c806ab2cde22f414e34d2dfda79f4ee2832b4f97`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33930026912`. Both jobs completed successfully: Linux job `101206556191` and Windows job `101206556350`, each named `<platform> / Node 20`, running Node `v20.20.2`. This is historical evidence for the already-promoted Prompt 011 snapshot; Correction 04 requires a fresh hosted matrix for its own head.
+The hosted historical correction run is `UADS Cross-Platform Compatibility` run `33930026912`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, source tree SHA `c806ab2cde22f414e34d2dfda79f4ee2832b4f97`, with workflow URL `https://github.com/KayzenRoot/uads/actions/runs/33930026912`. Both jobs completed successfully: Linux job `101206556191` and Windows job `101206556350`, each named `<platform> / Node 20`, running Node `v20.20.2`. This is historical evidence for the already-promoted Prompt 011 snapshot and is retained unchanged.
 
 | Platform | Artifact | Artifact service digest | Downloaded evidence file SHA-256 | Evidence digest | Fixed checks |
 | --- | --- | --- | --- | --- | --- |
@@ -127,7 +125,21 @@ The hosted historical correction run is `UADS Cross-Platform Compatibility` run 
 
 The CI Foundation run is `33930026879`, attempt `1`, head SHA `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`, job `101206556051`, and conclusion PASS. Its exact-SHA receipt artifact is `uads-ci-gate-receipt-3d9b693c19a34acd2ad2ce72facdd7b2b6837a26` with service digest `sha256:392f6fbf6068c51c57eb1440b592cd582951886282cbb1a9eef0eded1e73219f`; the receipt itself records all required gates PASS, 47/47 files, 329/329 tests, AS 22/22, FI 32/32, and no high-or-greater npm vulnerabilities. The PR receipt necessarily records the GitHub `pull_request` merge ref `3d9b693c…`; the compatibility artifacts above are the separate exact head-SHA proof required for the correction.
 
-CodeQL run `33930026878` concluded PASS for the historical correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, fabricated PASS, or PR Scorecard result was introduced. Correction 05 hosted run IDs and the final PR identity are recorded only after pushing the final evidence-recording commit; until then they are not claimable.
+CodeQL run `33930026878` concluded PASS for the historical correction SHA. Dependency Review run `33930026983` attempt `1` failed because Dependency Graph was disabled; attempt `2` completed successfully on the same exact head SHA. No workflow relaxation, fabricated PASS, or PR Scorecard result was introduced.
+
+### Correction 05 final hosted PR record
+
+The final pre-record hosted review snapshot is PR #14 at head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, tree `489d4c546d9a380b856d39ea12e735f91e6ff169`, against base `d5cb361274cb19f70c8bd02dd023b596b8babf13`. All required checks completed successfully on attempt `1`:
+
+| Check | Run | Job |
+| --- | ---: | ---: |
+| Foundation checks | `33964494290` | `101302068914` |
+| CodeQL analysis (javascript-typescript) | `33964494328` | `101302069020` |
+| Dependency review | `33964494330` | `101302068873` |
+| Compatibility Linux / Node 20 | `33964494340` | `101302069143` |
+| Compatibility Windows / Node 20 | `33964494340` | `101302069166` |
+
+Each run resolved to the exact final pre-record head SHA above and concluded `success`. The subsequent record-only commit containing this evidence is intentionally not used as the implementation/source identity or as a self-referential proof input.
 
 The literal aggregate wrapper did not emit its final line because the user interrupted the first long-running process while it was in `eval:fault`. This is recorded as an execution interruption, not a test failure: the exact missing family and every subsequent command in the wrapper sequence were rerun and passed, including CLI `--help`, `doctor`, `status`, and `inspect --json`.
 

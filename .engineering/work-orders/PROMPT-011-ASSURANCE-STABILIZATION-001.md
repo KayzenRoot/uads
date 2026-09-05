@@ -72,7 +72,7 @@ Close the independent review findings for the existing PR #14 by binding Scoreca
 - [x] RG1-RG14 regression tests cover failure, unknown, exact-SHA, same-tree PR, mismatch, ambiguity, tampering, all-pass, and v0.11.0 immutability cases.
 - [x] Correction 05 binds Scorecard to push/main, binds same-tree Dependency Review to the exact merged/source PR and run metadata, rejects distinct authoritative run IDs, and adds bounded readiness handling.
 - [x] RG15-RG22 cover non-push Scorecard, cross-PR reuse, ambiguous source PRs/runs, and pending-to-success/timeout readiness.
-- [ ] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks remain required after the final evidence-recording push; no merge, tag, or v0.11.1 release is authorized by this worktree.
+- [x] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks passed on final pre-record head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, all attempt `1`; no merge, tag, or v0.11.1 release is authorized by this worktree.
 - [ ] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence remain required before any v0.11.1 publication.
 
 ## Required gates and evidence
