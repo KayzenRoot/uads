@@ -67,6 +67,16 @@ The following is a separate post-promotion record. It does not rewrite the histo
 
 This delta records a bounded documentation/evidence closeout. It does not change runtime code, schemas, workflows, tests, dependencies, versions, release assets, tags, or sidecar runtime truth; it does not move historical tags, recreate the release, start Prompt 012, or self-approve the final auditor decision.
 
+## Correction 07 / Dependency Review Coverage Alignment
+
+Correction 07 is a new temporal slice after the post-merge Direct Review failure on main `25bba5a623b15a2274c438837463af5025a93d73` / tree `8cdfa463bb79d91cac5a00a4e86ebd317e6e83be`. Direct Review run `33981776649`, job `101348158721`, failed closed after 12 bounded attempts with `SECURITY_PROOF_READINESS_TIMEOUT`. CodeQL, Scorecard, and compatibility had passed; Dependency Review was absent because its workflow was limited to package/dependabot path changes, while corrected-release authorization still requires all three proofs.
+
+The implementation branch is `fix/prompt-011-dependency-review-coverage`, created from the exact locked main baseline. The workflow correction removes only the Dependency Review trigger path restriction, preserving the `main` pull-request target, action pin, least-privilege permissions, and `fail-on-severity: high`. RG23-RG25 add focused coverage for trigger alignment, missing-proof non-authorization, and valid same-tree proof bound to the exact source PR. The security proof resolver, Direct Review readiness, CodeQL/Scorecard constraints, digest checks, ambiguity handling, and fail-closed semantics are unchanged.
+
+The new PR must receive Foundation, CodeQL, Dependency Review, and Linux/Windows compatibility results on its current head and must remain unmerged pending independent audit. The current PR head/tree/checks are authoritative only when read from GitHub at audit time and are not persisted self-referentially here. v0.11.1, v0.11.0, tags, assets, and attestations remain immutable; no v0.11.2 exists and Prompt 012 remains unopened.
+
 ## Closeout identity authority
 
 For Correction 06 closeout review, the authoritative current PR head/tree and hosted checks are read directly from GitHub by the auditor at audit time. These values are intentionally not persisted as a self-referential PR identity inside the same PR.
+
+For Correction 07 review, the same audit-time identity rule applies to the new PR. The historical timeout and the locked main baseline above are durable evidence; the new PR's current head/tree and hosted checks must be reconstructed directly from GitHub.

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertSchema } from "../src/lib/json-schema.js";
 import { createDirectReviewEvidence, validateDirectReviewEvidence } from "../src/github/direct-review.js";
@@ -69,7 +70,7 @@ function correctedEvidence(securityWorkflows?: Record<string, unknown>) {
   });
 }
 
-describe("RG1-RG22 release security proof", () => {
+describe("RG1-RG25 release security proof", () => {
   it("RG1 fails closed for a CodeQL failure", () => {
     const errors = securityWorkflowAuthorizationErrors({ codeql: { proof: proof("codeql", "failure") } }, { repository, finalCommitSha, finalTreeSha });
     expect(errors).toContain("CODEQL_NOT_PROVEN");
@@ -230,5 +231,69 @@ describe("RG1-RG22 release security proof", () => {
       }),
     });
     expect(result).toMatchObject({ ready: false, attempts: 2, reasonCode: "SECURITY_PROOF_READINESS_TIMEOUT" });
+  });
+
+  it("RG23 keeps Dependency Review coverage aligned with every pull request targeting main", () => {
+    const workflow = readFileSync(".github/workflows/dependency-review.yml", "utf8");
+    expect(workflow).toMatch(/pull_request:\s*\n\s+branches:\s+\[main\]/);
+    expect(workflow).not.toMatch(/^\s+paths(?:-ignore)?:/m);
+    expect(workflow).toContain("permissions:\n  contents: read");
+    expect(workflow).toContain("actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294");
+    expect(workflow).toContain("fail-on-severity: high");
+  });
+
+  it("RG24 remains fail-closed when Dependency Review is absent", () => {
+    const errors = securityWorkflowAuthorizationErrors({
+      codeql: { proof: proof("codeql") },
+      scorecard: { proof: proof("scorecard") },
+    }, { repository, finalCommitSha, finalTreeSha });
+    expect(errors).toEqual(["DEPENDENCY_REVIEW_NOT_PROVEN"]);
+  });
+
+  it("RG25 accepts a successful same-tree Dependency Review bound to the exact source PR", () => {
+    const pullRequest = {
+      number: 15,
+      state: "closed",
+      mergedAt: "2026-09-05T00:00:00Z",
+      mergeCommitSha: finalCommitSha,
+      baseRepository: repository,
+      baseRef: "main",
+      headRepository: repository,
+      headRef: "feature/security-proof",
+      headSha: sourceCommitSha,
+    };
+    expect(selectUniqueMergedDependencyReviewPullRequest([pullRequest], {
+      repository, finalCommitSha, sourceCommitSha,
+    })).toEqual({ pullRequest, reasonCode: null });
+
+    const run = {
+      id: 207,
+      headSha: sourceCommitSha,
+      status: "completed",
+      conclusion: "success",
+      runAttempt: 1,
+      event: "pull_request",
+      headBranch: "feature/security-proof",
+      pullRequestMetadata: "present",
+      pullRequestNumbers: [15],
+    };
+    expect(validateDependencyReviewRunBinding(run, {
+      pullRequestNumber: 15,
+      sourceBranch: "feature/security-proof",
+    })).toBeNull();
+
+    const dependencyReview = createSecurityWorkflowProof({
+      ...proof("dependency-review", "success", "same-tree-pr"),
+      pullRequestNumber: 15,
+      proofDigest: undefined as never,
+    });
+    expect(validateSecurityWorkflowProof(dependencyReview, {
+      workflow: "dependency-review", repository, finalCommitSha, finalTreeSha, sourceCommitSha,
+    })).toEqual([]);
+    expect(securityWorkflowAuthorizationErrors({
+      codeql: { proof: proof("codeql") },
+      scorecard: { proof: proof("scorecard") },
+      dependencyReview: { proof: dependencyReview },
+    }, { repository, finalCommitSha, finalTreeSha })).toEqual([]);
   });
 });

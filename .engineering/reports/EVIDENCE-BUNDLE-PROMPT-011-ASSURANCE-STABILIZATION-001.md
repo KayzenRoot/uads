@@ -205,6 +205,27 @@ The immutable prior release `v0.11.0` remains unchanged: tag ref `b1829d97647067
 - Correction 06 local checks: `git status --short` clean before commit; `git diff --check` exit `0`; `npm ci` exit `0`; `npm run validate:engineering` exit `0`; `npm run lint` exit `0`; `npm run typecheck` exit `0`; `npm run validate` exit `0` with 48/48 test files, 351/351 tests, all eval families green, and validators green.
 - The closeout is independently auditor-approved under comment `5553489182`; the authorized protected squash merge and post-merge verification remain the next actions. Prompt 012 remains unopened.
 
+## Correction 07 / Dependency Review Coverage Alignment
+
+This section records the new post-merge correction required after PR #15. It is a separate temporal slice and does not rewrite the completed v0.11.1 promotion or reuse the merged PR as the new implementation identity.
+
+### Root cause and locked baseline
+
+- Locked main baseline before implementation: commit `25bba5a623b15a2274c438837463af5025a93d73`, tree `8cdfa463bb79d91cac5a00a4e86ebd317e6e83be`.
+- Historical post-merge security gates: Foundation `33981434838`, CodeQL `33981434814`, Scorecard `33981434810`, and compatibility `33981638668` passed on that main identity.
+- Historical blocking Direct Review: run `33981776649`, job `101348158721`, failed after 12 bounded attempts with `SECURITY_PROOF_READINESS_TIMEOUT`.
+- Causal finding: PR #15 was documentation/evidence-only and had no Dependency Review run because `.github/workflows/dependency-review.yml` restricted `pull_request` coverage to `package.json`, `package-lock.json`, and `.github/dependabot.yml`. Corrected-release authorization still requires successful CodeQL, Scorecard, and Dependency Review; the timeout therefore remained correctly fail-closed.
+
+### Correction 07 implementation contract
+
+- New branch is created from the exact locked main baseline; PR #15 is not reused or rewritten.
+- The workflow change removes only the Dependency Review trigger path restriction so every `pull_request` targeting `main`, including documentation-only changes, produces the opportunity for required proof.
+- The existing action pin, `contents: read` permission, and `fail-on-severity: high` are preserved.
+- `securityWorkflowAuthorizationErrors`, `waitForSecurityProofReadiness`, exact-SHA and same-tree identity binding, event/ref binding, digest validation, ambiguity handling, and fail-closed behavior are unchanged. Missing, pending, failed, ambiguous, cross-PR, mismatched, or tampered Dependency Review remains non-authorizing.
+- RG23 verifies trigger coverage and preserved workflow guardrails; RG24 verifies absent Dependency Review remains non-authorizing; RG25 verifies valid same-tree proof bound to the exact source PR still satisfies the existing contract together with CodeQL and Scorecard.
+
+The new PR's current head/tree and hosted checks are intentionally not persisted in this canonical record; an independent auditor must read them directly from GitHub at audit time. No merge is performed before independent `APPROVED`. v0.11.1 and v0.11.0 release/tag/assets/digests remain immutable, no v0.11.2 exists, and Prompt 012 remains unopened.
+
 ## Privacy and safety review
 
 - Durable assurance packets and review records are bounded by schemas and contain no credentials, raw tokens, private keys, full prompts, arbitrary commands, or absolute host paths.
