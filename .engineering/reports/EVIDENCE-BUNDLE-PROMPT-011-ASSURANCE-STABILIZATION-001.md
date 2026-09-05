@@ -1,6 +1,7 @@
 # Evidence Bundle — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
 Status: `PROMOTION_COMPLETE; CORRECTION_06_APPROVED_FOR_MERGE`
+Correction 07 status: `APPROVED_FOR_MERGE` under external audit comment `5554112346`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA for the corrected promotion: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
 Historical Prompt 011 source/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
@@ -225,6 +226,10 @@ This section records the new post-merge correction required after PR #15. It is 
 - RG23 verifies trigger coverage and preserved workflow guardrails; RG24 verifies absent Dependency Review remains non-authorizing; RG25 verifies valid same-tree proof bound to the exact source PR still satisfies the existing contract together with CodeQL and Scorecard.
 
 The new PR's current head/tree and hosted checks are intentionally not persisted in this canonical record; an independent auditor must read them directly from GitHub at audit time. No merge is performed before independent `APPROVED`. v0.11.1 and v0.11.0 release/tag/assets/digests remain immutable, no v0.11.2 exists, and Prompt 012 remains unopened.
+
+External audit comment `5554112346` records `APPROVED` for the historical PR #16 audited snapshot: head `7ce3813df78e1f4de40051544b7820eda5f513d0`, tree `ec1af458e097264a9a58adf4337e44369279eeb9`, base main `25bba5a623b15a2274c438837463af5025a93d73`, with the hosted Foundation, CodeQL, Dependency Review, and Linux/Windows compatibility checks recorded above. These values are preserved only as historical external audit evidence and must not be treated as the current or final PR identity after the status delta is pushed. The approval authorizes the protected merge and post-merge verification, but no pre-merge text here claims post-merge Direct Review PASS or final Prompt 011 closure.
+
+No-recursive-closeout rule: after the protected merge, the final main SHA/tree and post-merge workflow run IDs are authoritative when read directly from GitHub by the independent auditor. They do not require another repository commit or a new closeout PR.
 
 ## Privacy and safety review
 

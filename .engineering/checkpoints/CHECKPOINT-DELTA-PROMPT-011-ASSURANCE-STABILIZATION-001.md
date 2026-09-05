@@ -2,6 +2,7 @@
 
 Status: `PROMOTED; CORRECTION_06_APPROVED_FOR_MERGE`
 Canonical promotion: `COMPLETED_FOR_V0.11.1`
+Correction 07 status: `APPROVED_FOR_MERGE` under external audit comment `5554112346`
 
 ## Lifecycle transition
 
@@ -75,8 +76,12 @@ The implementation branch is `fix/prompt-011-dependency-review-coverage`, create
 
 The new PR must receive Foundation, CodeQL, Dependency Review, and Linux/Windows compatibility results on its current head and must remain unmerged pending independent audit. The current PR head/tree/checks are authoritative only when read from GitHub at audit time and are not persisted self-referentially here. v0.11.1, v0.11.0, tags, assets, and attestations remain immutable; no v0.11.2 exists and Prompt 012 remains unopened.
 
+External audit comment `5554112346` records `APPROVED` for the historical audited PR #16 snapshot at head `7ce3813df78e1f4de40051544b7820eda5f513d0` / tree `ec1af458e097264a9a58adf4337e44369279eeb9`, against the locked main base above. This snapshot is historical audit evidence only, not the current or final PR identity. The approved canonical status delta authorizes the protected squash merge and the required post-merge verification; it does not pre-authorize a Direct Review PASS or final Prompt 011 closure.
+
 ## Closeout identity authority
 
 For Correction 06 closeout review, the authoritative current PR head/tree and hosted checks are read directly from GitHub by the auditor at audit time. These values are intentionally not persisted as a self-referential PR identity inside the same PR.
 
 For Correction 07 review, the same audit-time identity rule applies to the new PR. The historical timeout and the locked main baseline above are durable evidence; the new PR's current head/tree and hosted checks must be reconstructed directly from GitHub.
+
+After protected merge, the resulting main SHA/tree and post-merge workflow run IDs must be read directly from GitHub by the independent auditor. No additional repository closeout commit or closeout PR is required or permitted solely to persist those values.

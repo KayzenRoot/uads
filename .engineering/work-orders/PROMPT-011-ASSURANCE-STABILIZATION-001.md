@@ -30,6 +30,8 @@ Close the documentation/evidence drift after the successful v0.11.1 promotion. S
 
 Resolve the post-merge Direct Review readiness failure discovered after PR #15 by making Dependency Review run for every `pull_request` targeting `main`, including documentation-only changes. Start from main SHA `25bba5a623b15a2274c438837463af5025a93d73` / tree `8cdfa463bb79d91cac5a00a4e86ebd317e6e83be` on a new branch `fix/prompt-011-dependency-review-coverage` and open a new PR; PR #15 is merged and must not be reused or rewritten. Preserve the existing Dependency Review action pin, least-privilege permissions, `fail-on-severity: high`, and all fail-closed security-proof and identity-binding semantics. Add focused RG23-RG25 coverage for trigger alignment, missing-proof non-authorization, and valid exact-source-PR same-tree proof. No merge is authorized before an independent audit; Prompt 012, release/tag/asset changes, version changes, dependency changes, and any proof-policy relaxation remain out of scope.
 
+Post-approval status delta: external audit comment `5554112346` approved PR #16 at the historical audited head `7ce3813df78e1f4de40051544b7820eda5f513d0` / tree `ec1af458e097264a9a58adf4337e44369279eeb9`. Correction 07 is now `APPROVED_FOR_MERGE`; the bounded canonical status delta, protected squash merge, and external post-merge verification are authorized. The audited head/tree remain historical evidence only, and the final main identity and post-merge proof run IDs must be read directly from GitHub rather than persisted through a recursive closeout commit or PR.
+
 ## Included scope
 
 - Deterministic central assurance policy and semantic revalidation at assurance record/finalize seams.
@@ -110,6 +112,7 @@ Resolve the post-merge Direct Review readiness failure discovered after PR #15 b
 - Safe autonomous actions: inspect, create the bounded closeout branch and records, edit only the in-scope documentation/evidence files, prepare and update the truthful v0.11.1 release description after branch durability, run isolated local validation, commit, push the focused branch, and open/update a review request.
 - Requires maintainer/owner action before approval: independent audit, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any later increment. After the independent `APPROVED` recorded on PR #15 comment `5553489182`, this post-approval instruction authorizes the executor to perform the normal protected squash merge and post-merge verification; the executor does not alter immutable release identity/assets or start Prompt 012.
 - Correction 07 overrides the prior post-approval merge instruction for this new increment: the new PR must remain unmerged until an independent audit records `APPROVED`; after that approval, post-merge Direct Review verification is required before Prompt 011 can close.
+- Correction 07 approval is now recorded under external audit comment `5554112346`; protected squash merge is authorized only after the status delta's own hosted checks pass. Direct Review post-merge PASS remains a mandatory condition and Prompt 011 must not be marked finally closed by the executor.
 
 ## Review and delivery
 
