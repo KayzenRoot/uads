@@ -107,5 +107,6 @@ Close the documentation/evidence drift after the successful v0.11.1 promotion. S
 - Historical PR #12 title: `feat: harden assurance and adversarial stabilization` (promotion completed and retained as history).
 - Correction 04/05 PR title: `fix: bind release authorization to security proof` (PR #14, merged to the exact reviewed tree)
 - Correction 06 PR title: `docs: close Prompt 011 v0.11.1 promotion record` (focused closeout branch; independent review required)
+- Correction 06 PR: `#15` at closeout head `bbfdc209d692e65b9e79526a09b319a35bcb06de`, tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`; Foundation `33974695730`, CodeQL `33974695726`, and compatibility `33974695721` passed on attempt `1`. Dependency Review was not triggered for this documentation-only diff; the promotion Dependency Review proof remains PR #14 same-tree run `33967128218`.
 - Evidence Bundle: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`

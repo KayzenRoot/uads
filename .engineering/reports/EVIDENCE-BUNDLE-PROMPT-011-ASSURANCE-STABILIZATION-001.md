@@ -157,6 +157,7 @@ This section is a new temporal slice. Historical pre-promotion claims above rema
 | PR #14 merge | squash merge at `2026-09-05T13:29:22Z`; parent `d5cb361274cb19f70c8bd02dd023b596b8babf13` |
 | Final main SHA / tree | `db904219a691dea9509f04ff44ac9e8dff5563fa` / `0a4ef8e7e8354d4a90d8fc3db6fe19d70734c42f` |
 | Same-tree provenance | reviewed PR head and final squash commit share the exact reviewed tree |
+| Closeout branch / PR | commit `bbfdc209d692e65b9e79526a09b319a35bcb06de`, tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`; PR #15 `docs: close Prompt 011 v0.11.1 promotion record` |
 
 ### Post-main gates and security proof
 
@@ -168,6 +169,8 @@ This section is a new temporal slice. Historical pre-promotion claims above rema
 | Dependency Review | run `33967128218`, job `101309112604`, attempt `1` | same-tree PR #14; source `5c924602...` and final `db904219...` share tree `0a4ef8e...`; success; proof digest `bb77e6d35da364e6ccb91ce0f5b99748accf7be2c138c906252ed3c46dfb2889` |
 | Compatibility | run `33969242069`, attempt `1`; Linux job `101314700974`; Windows job `101314700869` | exact final SHA/tree, Node 20; both success |
 | Direct Review | run `33969337749`, job `101314949485`, attempt `1` | artifact `uads-direct-review-db904219a691dea9509f04ff44ac9e8dff5563fa`; `finalVerdict=PASS`; `reasonCodes=[]`; base evidence SHA-256 `02cd263a35e7cf09a47463d83d1cd52412495f9d2b1c18eadfb059631b3b2f5f` |
+
+The focused closeout PR #15 hosted checks also passed on its documentation-only head: Foundation CI run `33974695730`, job `101329230866`; CodeQL run `33974695726`, job `101329231020`; compatibility run `33974695721`, Linux job `101329231023`, Windows job `101329231081`; all attempt `1`, exact closeout head, success. Dependency Review was not triggered for this documentation-only closeout diff; no Dependency Review pass is claimed for PR #15, and the final promotion proof remains the same-tree PR #14 run `33967128218` above. No post-main Scorecard or Direct Review claim is made for the unmerged closeout PR.
 
 ### Release and immutable asset proof
 
@@ -196,6 +199,9 @@ The immutable prior release `v0.11.0` remains unchanged: tag ref `b1829d97647067
 - Work Order final acceptance criterion for independent review/merge plus fresh post-main proof is checked and references PR #14, runs `33969035966`, `33969035984`, `33967128218`, `33969242069`, `33969337749`, and release run `33969445797`.
 - `CHANGELOG.md` now states that v0.11.1 was published at the exact final SHA after all required gates and that RG1-RG22 are complete.
 - The live GitHub release description now states publication completed after exact-SHA post-merge gates and includes RG1-RG22 coverage; title, prerelease state, target, tag, assets, digests, and attestations were not changed.
+- Release body delta: before, the `Verification` section said `v0.11.1` was not published and the release evidence stopped at RG1-RG14; after, it states immutable GitHub prerelease publication at exact main `db904219...` after all required post-merge gates, records RG1-RG22, and lists the final proof runs. The body update was performed only after branch/PR durability.
+- Exact Correction 06 changed files: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`, `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`, `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md`, and `CHANGELOG.md`; no runtime, workflow, schema, dependency, version, or release-artifact file changed.
+- Correction 06 local checks: `git status --short` clean before commit; `git diff --check` exit `0`; `npm ci` exit `0`; `npm run validate:engineering` exit `0`; `npm run lint` exit `0`; `npm run typecheck` exit `0`; `npm run validate` exit `0` with 48/48 test files, 351/351 tests, all eval families green, and validators green.
 - The closeout remains proposed rather than auditor-approved. The executor does not merge this closeout PR or start Prompt 012.
 
 ## Privacy and safety review
