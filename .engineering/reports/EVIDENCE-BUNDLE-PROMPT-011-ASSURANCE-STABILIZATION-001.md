@@ -1,6 +1,6 @@
 # Evidence Bundle — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PROMOTION_COMPLETE; CORRECTION_06_CLOSEOUT_READY_FOR_REVIEW`
+Status: `PROMOTION_COMPLETE; CORRECTION_06_APPROVED_FOR_MERGE`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA for the corrected promotion: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
 Historical Prompt 011 source/evidence SHA: `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`
@@ -195,14 +195,15 @@ The immutable prior release `v0.11.0` remains unchanged: tag ref `b1829d97647067
 
 ### Correction 06 canonical closeout
 
-- Checkpoint canonical promotion is now recorded as `COMPLETED_FOR_V0.11.1`; the correction status remains `CORRECTION_06_CLOSEOUT_READY_FOR_REVIEW` until independent audit.
+- Checkpoint canonical promotion remains `COMPLETED_FOR_V0.11.1`; Correction 06 is now `APPROVED_FOR_MERGE` by independent external audit recorded on PR #15 comment `5553489182`.
+- Independent audit evidence: comment `5553489182` records `APPROVED` for historical audited PR #15 head `973e208882feaf3fd9fd7e1ae619c552412fefc6` / tree `540837bdd2bdef5e8a346a2f28b796d01e0e946a`; this target is historical external evidence and does not become the current PR identity.
 - Work Order final acceptance criterion for independent review/merge plus fresh post-main proof is checked and references PR #14, runs `33969035966`, `33969035984`, `33967128218`, `33969242069`, `33969337749`, and release run `33969445797`.
 - `CHANGELOG.md` now states that v0.11.1 was published at the exact final SHA after all required gates and that RG1-RG22 are complete.
 - The live GitHub release description now states publication completed after exact-SHA post-merge gates and includes RG1-RG22 coverage; title, prerelease state, target, tag, assets, digests, and attestations were not changed.
 - Release body delta: before, the `Verification` section said `v0.11.1` was not published and the release evidence stopped at RG1-RG14; after, it states immutable GitHub prerelease publication at exact main `db904219...` after all required post-merge gates, records RG1-RG22, and lists the final proof runs. The body update was performed only after branch/PR durability.
-- Exact Correction 06 changed files: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`, `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`, `.engineering/work-orders/PROMPT-011-ASSURANCE-STABILIZATION-001.md`, and `CHANGELOG.md`; no runtime, workflow, schema, dependency, version, or release-artifact file changed.
+- Historical Correction 06 changed files included the three canonical records and `CHANGELOG.md`; this post-approval delta changes only the three canonical files listed above, and `CHANGELOG.md` is not modified by this delta. No runtime, workflow, schema, dependency, version, or release-artifact file changed.
 - Correction 06 local checks: `git status --short` clean before commit; `git diff --check` exit `0`; `npm ci` exit `0`; `npm run validate:engineering` exit `0`; `npm run lint` exit `0`; `npm run typecheck` exit `0`; `npm run validate` exit `0` with 48/48 test files, 351/351 tests, all eval families green, and validators green.
-- The closeout remains proposed rather than auditor-approved. The executor does not merge this closeout PR or start Prompt 012.
+- The closeout is independently auditor-approved under comment `5553489182`; the authorized protected squash merge and post-merge verification remain the next actions. Prompt 012 remains unopened.
 
 ## Privacy and safety review
 

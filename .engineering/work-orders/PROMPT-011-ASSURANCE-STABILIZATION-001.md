@@ -1,6 +1,6 @@
 # Work Order — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `COMPLETED_WITH_CORRECTION_06_OPEN`
+Status: `COMPLETED; CORRECTION_06_APPROVED_FOR_MERGE`
 Repository: `KayzenRoot/uads`
 Branch: `fix/prompt-011-promotion-closeout`
 Baseline Git SHA: `d5cb361274cb19f70c8bd02dd023b596b8babf13`
@@ -80,7 +80,7 @@ Close the documentation/evidence drift after the successful v0.11.1 promotion. S
 - [x] RG15-RG22 cover non-push Scorecard, cross-PR reuse, ambiguous source PRs/runs, and pending-to-success/timeout readiness.
 - [x] Correction 05 PR #14 final hosted Foundation, CodeQL, Linux/Windows compatibility, and Dependency Review checks passed on the final pre-record head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, all attempt `1`; this remains historical pre-promotion evidence.
 - [x] Independent maintainer review/merge plus fresh post-main Scorecard and Direct Review evidence are satisfied by merged PR #14 and runs `33969035984` / `33969337749`; Dependency Review is bound by same-tree PR #14 run `33967128218`, compatibility by run `33969242069`, and publication by release run `33969445797`.
-- [x] Prompt 011 / v0.11.1 promotion is complete at main `db904219a691dea9509f04ff44ac9e8dff5563fa` / tree `0a4ef8e7e8354d4a90d8fc3db6fe19d70734c42f`; canonical records and public release notes are synchronized by Correction 06, pending independent audit of this closeout delta.
+- [x] Prompt 011 / v0.11.1 promotion is complete at main `db904219a691dea9509f04ff44ac9e8dff5563fa` / tree `0a4ef8e7e8354d4a90d8fc3db6fe19d70734c42f`; canonical records and public release notes are synchronized by Correction 06, and this closeout delta is independently `APPROVED_FOR_MERGE` under PR #15 comment `5553489182`.
 
 ## Required gates and evidence
 
@@ -99,14 +99,14 @@ Close the documentation/evidence drift after the successful v0.11.1 promotion. S
 ## Autonomy boundary
 
 - Safe autonomous actions: inspect, create the bounded closeout branch and records, edit only the in-scope documentation/evidence files, prepare and update the truthful v0.11.1 release description after branch durability, run isolated local validation, commit, push the focused branch, and open/update a review request.
-- Requires maintainer/owner action: independent audit and merge of the Correction 06 closeout PR, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any later increment. The executor does not merge the closeout PR, alter immutable release identity/assets, or start Prompt 012.
+- Requires maintainer/owner action before approval: independent audit, restoration of multi-maintainer review requirements when a second eligible maintainer exists, and any later increment. After the independent `APPROVED` recorded on PR #15 comment `5553489182`, this post-approval instruction authorizes the executor to perform the normal protected squash merge and post-merge verification; the executor does not alter immutable release identity/assets or start Prompt 012.
 
 ## Review and delivery
 
 - Independent technical audit: recorded on PR #12 as comment/review evidence `5119401125`; GitHub human APPROVE is intentionally not required in current solo-maintainer mode.
 - Historical PR #12 title: `feat: harden assurance and adversarial stabilization` (promotion completed and retained as history).
 - Correction 04/05 PR title: `fix: bind release authorization to security proof` (PR #14, merged to the exact reviewed tree)
-- Correction 06 PR title: `docs: close Prompt 011 v0.11.1 promotion record` (focused closeout branch; independent review required)
-- Correction 06 PR: `#15`; historical snapshots are the initial pushed snapshot `bbfdc209d692e65b9e79526a09b319a35bcb06de` / tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`, the previous evidence snapshot `6e3e914b0cd029ec7b11557af831b754831d55a9` / tree `e83f43fbafd089a51de089d2efdc0aee8d6ebc36`, and the pre-delta auditor-observed snapshot `a9ce41109634341f59892b3920e584d942681417` / tree `5ca446fe20e28de7ecb964f5a25894e20f9c8aaa`. Foundation `33975382568`, CodeQL `33975382597`, and compatibility `33975382584` are historical checks for the previous evidence snapshot and passed on attempt `1`. For closeout review, the authoritative current PR head/tree and hosted checks must be read directly from GitHub by the auditor at audit time; they are intentionally not persisted as a self-referential PR identity inside the same PR. Dependency Review was not triggered for this documentation-only diff, and the promotion Dependency Review proof remains PR #14 same-tree run `33967128218`.
+- Correction 06 PR title: `docs: close Prompt 011 v0.11.1 promotion record` (focused closeout branch; independent audit approved for protected merge)
+- Correction 06 PR: `#15`; historical snapshots are the initial pushed snapshot `bbfdc209d692e65b9e79526a09b319a35bcb06de` / tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`, the previous evidence snapshot `6e3e914b0cd029ec7b11557af831b754831d55a9` / tree `e83f43fbafd089a51de089d2efdc0aee8d6ebc36`, and the pre-delta auditor-observed snapshot `a9ce41109634341f59892b3920e584d942681417` / tree `5ca446fe20e28de7ecb964f5a25894e20f9c8aaa`. Independent audit comment `5553489182` records `APPROVED` for historical audited target head `973e208882feaf3fd9fd7e1ae619c552412fefc6` / tree `540837bdd2bdef5e8a346a2f28b796d01e0e946a`. Foundation `33975382568`, CodeQL `33975382597`, and compatibility `33975382584` are historical checks for the previous evidence snapshot and passed on attempt `1`. For closeout review, the authoritative current PR head/tree and hosted checks must be read directly from GitHub by the auditor at audit time; they are intentionally not persisted as a self-referential PR identity inside the same PR. Dependency Review was not triggered for this documentation-only diff, and the promotion Dependency Review proof remains PR #14 same-tree run `33967128218`.
 - Evidence Bundle: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md`

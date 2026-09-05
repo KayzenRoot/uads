@@ -1,6 +1,6 @@
 # Checkpoint Delta — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PROMOTED; CORRECTION_06_CLOSEOUT_READY_FOR_REVIEW`
+Status: `PROMOTED; CORRECTION_06_APPROVED_FOR_MERGE`
 Canonical promotion: `COMPLETED_FOR_V0.11.1`
 
 ## Lifecycle transition
@@ -9,7 +9,7 @@ Canonical promotion: `COMPLETED_FOR_V0.11.1`
 - After proposed: `Prompt 011 assurance stabilization implemented locally; review / READY_FOR_REVIEW pending independent maintainer review`
 - Correction 04 after: `v0.11.0 promotion is recorded as complete; corrected 0.11.1 security-proof semantics are prepared on a focused branch and require fresh independent review/hosted checks`
 - Correction 05 after: `security proof event/ref and merged-PR binding plus bounded post-main readiness are implemented on PR #14 and require independent review and fresh hosted checks`
-- Correction 06 after: `Prompt 011 / v0.11.1 promotion is complete at the exact final main SHA; canonical records and public release notes are synchronized to the proven evidence, with this closeout delta ready for independent audit`
+- Correction 06 after: `Prompt 011 / v0.11.1 promotion is complete at the exact final main SHA; canonical records and public release notes are synchronized to the proven evidence, and the closeout delta has independent APPROVED status for protected merge`
 
 ## Completed steps
 
@@ -31,6 +31,7 @@ Canonical promotion: `COMPLETED_FOR_V0.11.1`
 - Verified same-tree Dependency Review proof from PR #14 run `33967128218`, then verified release workflow `33969445797` published the annotated `v0.11.1` tag to the exact final main commit with all 10 expected assets and a successful attestation step.
 - Verified the immutable `v0.11.0` tag/release and all historical assets remain unchanged; no `v0.11.2` exists and Prompt 012 has not begun.
 - Published the focused Correction 06 branch as PR #15 and retained only historical pushed snapshots for traceability: the initial pushed snapshot was `bbfdc209d692e65b9e79526a09b319a35bcb06de` / tree `dc45fced1ec7bccaea7fc001c276755deb8b16dc`; a previous evidence snapshot was `6e3e914b0cd029ec7b11557af831b754831d55a9` / tree `e83f43fbafd089a51de089d2efdc0aee8d6ebc36`; and the pre-delta auditor-observed snapshot was `a9ce41109634341f59892b3920e584d942681417` / tree `5ca446fe20e28de7ecb964f5a25894e20f9c8aaa`. Foundation, CodeQL, and Linux/Windows Node 20 hosted checks were observed green on the previous evidence snapshot.
+- Independent external audit is recorded on PR #15 comment `5553489182` with verdict `APPROVED` for the historical audited target `973e208882feaf3fd9fd7e1ae619c552412fefc6` / tree `540837bdd2bdef5e8a346a2f28b796d01e0e946a`; this target is retained as audit evidence, not as the current PR identity.
 - Updated the live v0.11.1 release description to the truthful post-promotion record and reverified that only the release body changed; title, prerelease state, target, annotated tag, all 10 assets/digests, and attestations are unchanged.
 
 ## Open items
@@ -42,9 +43,9 @@ Canonical promotion: `COMPLETED_FOR_V0.11.1`
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
 - Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.
 - The existing classic branch-protection mechanism now reports `mergeable=true` and `mergeable_state=clean` for PR #12. The governance documentation update is bounded and evidence-only; its new exact head must retain the same green check matrix before any promotion.
-- Historical PR #12 promotion is complete. PR #14 and the v0.11.1 promotion are complete; this Correction 06 closeout branch remains open only for independent audit and review of the synchronized records. The executor does not mark the final auditor decision as approved.
+- Historical PR #12 promotion is complete. PR #14 and the v0.11.1 promotion are complete; the Correction 06 closeout delta was independently audited `APPROVED` on PR #15 comment `5553489182` and is authorized for protected merge. Post-merge main verification remains pending.
 - Correction 05 final pre-record hosted matrix is green on head `c4a3398a0eef1fe73f6f6e79879afd3ce7649cb2`, tree `489d4c546d9a380b856d39ea12e735f91e6ff169`: Foundation `33964494290` / job `101302068914`; CodeQL `33964494328` / job `101302069020`; Dependency Review `33964494330` / job `101302068873`; compatibility `33964494340` / jobs `101302069143`, `101302069166`, all attempt `1` and PASS.
-- Independent audit of the Correction 06 closeout PR and its proposed final lifecycle wording remains required. No completed promotion action is pending.
+- Independent audit of the Correction 06 closeout delta is recorded as `APPROVED`; the remaining actions are the authorized squash merge and read-only post-merge verification.
 
 ## Correction 06 / Promotion Closeout
 
@@ -59,7 +60,8 @@ The following is a separate post-promotion record. It does not rewrite the histo
 - Dependency Review: run `33967128218`, attempt `1`, job `101309112604`, same-tree PR #14 proof; source `5c924602...` and final `db904219...` share tree `0a4ef8e...`; proof digest `bb77e6d35da364e6ccb91ce0f5b99748accf7be2c138c906252ed3c46dfb2889`.
 - Direct Review: run `33969337749`, attempt `1`, job `101314949485`, artifact `uads-direct-review-db904219a691dea9509f04ff44ac9e8dff5563fa`, `finalVerdict=PASS`, `reasonCodes=[]`.
 - Release: workflow run `33969445797`, attempt `1`, job `101315238039`, success; release `383257837`, prerelease, non-draft; annotated tag object `c2f3e78bdfe4aa439cf576d2d2122ceec7216fe9` peels to `db904219a691dea9509f04ff44ac9e8dff5563fa`; all 10 assets are present and attestation step succeeded.
-- Closeout status proposed for independent audit: `Prompt 011 / v0.11.1 promotion complete; Correction 06 canonical records synchronized; no implementation or release mutation remains pending`.
+- Closeout status after independent audit: `Prompt 011 / v0.11.1 promotion complete; Correction 06 canonical records synchronized; APPROVED_FOR_MERGE under PR #15 comment 5553489182; no implementation or release mutation remains pending`.
+- External audit historical target: PR #15 head `973e208882feaf3fd9fd7e1ae619c552412fefc6` / tree `540837bdd2bdef5e8a346a2f28b796d01e0e946a`; the current PR head/tree remains authoritative only when read from GitHub at audit time.
 
 ## Safety statement
 
