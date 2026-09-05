@@ -34,6 +34,12 @@ directReview.commitSha
 
 The canonical evidence uses `workflow.runId` for the Direct Review workflow and `provenance.sourceRunId/sourceRunAttempt` for the source CI. The review index exposes both identities, the evidence file SHA-256, exact security statuses, release run, tag target and release asset table of contents. Missing or contradictory identity is `INCOMPLETE` or a validation failure; it is never silently converted into `PASS`. Release notes derive their Review Evidence block from the validated JSON/index, not from hand-entered counts or SHAs.
 
+### Corrected release security proof
+
+Starting with the corrected release semantics at v0.11.1, a `PASS` requires three typed, reconstructable proofs in both the Direct Review evidence and the review index. CodeQL and Scorecard must be successful runs for the final `main` commit SHA. Dependency Review may be successful on that exact SHA or on exactly one merged PR into `main` whose head tree equals the final main tree; the proof records the PR number, source SHA/tree, final SHA/tree, run ID/attempt, repository, run URL, and a canonical proof digest. The publisher and release builder reconstruct these bindings from GitHub API/git data and fail closed on missing, ambiguous, failed, mismatched, or tampered results. Scorecard remains a push-to-main workflow; no PR Scorecard result is fabricated.
+
+The historical v0.11.0 evidence and release remain governed by their original 0.8.0 contract and are immutable. v0.11.1 is the first release for which the 0.9.0 security-proof contract is authoritative; this correction prepares that contract and does not publish or tag v0.11.1.
+
 ## Reviewer path
 
 An independent reviewer can start with the final main SHA, open its exact CI run, follow the Direct Review workflow and its artifact, inspect the marker block, then follow CodeQL/Scorecard, the annotated tag, release assets and the generated Review Evidence block. A local ZIP is not required for ordinary approval when this chain is coherent. `npm run review:release -- 0.10.0` remains the deeper offline path and cross-checks the same canonical evidence. Historical tag checks are data-driven and compare every known prior tag target; tags are never moved or recreated, including v0.10.4 and earlier historical tags.

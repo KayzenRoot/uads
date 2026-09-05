@@ -4,6 +4,17 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-09-05
+
+### Fixed
+
+- Bound corrected release authorization to reconstructable exact-SHA CodeQL and Scorecard proofs plus exact-SHA or same-tree PR Dependency Review proof.
+- Added fail-closed security-proof identity/digest validation and adversarial RG1-RG14 regression coverage without changing validated runtime subsystems.
+
+### Verification
+
+- Prepared as a patch release for independent review. The immutable `v0.11.0` release and tag are unchanged; `v0.11.1` is not published by this correction.
+
 ## [0.11.0] - 2026-09-04
 
 ### Highlights

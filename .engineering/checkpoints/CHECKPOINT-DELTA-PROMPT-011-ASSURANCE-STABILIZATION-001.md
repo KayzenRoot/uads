@@ -1,12 +1,13 @@
 # Checkpoint Delta — `PROMPT-011-ASSURANCE-STABILIZATION-001`
 
-Status: `PROPOSED`
-Canonical promotion: `PENDING_MAINTAINER`
+Status: `PROMOTED; CORRECTION_04_READY_FOR_REVIEW`
+Canonical promotion: `COMPLETED_FOR_V0.11.0`
 
 ## Lifecycle transition
 
 - Before: `approved Prompt 010 / v0.10.4 baseline with no active Prompt 011 stabilization record`
 - After proposed: `Prompt 011 assurance stabilization implemented locally; review / READY_FOR_REVIEW pending independent maintainer review`
+- Correction 04 after: `v0.11.0 promotion is recorded as complete; corrected 0.11.1 security-proof semantics are prepared on a focused branch and require fresh independent review/hosted checks`
 
 ## Completed steps
 
@@ -19,15 +20,18 @@ Canonical promotion: `PENDING_MAINTAINER`
 - Added review-packet and compatibility-evidence schemas, CI receipt/Direct Review integration, and the Linux/Windows Node 20 compatibility workflow.
 - Added release-title/version bindings and bounded documentation updates for v0.11.0 without implementing Prompt 012 or provider/runtime gateway scope.
 - Ran local typecheck/build, focused regression tests, legacy evaluations, new evaluations, action/receipt/Direct Review validators, Windows compatibility smoke, audit, and package smoke.
+- Recorded the successful v0.11.0 promotion at the audited main identity `d5cb361274cb19f70c8bd02dd023b596b8babf13`; historical release/tag/assets are preserved unchanged.
+- Added Correction 04 typed security proofs, independent reconstruction barriers, 0.9.0 schemas, release 0.11.1 preparation, and RG1-RG14 adversarial tests.
 
 ## Open items
 
-- The corrected source and hosted evidence snapshot are committed at `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09`; the corrected full Vitest suite completed at 47 files/329 tests with 0 failures.
+- Historical Prompt 011 source/evidence snapshot `4061946f301ff5b7ce5d3f0ddc231ab1a87cce09` and its hosted matrix are retained as the pre-promotion record; the promoted main identity is `d5cb361274cb19f70c8bd02dd023b596b8babf13`.
+- Correction 04 branch head is `PENDING_CORRECTION_04_COMMIT`; local RG1-RG14 and full validation results are recorded in the companion Evidence Bundle after execution.
 - The exact-SHA hosted matrix is green for that snapshot: CI `33930026879`, CodeQL `33930026878`, compatibility `33930026912` (Linux job `101206556191`, Windows job `101206556350`), and Dependency Review `33930026983` attempt `2` (job `101229407580`).
 - Dependency Review attempt 1 is historical failure evidence only: Dependency Graph was disabled; after the repository setting was enabled, attempt 2 completed successfully on the same exact SHA.
 - Correction 03 pre-flight proved `SOLO_MAINTAINER`: the repository API exposed only `KayzenRoot` as an admin collaborator and `.github/CODEOWNERS` assigned all ownership to `@KayzenRoot`. Before: one required approval and blocking code-owner review. After: zero required approvals and non-blocking code-owner review; `Foundation checks`, strict status checks, PR requirement, linear history, conversation resolution, no force pushes, no deletion, and administrator enforcement state were preserved.
 - The existing classic branch-protection mechanism now reports `mergeable=true` and `mergeable_state=clean` for PR #12. The governance documentation update is bounded and evidence-only; its new exact head must retain the same green check matrix before any promotion.
-- The focused branch remains open for independent maintainer review; only then may a maintainer merge or publish v0.11.0. Scorecard, Direct Review, and release-validation evidence remain post-merge/release-chain concerns and are not claimable from this open PR.
+- Historical PR #12 promotion is complete. The Correction 04 branch remains open for independent maintainer review; only after a fresh post-merge proof may a maintainer consider v0.11.1 publication. This task does not merge, tag, or publish.
 
 ## Safety statement
 

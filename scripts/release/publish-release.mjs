@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const { releaseTitle } = await import("../../dist/release/release-title.js");
+const { assertSchema } = await import("../../dist/lib/json-schema.js");
+const { validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
+const securityModule = await import("../../dist/github/security-proof.js");
+const { resolveSecurityWorkflowProofs } = await import("../github/security-proof.mjs");
 const version = process.argv[2];
 const artifactDir = valueOf("--artifacts");
 const repo = valueOf("--repo") ?? "KayzenRoot/uads";
@@ -16,13 +20,28 @@ const localTagSha = localTag(tag);
 const tagSha = remoteTagSha(tag) ?? localTagSha;
 if (tagSha && tagSha !== head) fail(`RELEASE_TAG_CONFLICT ${tag}: ${tagSha}`);
 if (git(["status", "--porcelain"]).length > 0) fail("release requires a clean worktree");
+const artifactRoot = path.resolve(artifactDir);
+const directReviewPath = path.join(artifactRoot, "github-direct-review-evidence.json");
+if (!fs.existsSync(directReviewPath)) fail("release direct review evidence is missing");
+const directReview = JSON.parse(fs.readFileSync(directReviewPath, "utf8"));
+try { assertSchema("github-direct-review-evidence.schema.json", directReview, root); } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+const directReviewErrors = validateDirectReviewEvidence(directReview, root);
+if (directReviewErrors.length > 0 || directReview.finalVerdict !== "PASS" || directReview.commitSha !== head || directReview.version !== version) fail(`release security authorization is invalid: ${directReviewErrors.join(",") || "direct-review-not-pass-or-identity-mismatch"}`);
+if (securityModule.isCorrectedReleaseVersion(version)) {
+  const resolved = resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: head });
+  const proofErrors = securityModule.securityWorkflowAuthorizationErrors({ codeql: resolved.codeql, scorecard: resolved.scorecard, dependencyReview: resolved.dependencyReview }, { repository: repo, finalCommitSha: head, finalTreeSha: directReview.gitTreeSha });
+  if (proofErrors.length > 0) fail(`release security proof is not authorized: ${proofErrors.join(",")}`);
+  for (const [key, status] of [["codeql", resolved.codeql], ["scorecard", resolved.scorecard], ["dependencyReview", resolved.dependencyReview]]) {
+    if (status.proof?.proofDigest !== directReview.securityWorkflows?.[key]?.proof?.proofDigest) fail(`release security proof does not match direct-review evidence: ${key}`);
+  }
+}
 if (!tagSha) {
   run("git", ["tag", "-a", tag, head, "-m", `UADS ${tag} release`]);
   run("git", ["push", "origin", `refs/tags/${tag}`]);
 } else if (!remoteTagSha(tag)) {
   run("git", ["push", "origin", `refs/tags/${tag}`]);
 }
-const assets = fs.readdirSync(path.resolve(artifactDir)).filter((name) => /\.(tgz|json|txt)$/.test(name)).sort();
+const assets = fs.readdirSync(artifactRoot).filter((name) => /\.(tgz|json|txt)$/.test(name)).sort();
 if (assets.length < 7 || !assets.includes("github-direct-review-evidence.json") || !assets.includes("github-review-index.json")) fail("release artifact directory is incomplete or lacks direct review evidence/index");
 const existing = spawnSync("gh", ["release", "view", tag, "--repo", repo], { cwd: root, windowsHide: true }).status === 0;
 if (!existing) {

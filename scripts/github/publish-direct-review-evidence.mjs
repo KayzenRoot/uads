@@ -13,6 +13,7 @@ import {
 } from "./ci-gate-receipt-runtime.mjs";
 import { deriveGitComparison, validateComparison } from "./comparison-runtime.mjs";
 import { validateCompatibilityArtifact } from "./compatibility-artifacts.mjs";
+import { resolveSecurityWorkflowProofs } from "./security-proof.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const repo = valueOf("--repo") ?? process.env.GITHUB_REPOSITORY;
@@ -52,6 +53,7 @@ if (comparisonErrors.length) fail(`canonical comparison is invalid: ${comparison
 
 const directRunId = numberOrNull(process.env.GITHUB_RUN_ID);
 const directRunAttempt = numberOrNull(process.env.GITHUB_RUN_ATTEMPT);
+const securityProofs = resolveSecurityWorkflowProofs({ repository: repo, finalCommitSha: receipt.commitSha });
 const directEvidence = createDirectReviewFromReceipt(receipt, {
   repository: repo,
   branch: process.env.GITHUB_REF_NAME ?? "main",
@@ -75,15 +77,18 @@ const directEvidence = createDirectReviewFromReceipt(receipt, {
   artifactName: `uads-direct-review-${receipt.commitSha}`,
   artifactRetentionDays: 90,
   securityWorkflows: {
-    codeql: workflowStatus(repo, "codeql.yml", receipt.commitSha),
-    scorecard: workflowStatus(repo, "scorecard.yml", receipt.commitSha),
-    dependencyReview: workflowStatus(repo, "dependency-review.yml", receipt.commitSha),
+    codeql: securityProofs.codeql,
+    scorecard: securityProofs.scorecard,
+    dependencyReview: securityProofs.dependencyReview,
   },
   compatibility: {
     linux: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "linux", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
     windows: validateCompatibilityArtifact({ repository: repo, expectedSha: receipt.commitSha, expectedTreeSha: receipt.gitTreeSha, platform: "windows", expectedRunId: compatibilityRunId, expectedRunAttempt: compatibilityRunAttempt }),
   },
 });
+const { validateDirectReviewEvidence } = await import("../../dist/github/direct-review.js");
+const directEvidenceErrors = validateDirectReviewEvidence(directEvidence, root);
+if (directEvidenceErrors.length > 0) fail(`security-gated direct-review evidence is invalid: ${directEvidenceErrors.join(",")}`);
 if (directEvidence.finalVerdict === "INCOMPLETE" && receipt.finalVerdict === "PASS") fail("canonical direct-review identity is incomplete");
 fs.mkdirSync(path.dirname(output), { recursive: true });
 const text = `${JSON.stringify(directEvidence, null, 2)}\n`;
@@ -124,15 +129,6 @@ function crossCheckSourceJob(jobs, item) {
   if (item.requiredGates.length !== REQUIRED_GATES.length) fail("source receipt gate set is incomplete");
 }
 function normalizeGitHubOutcome(value) { return ["success", "failure", "cancelled", "skipped"].includes(value) ? value : "unknown"; }
-function workflowStatus(repository, workflowFile, expectedSha) {
-  const result = api(`repos/${repository}/actions/workflows/${workflowFile}/runs?per_page=100&head_sha=${expectedSha}`);
-  const candidates = (result?.workflow_runs ?? []).filter((run) => run.head_sha === expectedSha);
-  if (candidates.length === 0) return { status: "unavailable", outcome: "unknown", runId: null, commitSha: null, htmlUrl: null, reasonCode: "SECURITY_RUN_UNAVAILABLE" };
-  const completed = candidates.filter((run) => run.status === "completed");
-  const run = (completed.length ? completed : candidates).sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))[0];
-  const outcome = normalizeGitHubOutcome(run.conclusion);
-  return { status: run.status === "completed" ? outcome : "pending", outcome, runId: numberOrNull(run.id), commitSha: safeSha(run.head_sha), htmlUrl: safeUrl(run.html_url), reasonCode: run.status === "completed" ? null : "SECURITY_RUN_PENDING" };
-}
 function safeUrl(value) { return typeof value === "string" && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(value) ? value : null; }
 function api(endpoint) { const result = spawnSync("gh", ["api", endpoint], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 }); if (result.status !== 0) return null; try { return JSON.parse(result.stdout); } catch { return null; } }
 function git(args) { try { return execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true }).trim(); } catch { return null; } }

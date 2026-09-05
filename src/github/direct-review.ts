@@ -1,7 +1,16 @@
 import crypto from "node:crypto";
+import {
+  LEGACY_SECURITY_PROOF_SCHEMA_VERSION,
+  SECURITY_PROOF_SCHEMA_VERSION,
+  isCorrectedReleaseVersion,
+  normalizeSecurityWorkflowProof,
+  securityWorkflowAuthorizationErrors,
+  validateSecurityWorkflowProof,
+  type SecurityWorkflowProof,
+} from "./security-proof.js";
 
 export const DIRECT_REVIEW_SCHEMA = "uads.github-direct-review-evidence" as const;
-export const DIRECT_REVIEW_SCHEMA_VERSION = "0.8.0" as const;
+export const DIRECT_REVIEW_SCHEMA_VERSION = SECURITY_PROOF_SCHEMA_VERSION;
 export const DIRECT_REVIEW_ARTIFACT_RETENTION_DAYS = 90;
 
 export type DirectReviewOutcome = "success" | "failure" | "cancelled" | "skipped" | "unknown";
@@ -34,6 +43,7 @@ export type DirectReviewWorkflowStatus = {
   platform?: "linux" | "windows" | null;
   nodeVersion?: string | null;
   checks?: Record<string, DirectReviewOutcome> | null;
+  proof?: SecurityWorkflowProof | null;
 };
 
 export type DirectReviewComparison = {
@@ -49,7 +59,7 @@ export type DirectReviewComparison = {
 
 export type DirectReviewEvidence = {
   schema: typeof DIRECT_REVIEW_SCHEMA;
-  schemaVersion: typeof DIRECT_REVIEW_SCHEMA_VERSION;
+  schemaVersion: typeof DIRECT_REVIEW_SCHEMA_VERSION | typeof LEGACY_SECURITY_PROOF_SCHEMA_VERSION;
   repository: string | null;
   branch: string | null;
   commitSha: string | null;
@@ -353,6 +363,7 @@ function status(value?: Partial<DirectReviewWorkflowStatus>): DirectReviewWorkfl
   if (value?.platform !== undefined) result.platform = value.platform === "linux" || value.platform === "windows" ? value.platform : null;
   if (value?.nodeVersion !== undefined) result.nodeVersion = safeText(value.nodeVersion, 64);
   if (value?.checks !== undefined) result.checks = value.checks && typeof value.checks === "object" && !Array.isArray(value.checks) ? value.checks : null;
+  if (value?.proof !== undefined) result.proof = normalizeSecurityWorkflowProof(value.proof);
   return result;
 }
 
@@ -438,23 +449,35 @@ export function createDirectReviewEvidence(input: {
     completedAt: safeDateTime(input.workflow?.completedAt),
   };
   const artifactName = input.artifactName && safePath(input.artifactName) ? input.artifactName : null;
+  const securityWorkflows = {
+    codeql: status(input.securityWorkflows?.codeql),
+    scorecard: status(input.securityWorkflows?.scorecard),
+    dependencyReview: status(input.securityWorkflows?.dependencyReview),
+  };
   const allRequiredSuccess = requiredGates.every((gate) => gate.outcome === "success");
   const hasKnownFailure = requiredGates.some((gate) => gate.outcome === "failure" || gate.outcome === "cancelled");
   const hasUnknown = requiredGates.some((gate) => gate.outcome === "unknown");
   const identityProven = Boolean(repository && commitSha && safeSha(input.gitTreeSha) && runId && workflow.htmlUrl);
   if (!identityProven) reasons.push("IDENTITY_UNPROVEN");
+  const securityReasons = isCorrectedReleaseVersion(input.version)
+    ? securityWorkflowAuthorizationErrors(securityWorkflows, { repository, finalCommitSha: commitSha, finalTreeSha: safeSha(input.gitTreeSha) })
+    : [];
+  reasons.push(...securityReasons);
+  const securityFailure = Object.values(securityWorkflows).some((item) => item.proof?.outcome === "failure" || item.proof?.outcome === "cancelled");
   const finalVerdict: DirectReviewVerdict = !identityProven
     ? "INCOMPLETE"
-    : allRequiredSuccess
-    ? "PASS"
-    : hasKnownFailure
+    : !allRequiredSuccess
+    ? hasKnownFailure
       ? "FAIL"
       : hasUnknown
         ? "INCOMPLETE"
-        : "FAIL";
+        : "FAIL"
+    : securityReasons.length > 0
+    ? securityFailure ? "FAIL" : "INCOMPLETE"
+    : "PASS";
   const base: Omit<DirectReviewEvidence, "evidenceContractDigest"> = {
     schema: DIRECT_REVIEW_SCHEMA,
-    schemaVersion: DIRECT_REVIEW_SCHEMA_VERSION,
+    schemaVersion: isCorrectedReleaseVersion(input.version) ? DIRECT_REVIEW_SCHEMA_VERSION : LEGACY_SECURITY_PROOF_SCHEMA_VERSION,
     repository,
     branch: safeText(input.branch, 128),
     commitSha,
@@ -482,11 +505,7 @@ export function createDirectReviewEvidence(input: {
       npmAudit: { outcome: parsedSteps["npm-audit"] ?? npmAudit.outcome, highOrGreaterVulnerabilities: npmAudit.highOrGreaterVulnerabilities },
       packaging: { outcome: parsedSteps.packaging ?? "unknown" },
     },
-    securityWorkflows: {
-      codeql: status(input.securityWorkflows?.codeql),
-      scorecard: status(input.securityWorkflows?.scorecard),
-      dependencyReview: status(input.securityWorkflows?.dependencyReview),
-    },
+    securityWorkflows,
     compatibility: {
       linux: status(input.compatibility?.linux),
       windows: status(input.compatibility?.windows),
@@ -525,7 +544,7 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   const errors: string[] = [];
   if (!value || typeof value !== "object" || Array.isArray(value)) return ["evidence-not-object"];
   const evidence = value as Partial<DirectReviewEvidence>;
-  if (evidence.schema !== DIRECT_REVIEW_SCHEMA || evidence.schemaVersion !== DIRECT_REVIEW_SCHEMA_VERSION) errors.push("schema-version-mismatch");
+  if (evidence.schema !== DIRECT_REVIEW_SCHEMA || ![LEGACY_SECURITY_PROOF_SCHEMA_VERSION, DIRECT_REVIEW_SCHEMA_VERSION].includes(evidence.schemaVersion as typeof DIRECT_REVIEW_SCHEMA_VERSION | typeof LEGACY_SECURITY_PROOF_SCHEMA_VERSION)) errors.push("schema-version-mismatch");
   if (evidence.commitSha !== null && evidence.commitSha !== undefined && !safeSha(evidence.commitSha)) errors.push("commit-sha-invalid");
   if (evidence.gitTreeSha !== null && evidence.gitTreeSha !== undefined && !safeSha(evidence.gitTreeSha)) errors.push("tree-sha-invalid");
   if (evidence.repository !== null && evidence.repository !== undefined && !safeRepository(evidence.repository)) errors.push("repository-invalid");
@@ -542,6 +561,24 @@ export function validateDirectReviewEvidence(value: unknown, schemaRoot?: string
   const sourceIdentityProven = Boolean(safeSha(evidence.provenance?.sourceRunSha ?? undefined) && safeRunId(evidence.provenance?.sourceRunId ?? undefined) && safeRunAttempt(evidence.provenance?.sourceRunAttempt ?? undefined));
   if (evidence.finalVerdict === "PASS" && !sourceIdentityProven) errors.push("source-run-identity-unproven");
   if (evidence.finalVerdict === "PASS" && evidence.requiredGates?.some((gate) => gate.required && gate.outcome !== "success")) errors.push("pass-with-non-success-gate");
+  for (const [statusKey, statusValue] of Object.entries(evidence.securityWorkflows ?? {})) {
+    if (statusValue?.proof !== undefined && statusValue.proof !== null) {
+      const workflow = statusKey === "dependencyReview" ? "dependency-review" : statusKey;
+      errors.push(...validateSecurityWorkflowProof(statusValue.proof, {
+        workflow: workflow as "codeql" | "scorecard" | "dependency-review",
+        repository: evidence.repository,
+        finalCommitSha: evidence.commitSha,
+        finalTreeSha: evidence.gitTreeSha,
+      }));
+    }
+  }
+  if (evidence.finalVerdict === "PASS" && isCorrectedReleaseVersion(evidence.version)) {
+    errors.push(...securityWorkflowAuthorizationErrors(evidence.securityWorkflows ?? {}, {
+      repository: evidence.repository,
+      finalCommitSha: evidence.commitSha,
+      finalTreeSha: evidence.gitTreeSha,
+    }));
+  }
   if (evidence.version === "0.11.0") {
     for (const key of ["linux", "windows"] as const) {
       const compatibility = evidence.compatibility?.[key];
