@@ -50,4 +50,6 @@ See `SECURITY.md`.
 
 Corrected-release authorization is fail-closed. Scorecard evidence must be an exact final-main SHA run from the `push` event with `head_branch=main`; schedule, branch-protection, and pull-request runs are not interchangeable. A same-tree Dependency Review proof must independently identify exactly one merged PR into the repository's `main`, validate the source-commit PR association and source/final tree equality, and require any available run PR metadata to name that same PR. Distinct authoritative run IDs and ambiguous PR associations are rejected; a rerun is considered the same logical run only when the GitHub run ID is identical and only `run_attempt` changes.
 
+The Dependency Review workflow runs for every `pull_request` targeting `main`, including documentation-only changes, so every candidate main commit can produce the required proof. This coverage rule does not make the proof optional: absent, pending, failed, ambiguous, mismatched, cross-PR, or tampered Dependency Review evidence remains non-authorizing.
+
 Canonical post-main Direct Review generation performs bounded readiness polling for pending security proofs. The timeout is explicit and remains non-authorizing: failure, ambiguity, mismatch, cancellation, skipping, tampering, or timeout cannot become `PASS`.
