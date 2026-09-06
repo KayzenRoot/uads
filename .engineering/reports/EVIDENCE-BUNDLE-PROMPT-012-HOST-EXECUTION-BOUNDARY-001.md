@@ -80,9 +80,9 @@ self-embedded; its committed identity is supplied by Git.
 | `.engineering/decisions/ADR-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `5ed648425a799a7f324088cd4e2f230c9deb7f85e8120e48ca9e118fc1aa2d45` |
 | `.engineering/work-orders/PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `578b60fc2932ed9a8ca911aafd050c6a812d3cb21b17179c5e64915818dc42f0` |
 | `.engineering/context-locks/PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `4e691bab1da36ca6c2b197d36cc767e370c24ec213addd7b15fcca2d2d9cb637` |
-| `.engineering/baselines/PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `c02f42742c3c86c3225a73851fc33b9d4ef5f6c600c840a8f28cff0c775640d0` |
+| `.engineering/baselines/PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `303a1cbe63f6b4ff1619d2975926efc2497de4fe5e818ae5b7170a955ccf477f` |
 | `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `685ccd0d98dd484e4e67e0bf132664afe6f22ebc19fd5d28eb3c659108f04959` |
-| `.engineering/checkpoints/CORRECTION-DELTA-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `bcbb55ccad79f6d1464ef55d6b3a50f092239cc57a532080fb44813c0199c0a4` |
+| `.engineering/checkpoints/CORRECTION-DELTA-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` | `fb5c2c798819edb3f75d62cb5a50aae596e6cca2df6a3d9a8d6cd59e6db32078` |
 
 ## Change classification
 

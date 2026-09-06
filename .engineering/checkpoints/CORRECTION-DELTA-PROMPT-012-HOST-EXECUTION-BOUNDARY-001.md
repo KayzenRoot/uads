@@ -33,9 +33,13 @@ identity fields directly from the Work Order.
 - Retained exactly one `NECESSARY` classification for host execution depth,
   based on pre-freeze roadmap ordering plus the concrete prepare-without-
   execute/receipt gap.
-- Renamed the branch to
-  `docs/eng-prompt-012-host-execution-boundary-001` and aligned the PR title
-  to include the exact Work Order identity, without rewriting commit history.
+- PR #17 was the original Prompt 012 scope-freeze PR.
+- Independent audit comment `5555196483` required Correction 01.
+- Replacement branch `docs/eng-prompt-012-host-execution-boundary-001` was
+  created from the preserved prior commits/history; the GitHub record is a
+  replacement branch/PR, not a simple branch rename.
+- PR #18 is the replacement PR, with the Work Order identity in its title.
+- PR #17 was closed without merge and is superseded by PR #18.
 - Preserved planning-only scope, Prompt 011 history, versions, releases,
   tags, runtime paths, schemas, tests, workflows, and dependencies.
 

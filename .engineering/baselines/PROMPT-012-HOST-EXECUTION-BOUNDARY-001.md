@@ -4,11 +4,16 @@ Status: `COMPLETE`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `96f2965d0ec26e00968052999b20876c13578a51`
 Baseline tree: `4fb7004d1ff923cd03f3df9f085ca248c2e49b67`
-Branch: `docs/prompt-012-scope-freeze`
+Branch: `docs/eng-prompt-012-host-execution-boundary-001`
 
 ## Baseline identity
 
 - `origin/main` resolves to the exact baseline SHA/tree above.
+- The current governing replacement branch for this planning record is
+  `docs/eng-prompt-012-host-execution-boundary-001` (PR #18).
+- The original scope-freeze branch `docs/prompt-012-scope-freeze` is historical
+  only: it carried PR #17, which was closed without merge and superseded by
+  PR #18 after independent audit comment `5555196483`.
 - The worktree was clean before this planning delta.
 - `VERSION`, `package.json`, and the package-lock root version are `0.11.1`.
 - GitHub contains immutable `v0.11.0` and `v0.11.1`; no `v0.11.2` or
