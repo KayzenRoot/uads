@@ -1,0 +1,38 @@
+# Checkpoint Delta — `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
+
+Status: `PROPOSED`
+Canonical promotion: `PENDING_MAINTAINER`
+Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
+
+## Lifecycle transition
+
+- Before: `Prompt 012 scope freeze accepted on main c8ce23e; implementation not started`
+- After proposed: `bounded Host Execution/Receipt implementation present on the exact feature branch; review pending`
+
+## Completed steps
+
+- Revalidated the parent scope-freeze SHA/tree and created the exact
+  implementation branch from `origin/main`.
+- Added the closed Host Execution Receipt schema, global sidecar paths, common
+  adapter API, handoff seam, receipt state machine, CLI surface, and focused
+  HEB01–HEB20 coverage.
+- Preserved provider neutrality, global-first/ZPF behavior, existing gate and
+  assurance authority, release immutability, and Architecture Freeze v0.2.
+- Recorded local baseline and implementation evidence in the linked Evidence
+  Bundle; hosted checks and independent audit remain pending until the PR head
+  exists.
+
+## Open items
+
+- Complete all implementation local gates and audit exact changed paths.
+- Push one exact branch and open one unmerged PR with required checks.
+- Obtain independent technical audit of exact PR head/tree/base.
+- Maintainer must decide any canonical promotion or merge; the implementer
+  cannot promote this delta or mark Prompt 012 complete.
+
+## Safety statement
+
+This delta does not authorize provider invocation, arbitrary command execution,
+approval, merge, release, tag mutation, or canonical promotion. It records a
+review-pending implementation proposal and must remain `PROPOSED` /
+`PENDING_MAINTAINER` until an independent reviewer and maintainer act.

@@ -8,6 +8,16 @@ relative ownership resources, conservative capability provenance, bounded role
 assignments, and identity digests; raw host paths, credentials, full prompts,
 and arbitrary commands are not part of the contracts.
 
+Prompt 012 adds `host-execution-receipt.schema.json` v0.1.0. It is a closed,
+provider-neutral receipt for one current Host Dispatch Bundle handoff. It binds
+the bundle, project, Work Order, routing, specialist, model/runtime, execution
+run, target-root, change, adapter, and receipt identities. Its only states are
+`ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED`; reason codes are
+schema-enumerated. The receipt contains no provider call, credential, command,
+prompt, output, or absolute host path, and it is not gate evidence or approval.
+The current receipt is stored in the global sidecar with a fixed 32-entry
+history retention bound.
+
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 
 The `ci-gate-receipt.schema.json` contract is the Stage A exact-SHA CI receipt. The `github-direct-review-evidence.schema.json` contract is the Stage B strict, versioned canonical evidence; it binds source CI run/attempt provenance, the Direct Review workflow, bounded test/evaluation/audit summaries, security and Linux/Windows compatibility status, release identity, artifact provenance, and explicit PASS/FAIL/INCOMPLETE verdicts. Corrected-release security proofs also persist the observed GitHub event/ref fields and, for Dependency Review same-tree mode, the exact merged-PR base/source identity. Unavailable counts remain `null` with an uppercase `COUNT_PARSE_UNAVAILABLE:*` reason code. `github-review-index.schema.json` is the small release table of contents containing only independently verifiable canonical pointers and identities; it is not evidence by itself.

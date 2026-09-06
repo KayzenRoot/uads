@@ -4,6 +4,7 @@ import { safeErrorMessage } from "../lib/safe-persist.js";
 import { findPackageRoot } from "../lib/version.js";
 import { getUadsPaths } from "../lib/workspace.js";
 import { prepareHostDispatchBundle, hostAdapterStatus } from "../adapters/host-dispatch.js";
+import { handoffHostExecution, transitionHostExecutionReceipt } from "../adapters/host-execution.js";
 import {
   detectAllHostAdapters,
   detectHostAdapter,
@@ -16,7 +17,11 @@ import {
   installHostAdapter,
   uninstallHostAdapter,
 } from "../adapters/host-adapter-install.js";
-import { HOST_ADAPTER_IDS, type HostAdapterId } from "../adapters/host-adapter-types.js";
+import {
+  HOST_ADAPTER_IDS,
+  type HostAdapterId,
+  type HostExecutionReceiptState,
+} from "../adapters/host-adapter-types.js";
 
 function adapterId(value: string): HostAdapterId {
   if (!(HOST_ADAPTER_IDS as readonly string[]).includes(value)) {
@@ -250,6 +255,82 @@ export function runAdaptersPrepareCommand(input: {
       `execution: ${bundle.execution.roleDispatch}, parallel=${bundle.execution.parallel}`,
       `assignments: ${bundle.assignments.length}`,
       `bundleDigest: ${bundle.bundleDigest}`,
+      "",
+    ].join("\n");
+  } catch (error) {
+    throw new Error(safeErrorMessage(error));
+  }
+}
+
+function receiptState(value: string): HostExecutionReceiptState {
+  const states: readonly HostExecutionReceiptState[] = ["ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED"];
+  if (!states.includes(value as HostExecutionReceiptState)) {
+    throw new Error(`invalid host execution receipt state: ${value}`);
+  }
+  return value as HostExecutionReceiptState;
+}
+
+export function runAdaptersHandoffCommand(input: {
+  adapter: string;
+  cwd?: string;
+  uadsHome?: string;
+  hostHome?: string;
+  json?: boolean;
+}): string {
+  try {
+    const receipt = handoffHostExecution({
+      adapterId: adapterId(input.adapter),
+      cwd: input.cwd,
+      uadsHome: input.uadsHome,
+      hostHome: input.hostHome,
+      schemaRoot: findPackageRoot(),
+    });
+    if (input.json) return `${JSON.stringify(receipt, null, 2)}\n`;
+    return [
+      "UADS adapters handoff",
+      `adapter: ${receipt.adapterId}`,
+      `receiptId: ${receipt.receiptId}`,
+      `handoffId: ${receipt.handoffId}`,
+      `state: ${receipt.state}`,
+      `bundleId: ${receipt.bundleId}`,
+      `executionRunId: ${receipt.executionRunId}`,
+      `reasonCodes: ${receipt.reasonCodes.join(", ")}`,
+      `receiptDigest: ${receipt.receiptDigest}`,
+      "",
+    ].join("\n");
+  } catch (error) {
+    throw new Error(safeErrorMessage(error));
+  }
+}
+
+export function runAdaptersReceiptCommand(input: {
+  adapter: string;
+  state: string;
+  reasonCodes?: string[];
+  cwd?: string;
+  uadsHome?: string;
+  hostHome?: string;
+  json?: boolean;
+}): string {
+  try {
+    const receipt = transitionHostExecutionReceipt({
+      adapterId: adapterId(input.adapter),
+      state: receiptState(input.state),
+      reasonCodes: input.reasonCodes,
+      cwd: input.cwd,
+      uadsHome: input.uadsHome,
+      hostHome: input.hostHome,
+      schemaRoot: findPackageRoot(),
+    });
+    if (input.json) return `${JSON.stringify(receipt, null, 2)}\n`;
+    return [
+      "UADS adapters receipt",
+      `adapter: ${receipt.adapterId}`,
+      `receiptId: ${receipt.receiptId}`,
+      `state: ${receipt.state}`,
+      `reasonCodes: ${receipt.reasonCodes.join(", ")}`,
+      `executionRunId: ${receipt.executionRunId}`,
+      `receiptDigest: ${receipt.receiptDigest}`,
       "",
     ].join("\n");
   } catch (error) {

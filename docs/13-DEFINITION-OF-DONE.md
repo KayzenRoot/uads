@@ -241,3 +241,32 @@ The selection proof is not derived from this newly added future-implementation
 acceptance block. It uses only the pre-freeze roadmap, Prompt 008/009/010/011
 completion records, the current adapter preparation contract, and the
 corresponding source/schema evidence.
+
+## Prompt 012 Host Execution Boundary / Implementation 001
+
+This implementation is ready only when the exact implementation Work Order is
+independently reviewed and all of the following are proven without a release
+or merge in this increment:
+
+- A strict, schema-closed, provider-neutral Host Execution Receipt binds the
+  current Host Dispatch Bundle and every required Work Order, routing,
+  specialist, model/runtime, execution-run, target-root, change, adapter, and
+  receipt integrity identity.
+- Handoff reconstructs and revalidates current orchestration state and fails
+  closed for missing, corrupt, tampered, stale, replayed, cross-project,
+  cross-adapter, cross-root, unsupported, blocked, or mismatched state.
+- `ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED` are the only
+  states; transitions are bounded, reason codes are stable, terminal facts
+  are immutable, and duplicate handoff side effects are not created.
+- Current and immutable-history receipts use atomic writes, safe identifiers,
+  fixed 32-entry retention, corruption detection, privacy-safe identifiers,
+  and zero project footprint. Raw prompts, model output, commands, tokens,
+  credentials, environment dumps, and absolute host paths are rejected.
+- Cursor, Codex, and Generic Agent Skills share one contract. Unknown host
+  capabilities narrow or block behavior and never add specialists, gates,
+  evidence, scope, parallelism, or model quality.
+- A completed receipt cannot satisfy command evidence, selected gates,
+  independent assurance, review, finalize, release, or deployment semantics.
+- HEB01–HEB20, the existing validation matrix, exact-SHA hosted checks, and
+  independent audit evidence pass. The implementation PR remains unmerged;
+  Prompt 012 is not marked complete by the implementer.

@@ -1,0 +1,22 @@
+[
+  { "id": "HEB01", "name": "valid identity-bound handoff is accepted" },
+  { "id": "HEB02", "name": "missing or corrupt bundle fails closed" },
+  { "id": "HEB03", "name": "tampered bundle fails closed" },
+  { "id": "HEB04", "name": "stale orchestration identity fails closed" },
+  { "id": "HEB05", "name": "cross-project replay fails closed" },
+  { "id": "HEB06", "name": "wrong adapter or root replay fails closed" },
+  { "id": "HEB07", "name": "current execution run is required" },
+  { "id": "HEB08", "name": "unsupported capability remains conservative" },
+  { "id": "HEB09", "name": "authoritative handoff replay has no duplicate side effect" },
+  { "id": "HEB10", "name": "allowed receipt transitions are bounded" },
+  { "id": "HEB11", "name": "invalid and terminal rewrites are rejected" },
+  { "id": "HEB12", "name": "corrupt receipt fails closed" },
+  { "id": "HEB13", "name": "sidecar-only persistence preserves ZPF" },
+  { "id": "HEB14", "name": "sensitive durable fields are rejected" },
+  { "id": "HEB15", "name": "all three adapters share one contract" },
+  { "id": "HEB16", "name": "host-managed model provenance stays conservative" },
+  { "id": "HEB17", "name": "receipt cannot satisfy gates or finalize" },
+  { "id": "HEB18", "name": "receipt history is bounded" },
+  { "id": "HEB19", "name": "CLI output is deterministic and privacy-safe" },
+  { "id": "HEB20", "name": "existing adapter lifecycle remains compatible" }
+]

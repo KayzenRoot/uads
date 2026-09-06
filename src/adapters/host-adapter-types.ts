@@ -94,12 +94,58 @@ export type HostAdapterPrepareInput = {
   schemaRoot?: string;
 };
 
+export type HostExecutionReceiptState = "ACCEPTED" | "STARTED" | "COMPLETED" | "FAILED" | "BLOCKED";
+
+export type HostExecutionHandoffInput = HostAdapterPrepareInput;
+
+export type HostExecutionReceiptInput = HostAdapterPrepareInput & {
+  state: HostExecutionReceiptState;
+  reasonCodes?: string[];
+};
+
 export type HostAdapter = {
   definition: HostAdapterDefinition;
   detect: (input?: HostAdapterDetectionInput) => HostAdapterDetection;
   install: (input?: HostAdapterInstallInput) => HostAdapterState;
   uninstall: (input?: HostAdapterUninstallInput) => HostAdapterState | null;
   prepare: (input?: HostAdapterPrepareInput) => HostDispatchBundle;
+  handoff: (input?: HostExecutionHandoffInput) => HostExecutionReceipt;
+  receipt: (input: HostExecutionReceiptInput) => HostExecutionReceipt;
+};
+
+export type HostExecutionReceipt = {
+  schema: "uads.host-execution-receipt";
+  schemaVersion: "0.1.0";
+  contractVersion: "0.1.0";
+  receiptId: string;
+  handoffId: string;
+  adapterId: HostAdapterId;
+  adapterContractVersion: typeof HOST_ADAPTER_CONTRACT_VERSION;
+  projectId: string;
+  bundleId: string;
+  bundleDigest: string;
+  workOrderId: string;
+  workOrderDigest: string;
+  routingDecisionId: string;
+  routingDecisionDigest: string;
+  specialistSelectionPlanId: string;
+  specialistSelectionDigest: string;
+  modelPlanId: string | null;
+  modelPlanDigest: string | null;
+  modelRuntimeIdentityDigest: string | null;
+  runtimeId: string | null;
+  runtimeIdentityDigest: string;
+  executionRunId: string;
+  hostTargetRootDigest: string;
+  currentChangeDigest: string | null;
+  state: HostExecutionReceiptState;
+  reasonCodes: string[];
+  createdAt: string;
+  updatedAt: string;
+  acceptedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  receiptDigest: string;
 };
 
 export type HostDispatchAssignment = {

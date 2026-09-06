@@ -93,6 +93,7 @@ const requiredFiles = [
   "schemas/specialist-selection-plan.schema.json",
   "schemas/host-adapter-state.schema.json",
   "schemas/host-dispatch-bundle.schema.json",
+  "schemas/host-execution-receipt.schema.json",
   "schemas/github-review-index.schema.json",
   ".engineering/README.md",
   ".engineering/PROTOCOL.md",
@@ -120,6 +121,11 @@ const requiredFiles = [
   ".engineering/baselines/PROMPT-011-ASSURANCE-STABILIZATION-001.md",
   ".engineering/reports/EVIDENCE-BUNDLE-PROMPT-011-ASSURANCE-STABILIZATION-001.md",
   ".engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-011-ASSURANCE-STABILIZATION-001.md",
+  ".engineering/work-orders/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md",
+  ".engineering/context-locks/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md",
+  ".engineering/baselines/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md",
+  ".engineering/reports/EVIDENCE-BUNDLE-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md",
+  ".engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md",
   ".github/ISSUE_TEMPLATE/implementation.yml",
   ".github/workflows/compatibility.yml",
   "scripts/validate/validate-engineering-protocol.mjs",
@@ -143,6 +149,7 @@ const requiredFiles = [
   "evals/specialist-routing/cases.json",
   "src/eval/adapters.ts",
   "evals/adapters/cases.json",
+  "evals/host-execution/cases.json",
   "src/kernel/specialist-router.ts",
   "src/kernel/specialist-obligations.ts",
   "src/kernel/specialist-registry.ts",
@@ -156,10 +163,12 @@ const requiredFiles = [
   "src/adapters/host-adapter-root.ts",
   "src/adapters/host-adapter-install.ts",
   "src/adapters/host-dispatch.ts",
+  "src/adapters/host-execution.ts",
   "src/adapters/cursor-adapter.ts",
   "src/adapters/codex-adapter.ts",
   "src/adapters/generic-agent-skills-adapter.ts",
   "src/commands/adapters.ts",
+  "tests/host-execution.test.ts",
   "src/github/review-index.ts",
   "src/github/security-proof.ts",
   "evals/model-routing/cases.json",
@@ -236,6 +245,7 @@ runNpmGate(["run", "eval:cost"]);
 runNpmGate(["run", "eval:model-routing"]);
 runNpmGate(["run", "eval:specialist-routing"]);
 runNpmGate(["run", "eval:adapters"]);
+runNpmGate(["run", "eval:host-execution"]);
 runNpmGate(["run", "eval:assurance"]);
 runNpmGate(["run", "eval:fault-injection"]);
 runNpmGate(["run", "validate:skills"]);

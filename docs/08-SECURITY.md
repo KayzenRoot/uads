@@ -53,3 +53,18 @@ Corrected-release authorization is fail-closed. Scorecard evidence must be an ex
 The Dependency Review workflow runs for every `pull_request` targeting `main`, including documentation-only changes, so every candidate main commit can produce the required proof. This coverage rule does not make the proof optional: absent, pending, failed, ambiguous, mismatched, cross-PR, or tampered Dependency Review evidence remains non-authorizing.
 
 Canonical post-main Direct Review generation performs bounded readiness polling for pending security proofs. The timeout is explicit and remains non-authorizing: failure, ambiguity, mismatch, cancellation, skipping, tampering, or timeout cannot become `PASS`.
+
+## Host execution boundary
+
+Host Execution receipts are global-sidecar-only, schema-closed, atomic,
+bounded, and bound to the current dispatch bundle, adapter ownership/root
+digest, project, Work Order, routing, specialist, model/runtime, execution-run,
+and change identities. Handoff never accepts command text, provider endpoints,
+credentials, model output, raw prompts, arbitrary capabilities, caller
+authorization booleans, or absolute host paths. The host owns the actual
+IDE/agent/provider invocation; UADS records only bounded outcome state.
+
+`ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED` are the only receipt
+states. Replays and impossible transitions are rejected; terminal receipts are
+immutable. A receipt is never command PASS evidence, gate evidence,
+independent review, assurance, or finalize authorization.

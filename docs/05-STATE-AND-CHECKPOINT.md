@@ -37,3 +37,14 @@ The 0.8.0 Model Execution Plan is persisted separately at `model-routing/current
 - Write checkpoints after each meaningful phase
 - On resume, read the latest checkpoint first
 - Treat sidecar files as durable but not source-of-truth for product code
+
+Prompt 012 adds the host execution receipt sidecar at
+`host-execution/current.json`, with immutable transition entries under
+`host-execution/history/<receipt-id>.json`. Handoff revalidates the current
+Host Dispatch Bundle and all bound orchestration identities before persisting
+`ACCEPTED`. Receipt transitions are limited to the closed
+`ACCEPTED → STARTED → COMPLETED|FAILED|BLOCKED` contract (a host may report a
+direct terminal outcome from `ACCEPTED`); terminal receipts cannot be
+rewritten. History retention is fixed at 32 valid entries and corrupt JSON
+fails closed. Receipts are operational status only: they never replace gate
+evidence, assurance, review, or finalize state.
