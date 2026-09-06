@@ -1,6 +1,8 @@
 # Work Order — `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
-Status: `PROPOSED; READY_FOR_REVIEW`
+Status: `READY_FOR_REVIEW`
+Promotion status: `APPROVED_FOR_MERGE`
+Implementation status: `NOT_STARTED; NOT_AUTHORIZED`
 Repository: `KayzenRoot/uads`
 Branch: `docs/eng-prompt-012-host-execution-boundary-001`
 Baseline Git SHA: `96f2965d0ec26e00968052999b20876c13578a51`
@@ -235,3 +237,11 @@ Correction identity: `Prompt 012 Scope Freeze — Correction 01 / Necessity &
 Identity Reconciliation`.
 
 PR title: `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`.
+
+## POST-APPROVAL PROMOTION
+
+Independent audit comment `5556090827` approved the exact Prompt 012
+scope-freeze head/tree for protected merge. This Work Order's planning state
+is therefore `APPROVED_FOR_MERGE`; the Host Execution Boundary implementation
+remains `NOT_STARTED` and `NOT_AUTHORIZED` in this task. A separate future
+implementation Work Order is required after post-merge verification.

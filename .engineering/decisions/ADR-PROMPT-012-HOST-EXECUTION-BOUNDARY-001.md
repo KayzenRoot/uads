@@ -1,11 +1,12 @@
 # ADR — `ADR-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
-Status: `PROPOSED; PRE-IMPLEMENTATION`
+Status: `ACCEPTED; PRE-IMPLEMENTATION`
 Work Order: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 Branch: `docs/eng-prompt-012-host-execution-boundary-001`
 PR title: `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`
 Baseline: `96f2965d0ec26e00968052999b20876c13578a51`
 Architecture Freeze: `v0.2` — no bump proposed
+Promotion evidence: GitHub PR #18 independent audit comment `5556090827`
 
 ## Context
 
@@ -92,6 +93,8 @@ external service ownership, or a public contract broader than this Work Order,
 stop and propose an explicit freeze bump with compatibility, migration,
 rollback, and rejection evidence before any implementation edit.
 
-This ADR is proposed for independent review with the Work Order. It does not
-authorize implementation, release, tag creation, merge, or canonical
-promotion by itself.
+This ADR is accepted for protected merge as part of the approved planning
+scope freeze. It does not authorize implementation, release, tag creation, or
+version changes. Host Execution implementation remains not started and not
+authorized until a separate future implementation Work Order is independently
+approved after post-merge audit.

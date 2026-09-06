@@ -1,13 +1,14 @@
 # Checkpoint Delta — `PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
-Status: `PROPOSED`
-Canonical promotion: `PENDING_MAINTAINER`
+Status: `ACCEPTED`
+Canonical promotion: `PROMOTED`
 Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
 ## Lifecycle transition
 
 - Before: `Prompt 011 / v0.11.1 externally closed at main 96f2965d; Prompt 012 not started`
-- After proposed: `Prompt 012 scope frozen for independent review; implementation not started`
+- After approved: `Prompt 012 scope freeze accepted and approved for protected
+  merge; implementation not started and not authorized`
 
 ## Completed steps
 
@@ -31,10 +32,11 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
 ## Open items
 
-- Independent technical audit of the exact PR head/tree and decision matrix.
-- Maintainer acceptance of the proposed scope, ADR, and checkpoint delta.
+- Protected squash merge of PR #18 through the normal branch-protection flow.
+- Read-only post-merge verification of the resulting `main` SHA/tree and
+  canonical planning status.
 - A separate future implementation Work Order after this scope freeze is
-  independently accepted; no implementation is authorized by this delta.
+  post-merge verified; no implementation is authorized by this delta.
 
 ## Safety statement
 
@@ -42,7 +44,7 @@ This delta changes only static planning/governance records. It does not change
 runtime source, schemas, tests, workflows, dependencies, version metadata,
 release assets, tags, sidecar runtime state, provider behavior, credentials,
 or external service state. It does not rewrite Prompt 011 history or promote
-canonical product state by itself.
+canonical product state in `main` until the protected merge is completed.
 
 ## Correction 01 reconciliation
 
@@ -51,4 +53,12 @@ Reconciliation` expands the decision matrix to the two roadmap items that
 precede host execution, records the pre-freeze Prompt 008/009 outcomes and
 their relationship to the selected boundary, and binds the Work Order identity
 to the branch and PR title. The correction remains planning-only; no runtime
-implementation or canonical promotion is authorized.
+implementation is authorized.
+
+## Post-approval promotion
+
+Independent audit comment `5556090827` approved the exact PR #18 head/tree
+`367990c8ae2ea0c52c6d8ebf8e5f5ea750f15042` /
+`c9d88db0f7c789a58d89273e715ffd0d582093a3` against the exact `main` base.
+The scope-freeze checkpoint is accepted and promoted for protected merge only.
+Host Execution implementation remains not started and not authorized.

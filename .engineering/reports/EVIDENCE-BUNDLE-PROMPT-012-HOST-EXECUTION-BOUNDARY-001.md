@@ -1,6 +1,7 @@
 # Evidence Bundle — `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 
-Status: `PARTIAL`
+Status: `COMPLETE`
+Promotion state: `APPROVED_FOR_MERGE`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `96f2965d0ec26e00968052999b20876c13578a51`
 Head Git SHA: `pending; authoritative corrected PR head/tree must be read directly from GitHub`
@@ -137,18 +138,19 @@ ownership.
 | Prompt 009 bounded specialist catalog is delivered | `file` | baseline `docs/03-SCOPE.md`, `docs/13-DEFINITION-OF-DONE.md` | PASS | Broader 30+ catalog remains future |
 | Prompt 008 bounded provider-neutral mapping is delivered | `file` | baseline `docs/02-REQUIREMENTS.md`, `docs/03-SCOPE.md`, `docs/06-CONTEXT-AND-COST-INTELLIGENCE.md`, model router/schema/tests | PASS | Host-managed compatibility preserves provider neutrality |
 | Current adapters stop at identity-bound bundle preparation | `file` | baseline `docs/11-ADAPTERS.md`, `src/adapters/host-dispatch.ts`, host bundle schema | PASS | No execution/receipt contract exists |
-| Candidate B is the only objectively NECESSARY next capability | `file` | corrected matrix; pre-freeze roadmap and contract evidence only | PASS_PENDING_REAUDIT | New Prompt 012 DoD text is excluded from this proof |
+| Candidate B is the only objectively NECESSARY next capability | `file` | corrected matrix; pre-freeze roadmap and contract evidence only | PASS | Independent audit approved the exact head; new Prompt 012 DoD text is excluded from this proof |
 | Prompt 012 Work Order is complete and stable | `file` | Work Order | PASS | Contains correction record and stable identity |
 | Architecture decision is explicit | `file` | ADR and `docs/04-ARCHITECTURE.md` | PASS | Freeze v0.2 retained; ADR required before implementation |
-| No runtime implementation was added | `command` | `git status --short --untracked-files=all`, path classification | PASS_PENDING_COMMIT | Must be rechecked on corrected head |
-| `npm run validate:engineering` | `command` | correction post-edit run | PENDING | Must pass on corrected head |
-| `npm run lint` | `command` | correction post-edit run | PENDING | No source changes; must pass on corrected head |
-| `npm run typecheck` | `command` | correction post-edit run | PENDING | No source changes; must pass on corrected head |
+| No runtime implementation was added | `command` | `git status --short --untracked-files=all`, path classification | PASS | Final approved head contains planning/governance records only |
+| `npm run validate:engineering` | `command` | post-approval promotion run | PASS | exit 0; protocol identity and records valid |
+| `npm run lint` | `command` | post-approval promotion run | PASS | exit 0 |
+| `npm run typecheck` | `command` | post-approval promotion run | PASS | exit 0 |
 | `npm test` | `command` | prior exact-source post-edit aggregate run | PASS_BASELINE_SOURCE | Correction changes docs only; hosted Foundation must re-run exact head |
 | `npm run validate` | `command` | prior exact-source post-edit aggregate run | PASS_BASELINE_SOURCE | Correction changes docs only; hosted Foundation must re-run exact head |
-| `git diff --check` | `command` | correction post-edit whitespace validation | PENDING | Must pass on corrected head |
+| `git diff --check` | `command` | post-approval promotion run | PASS | exit 0 |
 | Version/release immutability | `github` | GitHub tag/release API and `VERSION`/package metadata | PASS | Version remains `0.11.1`; no v0.11.2/v0.12.0 |
-| Independent review and PR status | `review` | corrected Prompt 012 PR | PENDING_REAUDIT | Must remain unmerged; no self-approval |
+| Independent review and PR status | `review` | PR #18 comment `5556090827` and exact PR state | PASS | Approved for protected merge; PR remains unmerged until protected flow |
+| Scope-freeze promotion authorization | `review` | PR #18 comment `5556090827` | PASS | ADR/Checkpoint/Evidence/decision promotion authorized; implementation is not |
 
 ## Identity binding
 
@@ -169,5 +171,6 @@ ownership.
 - No generated/cache/vendored material or runtime sidecar state is added.
 - No provider call, deployment, release publication, tag mutation, version
   change, or implementation source change is authorized.
-- The proposed checkpoint remains `PENDING_MAINTAINER` and is not promoted by
-  the executor.
+- The checkpoint is `ACCEPTED`/`PROMOTED` for the approved planning state;
+  protected merge and post-merge read-only verification remain required.
+- Host Execution implementation remains `NOT_STARTED`/`NOT_AUTHORIZED`.

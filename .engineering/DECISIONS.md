@@ -29,7 +29,7 @@ This ledger is repository governance, not UADS runtime state. Entries are append
 
 ## DEC-ENG-004 / ADR-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 — Freeze one necessary next capability
 
-- Status: `PROPOSED`
+- Status: `ACCEPTED`
 - Work Order: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 - Decision: Select bounded, provider-neutral host execution and receipt handling as the sole NECESSARY Prompt 012 capability. The future implementation may deepen the existing Cursor, Codex, and Generic Agent Skills handoff only after the current Host Dispatch Bundle has passed all identity and ownership checks.
 - Necessity evidence: `ROADMAP.md` explicitly identifies “Cursor adapter depth + generic/Codex execution” as the third staged next increment; current `docs/11-ADAPTERS.md` and `src/adapters/host-dispatch.ts` stop at sidecar-only bundle preparation; `docs/02-REQUIREMENTS.md` F24 defines preparation but no execution/receipt contract. Without this boundary, the staged adapter-depth item cannot progress from prepared handoff to verifiable host execution.
@@ -38,10 +38,11 @@ This ledger is repository governance, not UADS runtime state. Entries are append
 - Required proof before implementation acceptance: strict receipt schema, bundle/execution identity binding, target-root ownership binding, replay/staleness/tamper rejection, bounded privacy-safe persistence, zero project footprint, explicit approval boundary, Linux/Windows adapter coverage, and complete local/external validation appropriate to the changed contract.
 - Alternatives rejected: selecting deep UGAS integration because it is merely reserved on the roadmap; selecting a provider gateway because it violates the current provider-neutral boundary; selecting dashboard/marketplace/deployment because no current DoD requires them; selecting no capability because the roadmap has an objectively identified adapter-execution gap.
 - Evidence: `ROADMAP.md`, `docs/02-REQUIREMENTS.md`, `docs/03-SCOPE.md`, `docs/04-ARCHITECTURE.md`, `docs/11-ADAPTERS.md`, `docs/13-DEFINITION-OF-DONE.md`, `integrations/ugas/README.md`, `src/adapters/host-dispatch.ts`, `schemas/host-dispatch-bundle.schema.json`, `tests/host-adapters.test.ts`, and the Prompt 011 final external audit recorded in GitHub PR #16 comment `5554582899`.
+- Promotion evidence: Prompt 012 independent audit approval recorded in GitHub PR #18 comment `5556090827`; accepted for protected merge, with implementation still not started or authorized.
 
 ## DEC-ENG-005 — Prompt 012 Correction 01 / necessity and identity reconciliation
 
-- Status: `PROPOSED`
+- Status: `ACCEPTED`
 - Work Order: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
 - Decision: Retain exactly one NECESSARY capability, bounded provider-neutral host execution and receipt depth, after explicitly reconciling roadmap items 1 and 2 against pre-freeze evidence. Prompt 009's bounded catalog is delivered and broader catalog expansion is FUTURE. Prompt 008's provider-neutral capability/profile mapping and `host-managed` compatibility are delivered; live provider-specific adapters are FUTURE and not a predecessor because provider invocation remains host-owned.
 - Identity: The branch is `docs/eng-prompt-012-host-execution-boundary-001` and the PR title is `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`.
