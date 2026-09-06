@@ -1,5 +1,20 @@
 # 14 — Backlog
 
+## Prompt 012 frozen selection (planning only)
+
+The sole NECESSARY next capability is bounded provider-neutral host execution
+and receipt handling after `uads adapters prepare`. It is represented by
+Work Order `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001` and is not implemented
+by this planning delta. Its boundary and proof obligations are recorded in
+the Prompt 012 ADR and Work Order.
+
+Roadmap reconciliation for this freeze: the bounded Prompt 009 catalog is
+already delivered, so only the broader 30+ catalog remains FUTURE. Prompt
+008's provider-neutral capability/profile mapping and explicit host-managed
+compatibility are already delivered; live provider-specific adapters remain
+FUTURE, are not required to cross the host execution boundary, and remain
+excluded from Prompt 012.
+
 Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that must **not** land in this increment:
 
 - Advanced semantic symbol graph / cross-language AST framework
@@ -21,7 +36,7 @@ Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that 
 - Formal waiver UX for selected gates
 - Provider/runtime negotiation beyond the bounded Linux/Windows Node 20 compatibility proof
 - Assurance dashboards, remote reviewer coordination, signed attestations, or a general policy-as-code engine
-- Prompt 012 capabilities and any deployment/provider gateway expansion
+- Other Prompt 012 capabilities and any deployment/provider gateway expansion
 
 If a change is useful but not required for the current DoD, add it here rather than expanding `src/`.
 # Specialist routing backlog boundaries

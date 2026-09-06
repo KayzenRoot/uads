@@ -126,3 +126,27 @@ limits, or model quality.
 ## Freeze status
 
 v0.2 architecture freeze remains in force. Prompt 002 implements the kernel inside that freeze; breaking global-first / ZPF defaults requires a documented freeze bump.
+
+## Prompt 012 architecture decision (planning only; not implemented)
+
+Prompt 012 is frozen to a bounded host execution and receipt boundary after
+the existing validation chain. The host may accept and execute only an
+identity-bound Host Dispatch Bundle that is current for the Work Order,
+routing decision, specialist/model plans, runtime, context/impact state,
+execution identity, and adapter target-root binding. The resulting receipt is
+sidecar-only, bounded, and bound to the bundle and execution identities.
+
+The kernel remains provider-neutral and does not become a provider API client,
+model invocation gateway, arbitrary-command executor, or approval authority.
+The host remains the owner of host/provider invocation and any approval-gated
+action; Prompt 012 does not grant credentials, external service ownership, or
+permission to deploy. Stale, replayed, tampered, cross-project, ambiguous, or
+unsupported handoffs fail closed.
+
+No Architecture Freeze v0.2 bump is required for this frozen plan because it
+extends the already documented host-adapter boundary while preserving
+global-first state, zero project footprint, bounded evidence, and explicit
+ownership. The associated ADR must be accepted before implementation. Any
+implementation that requires project-local operational state, provider calls
+from the kernel, new credentials, arbitrary command authority, or changed
+release/security ownership must stop and propose an explicit freeze bump.

@@ -44,6 +44,22 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 ## Future (not this increment)
 
 Provider API clients, vendor price catalogs, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis, and autonomous provider execution.
+
+## Prompt 012 planning decision (not implemented)
+
+The next implementation scope is frozen to one capability: a bounded,
+provider-neutral host execution and receipt boundary for an identity-bound
+Host Dispatch Bundle. This planned capability is a continuation of F24's
+adapter handoff boundary, not provider invocation, credential handling,
+autonomous approval, dashboard/control-plane behavior, or deployment. No new
+functional requirement is claimed as complete by this planning record.
+
+The pre-freeze reconciliation is explicit: the bounded Prompt 009 specialist
+catalog is delivered, while its broader 30+ expansion remains future; Prompt
+008 already supplies provider-neutral capability/profile mapping, model
+execution plans, and host-managed compatibility without provider calls. Live
+provider-specific adapters therefore remain future and are not a predecessor
+for the selected host boundary.
 # Specialist routing requirements (Prompt 009)
 
 Specialist delegation is global-first and sidecar-only. A normalized Work Order is bound to a deterministic Specialist Selection Plan containing the Work Order digest, routing digest, registry digest, policy digest, and optional change/impact/gate-contract digests. The plan must make selected coverage, assurance, evidence obligations, rejection reasons, conflicts, and dependency groups inspectable without exposing chain-of-thought.
