@@ -9,7 +9,7 @@ import { installHostAdapter, uninstallHostAdapter } from "../src/adapters/host-a
 import { prepareHostDispatchBundle } from "../src/adapters/host-dispatch.js";
 import { runAdaptersHandoffCommand, runAdaptersReceiptCommand } from "../src/commands/adapters.js";
 import { runFinalize, runDispatch } from "../src/kernel/execution.js";
-import { readCurrentExecutionRun } from "../src/kernel/execution-persist.js";
+import { persistExecutionRun, readCurrentExecutionRun } from "../src/kernel/execution-persist.js";
 import { runPlan } from "../src/kernel/orchestrator.js";
 import { resolveProjectContext } from "../src/kernel/project-context.js";
 import { assertZpf, seedFrontend } from "./execution-helpers.js";
@@ -22,7 +22,7 @@ function hostHome(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "uads-host-exec-test-"));
 }
 
-function fixture(adapterId: AdapterId = "generic-agent-skills") {
+function fixture(adapterId: AdapterId = "generic-agent-skills", requiresApproval: string[] = []) {
   const dirs = tempDirs();
   seedFrontend(dirs.repo);
   const planned = runPlan({
@@ -39,6 +39,16 @@ function fixture(adapterId: AdapterId = "generic-agent-skills") {
       classifier: "host-structured",
     },
   });
+  const plannedContext = resolveProjectContext(dirs.repo, dirs.home);
+  const workOrderPath = path.join(plannedContext.paths.workOrders, `${planned.workOrder.workOrderId}.json`);
+  rewrite(workOrderPath, (workOrder) => ({
+    ...workOrder,
+    autonomyBoundary: {
+      ...(workOrder.autonomyBoundary as Record<string, unknown>),
+      requiresApproval: [...requiresApproval],
+    },
+  }));
+  planned.workOrder.autonomyBoundary.requiresApproval = [...requiresApproval];
   const target = hostHome();
   installHostAdapter(adapterId, { hostHome: target, uadsHome: dirs.home, packageRoot: ROOT }, ROOT);
   const dispatched = runDispatch({ cwd: dirs.repo, uadsHome: dirs.home, session: "implementation-session" });
@@ -46,8 +56,8 @@ function fixture(adapterId: AdapterId = "generic-agent-skills") {
   return { ...dirs, target, planned, dispatched, context, adapterId };
 }
 
-function preparedFixture(adapterId: AdapterId = "generic-agent-skills") {
-  const value = fixture(adapterId);
+function preparedFixture(adapterId: AdapterId = "generic-agent-skills", requiresApproval: string[] = []) {
+  const value = fixture(adapterId, requiresApproval);
   const bundle = prepareHostDispatchBundle({
     adapterId,
     cwd: value.repo,
@@ -77,6 +87,16 @@ function handoff(value: ReturnType<typeof preparedFixture>) {
     hostHome: value.target,
     schemaRoot: ROOT,
   });
+}
+
+function expectHostExecutionReason(action: () => unknown, reasonCode: string): void {
+  let thrown: unknown;
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toMatchObject({ reasonCode });
 }
 
 describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
@@ -151,8 +171,8 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
   it("HEB10 records only allowed deterministic receipt transitions", () => {
     const value = preparedFixture();
     handoff(value);
-    const started = transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "STARTED", schemaRoot: ROOT });
-    const completed = transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "COMPLETED", schemaRoot: ROOT });
+    const started = transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT });
+    const completed = transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT });
     expect(started.state).toBe("STARTED");
     expect(completed.state).toBe("COMPLETED");
     expect(completed.handoffId).toBe(started.handoffId);
@@ -163,9 +183,9 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
   it("HEB11 rejects impossible transitions and terminal rewrites", () => {
     const value = preparedFixture();
     handoff(value);
-    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "COMPLETED", schemaRoot: ROOT })).not.toThrow();
+    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT })).not.toThrow();
     const terminal = readCurrentHostExecutionReceipt(value.context.paths, ROOT)!;
-    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "STARTED", schemaRoot: ROOT })).toThrow(/immutable|terminal/i);
+    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT })).toThrow(/immutable|terminal/i);
     expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)?.receiptDigest).toBe(terminal.receiptDigest);
   });
 
@@ -174,7 +194,7 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     handoff(value);
     rewrite(value.context.paths.currentHostExecutionReceipt, (receipt) => ({ ...receipt, state: "COMPLETED" }));
     expect(() => readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toThrow(/digest|corrupt|invalid/i);
-    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "STARTED", schemaRoot: ROOT })).toThrow(/digest|corrupt|invalid/i);
+    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT })).toThrow(/digest|corrupt|invalid/i);
   });
 
   it("HEB13 persists only in the global sidecar and preserves ZPF", () => {
@@ -219,8 +239,8 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
   it("HEB17 completed receipt cannot satisfy execution gates or finalize", () => {
     const value = preparedFixture();
     handoff(value);
-    transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "STARTED", schemaRoot: ROOT });
-    transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "COMPLETED", schemaRoot: ROOT });
+    transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT });
+    transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT });
     const runBefore = readCurrentExecutionRun(value.context.paths, ROOT)!;
     expect(runBefore.status).not.toBe("completed");
     expect(runBefore.evidenceRefs).toEqual([]);
@@ -254,7 +274,7 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     expect(parsed.state).toBe("ACCEPTED");
     expect(json).not.toContain(value.home);
     expect(json).not.toContain(value.target);
-    const human = runAdaptersReceiptCommand({ adapter: value.adapterId, cwd: value.repo, uadsHome: value.home, state: "STARTED" });
+    const human = runAdaptersReceiptCommand({ adapter: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED" });
     expect(human).toContain("state: STARTED");
     expect(human).not.toContain(value.home);
     expect(human).not.toContain(value.target);
@@ -268,5 +288,128 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
       const removed = uninstallHostAdapter(adapterId, { hostHome: value.target, uadsHome: value.home }, ROOT);
       expect(removed?.installStatus).toBe("NOT_INSTALLED");
     }
+  });
+
+  it("HEB21 rejects a transition after the current execution run changes", () => {
+    const value = preparedFixture();
+    const accepted = handoff(value);
+    const changedRun = {
+      ...value.dispatched.run,
+      executionRunId: "er_current_identity_drift",
+      updatedAt: new Date(Date.now() + 1_000).toISOString(),
+    };
+    persistExecutionRun({ paths: value.context.paths, run: changedRun, schemaRoot: ROOT });
+    expectHostExecutionReason(
+      () => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT }),
+      "EXECUTION_RUN_MISMATCH",
+    );
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(accepted);
+  });
+
+  it("HEB22 rejects current Work Order, routing, specialist, model, and change drift", () => {
+    const mutations: Array<{ label: string; mutate: (value: ReturnType<typeof preparedFixture>) => void }> = [
+      {
+        label: "work-order",
+        mutate: (value) => {
+          const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+          rewrite(workOrderPath, (workOrder) => ({ ...workOrder, objective: "drifted current objective" }));
+        },
+      },
+      {
+        label: "routing",
+        mutate: (value) => {
+          const routingPath = path.join(value.context.paths.decisions, `${value.planned.workOrder.routingDecisionId}.json`);
+          rewrite(routingPath, (routing) => ({ ...routing, warnings: [...((routing.warnings as string[]) ?? []), "drifted" ] }));
+        },
+      },
+      {
+        label: "specialist",
+        mutate: (value) => rewrite(value.context.paths.currentSpecialistSelection, (selection) => ({ ...selection, selectionDigest: "a".repeat(64) })),
+      },
+      {
+        label: "model",
+        mutate: (value) => rewrite(value.context.paths.currentModelRouting, (model) => ({ ...model, planId: "model_plan_drift" })),
+      },
+      {
+        label: "current-change",
+        mutate: (value) => {
+          const runPath = path.join(value.context.paths.executionRuns, value.dispatched.run.executionRunId, "run.json");
+          rewrite(runPath, (run) => ({ ...run, currentChangeDigest: "b".repeat(64) }));
+        },
+      },
+    ];
+    for (const mutation of mutations) {
+      const value = preparedFixture();
+      handoff(value);
+      mutation.mutate(value);
+      let thrown: unknown;
+      try {
+        transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT });
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, mutation.label).toBeDefined();
+      expect((thrown as { reasonCode?: string }).reasonCode, mutation.label).toMatch(/BUNDLE_STALE|SPECIALIST_SELECTION_INVALID|MODEL_PLAN_BLOCKED|CHANGE_IDENTITY_MISMATCH/);
+    }
+  });
+
+  it("HEB23 rejects a transition after host ownership becomes stale", () => {
+    const value = preparedFixture();
+    handoff(value);
+    const staleTarget = hostHome();
+    expectHostExecutionReason(
+      () => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: staleTarget, state: "STARTED", schemaRoot: ROOT }),
+      "OWNERSHIP_NOT_TRUSTED",
+    );
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)?.state).toBe("ACCEPTED");
+  });
+
+  it("HEB24 rejects a semantically replaced current bundle without rewriting the old receipt", () => {
+    const value = preparedFixture();
+    const accepted = handoff(value);
+    rewrite(value.context.paths.currentHostDispatch, (bundle) => {
+      const changed = { ...bundle, includedScope: [...((bundle.includedScope as string[]) ?? []), "tests"] };
+      const { bundleDigest: _ignored, ...withoutDigest } = changed;
+      return { ...changed, bundleDigest: sha256Hex(JSON.stringify(stableValue(withoutDigest))) };
+    });
+    expectHostExecutionReason(
+      () => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT }),
+      "BUNDLE_STALE",
+    );
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(accepted);
+  });
+
+  it("HEB25 continues an unchanged current handoff normally", () => {
+    const value = preparedFixture();
+    handoff(value);
+    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT })).not.toThrow();
+    expect(() => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT })).not.toThrow();
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)?.state).toBe("COMPLETED");
+  });
+
+  it("HEB26 blocks an approval-gated handoff without an existing authorization proof", () => {
+    const value = preparedFixture("generic-agent-skills", ["production deployment"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toBeNull();
+  });
+
+  it("HEB27 proves a completed receipt cannot substitute for approval authority", () => {
+    const value = preparedFixture();
+    handoff(value);
+    transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT });
+    const completed = transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "COMPLETED", schemaRoot: ROOT });
+    const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+    rewrite(workOrderPath, (workOrder) => ({
+      ...workOrder,
+      autonomyBoundary: {
+        ...(workOrder.autonomyBoundary as Record<string, unknown>),
+        requiresApproval: ["production deployment"],
+      },
+    }));
+    expectHostExecutionReason(
+      () => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT }),
+      "TERMINAL_IMMUTABLE",
+    );
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(completed);
   });
 });

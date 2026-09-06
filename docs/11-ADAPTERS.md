@@ -138,6 +138,16 @@ cross-root identity, unsupported ownership, missing execution run, and replay
 fail closed. `uads adapters receipt <adapter> --state <state>` only records
 the closed outcome transition and never changes gate evidence, assurance,
 review, or finalize state.
+
+Every mutating receipt transition reconstructs the current dispatch artifacts
+and rechecks the accepted bundle, execution run, Work Order/routing,
+specialist selection, model/runtime, current-change, adapter ownership, and
+target-root identities. A stale transition is rejected without rewriting the
+accepted receipt. Handoff also reads the current Work Order autonomy boundary;
+because this architecture has no durable authorization-proof primitive, a
+non-empty `requiresApproval` list blocks handoff with
+`APPROVAL_AUTHORIZATION_MISSING`. No receipt or caller input can authorize the
+action.
 # Specialist delegation contract
 
 Adapters may invoke the lean `agents/uads-*.md` descriptors selected by the sidecar Specialist Selection Plan. The kernel emits role-specific assignments with objective, relevant affected areas/files/gates, evidence obligations, risk, forbidden scope, dependency group, and parallel eligibility. Adapters must not invent profiles, call providers from the kernel, execute approval-gated actions, or treat a stale/blocked plan as dispatch authorization.

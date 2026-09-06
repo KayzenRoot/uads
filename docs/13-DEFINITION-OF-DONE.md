@@ -270,3 +270,14 @@ or merge in this increment:
 - HEB01–HEB20, the existing validation matrix, exact-SHA hosted checks, and
   independent audit evidence pass. The implementation PR remains unmerged;
   Prompt 012 is not marked complete by the implementer.
+
+## Prompt 012 Implementation 001 - Correction 01
+
+Complete only when all are true:
+
+- Every mutating Host Execution receipt transition reconstructs and validates current orchestration/host authority against the accepted bundle.
+- Execution-run, Work Order/routing, specialist, model/runtime, current-change, adapter ownership, target-root, and semantic bundle drift fail closed without rewriting the earlier receipt.
+- Approval-gated handoff reads the existing Work Order autonomy boundary and returns `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof exists.
+- No receipt state, CLI flag, caller prose, provider call, network operation, credential, or arbitrary command creates approval authority.
+- HEB01-HEB20 and HEB21-HEB27 pass, with the original 49-file/374-test baseline preserved or increased.
+- The correction remains on PR #19, unmerged and unreleased, pending independent re-audit of the exact new head.

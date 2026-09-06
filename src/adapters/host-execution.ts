@@ -7,7 +7,6 @@ import { containsAbsoluteHostPath, containsUnredactedSecret } from "../lib/secre
 import { sanitizeOperationalValue } from "../lib/safe-persist.js";
 import { findPackageRoot } from "../lib/version.js";
 import type { UadsPaths } from "../lib/workspace.js";
-import { readCurrentExecutionRun } from "../kernel/execution-persist.js";
 import { resolveProjectContext } from "../kernel/project-context.js";
 import {
   assertHostDispatchBundleMatchesCurrent,
@@ -381,6 +380,53 @@ function classifyDispatchFailure(error: unknown): HostExecutionReasonCode {
   return "BUNDLE_STALE";
 }
 
+type CurrentAuthorityInput = {
+  adapterId: HostAdapterId;
+  cwd?: string;
+  uadsHome?: string;
+  hostHome?: string;
+  schemaRoot: string;
+};
+
+function assertCurrentHostExecutionAuthority(
+  input: CurrentAuthorityInput,
+  bundle: NonNullable<ReturnType<typeof readCurrentHostDispatchBundle>>,
+  receipt?: HostExecutionReceipt,
+): HostDispatchCurrentArtifacts {
+  const ownership = inspectHostAdapterOwnership(
+    input.adapterId,
+    { uadsHome: input.uadsHome, hostHome: input.hostHome },
+    input.schemaRoot,
+  );
+  if (ownership.status !== "CLEAN") {
+    throw new HostExecutionError("host adapter ownership is not trusted for current execution authority", "OWNERSHIP_NOT_TRUSTED");
+  }
+
+  try {
+    const artifacts = readCurrentHostDispatchArtifacts(input);
+    if (artifacts.executionRunId !== bundle.executionRunId) {
+      throw new HostExecutionError("current execution run does not match the accepted host dispatch bundle", "EXECUTION_RUN_MISMATCH");
+    }
+    assertHostDispatchBundleMatchesCurrent(bundle, artifacts, input.adapterId);
+    if (receipt && !currentReceiptMatchesBundle(receipt, bundle)) {
+      throw new HostExecutionError("accepted host execution receipt is bound to a stale dispatch bundle", "BUNDLE_STALE");
+    }
+    return artifacts;
+  } catch (error) {
+    if (error instanceof HostExecutionError) throw error;
+    throw new HostExecutionError("current host execution authority is stale or invalid", classifyDispatchFailure(error));
+  }
+}
+
+function assertApprovalBoundary(artifacts: HostDispatchCurrentArtifacts): void {
+  if (artifacts.workOrder.autonomyBoundary.requiresApproval.length > 0) {
+    throw new HostExecutionError(
+      "host execution handoff is blocked: APPROVAL_AUTHORIZATION_MISSING; no verifiable authorization record exists for the current approval-gated Work Order",
+      "APPROVAL_AUTHORIZATION_MISSING",
+    );
+  }
+}
+
 export function handoffHostExecution(input: {
   adapterId: HostAdapterId;
   cwd?: string;
@@ -416,39 +462,11 @@ export function handoffHostExecution(input: {
     throw new HostExecutionError("host dispatch bundle has no execution run identity", "EXECUTION_RUN_MISSING");
   }
 
-  const ownership = inspectHostAdapterOwnership(
-    input.adapterId,
-    { uadsHome: input.uadsHome, hostHome: input.hostHome },
-    schemaRoot,
+  const artifacts = assertCurrentHostExecutionAuthority(
+    { adapterId: input.adapterId, cwd: input.cwd, uadsHome: input.uadsHome, hostHome: input.hostHome, schemaRoot },
+    bundle,
   );
-  if (ownership.status !== "CLEAN") {
-    throw new HostExecutionError("host adapter ownership is not trusted for handoff", "OWNERSHIP_NOT_TRUSTED");
-  }
-
-  const currentRun = readCurrentExecutionRun(ctx.paths, schemaRoot);
-  if (!currentRun) throw new HostExecutionError("current execution run is missing", "EXECUTION_RUN_MISSING");
-  if (currentRun.executionRunId !== bundle.executionRunId) {
-    throw new HostExecutionError("host dispatch execution run does not match the current run", "EXECUTION_RUN_MISMATCH");
-  }
-
-  let artifacts: HostDispatchCurrentArtifacts;
-  try {
-    artifacts = readCurrentHostDispatchArtifacts({
-      adapterId: input.adapterId,
-      cwd: input.cwd,
-      uadsHome: input.uadsHome,
-      hostHome: input.hostHome,
-      schemaRoot,
-    });
-    if (artifacts.executionRunId !== bundle.executionRunId) {
-      throw new HostExecutionError("current execution run does not match the bundle", "EXECUTION_RUN_MISMATCH");
-    }
-    assertHostDispatchBundleMatchesCurrent(bundle, artifacts, input.adapterId);
-  } catch (error) {
-    if (error instanceof HostExecutionError) throw error;
-    const reason = classifyDispatchFailure(error);
-    throw new HostExecutionError("current host dispatch identity is stale or invalid", reason);
-  }
+  assertApprovalBoundary(artifacts);
 
   if (existing && currentReceiptMatchesBundle(existing, bundle)) {
     return existing;
@@ -486,6 +504,12 @@ export function transitionHostExecutionReceipt(input: HostExecutionReceiptInput 
   if (!currentReceiptMatchesBundle(current, bundle)) {
     throw new HostExecutionError("host execution receipt binding is stale", "BUNDLE_STALE");
   }
+  const artifacts = assertCurrentHostExecutionAuthority(
+    { adapterId: input.adapterId, cwd: input.cwd, uadsHome: input.uadsHome, hostHome: input.hostHome, schemaRoot },
+    bundle,
+    current,
+  );
+  assertApprovalBoundary(artifacts);
   const next = buildReceipt(bundle, nextState, reasonCodes, current);
   return persistHostExecutionReceipt(ctx.paths, next, schemaRoot);
 }

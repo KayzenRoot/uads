@@ -16,6 +16,12 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 - Added the closed Host Execution Receipt schema, global sidecar paths, common
   adapter API, handoff seam, receipt state machine, CLI surface, and focused
   HEB01–HEB20 coverage.
+- Applied Correction 01: receipt mutations now reconstruct current dispatch
+  authority before writing, and approval-gated Work Orders fail closed with
+  `APPROVAL_AUTHORIZATION_MISSING` when no durable exact-identity proof exists.
+- Added HEB21–HEB27 coverage for execution/orchestration/host/bundle drift,
+  unchanged transition continuity, approval rejection, and completed-receipt
+  non-substitution.
 - Preserved provider neutrality, global-first/ZPF behavior, existing gate and
   assurance authority, release immutability, and Architecture Freeze v0.2.
 - Recorded local baseline and implementation evidence in the linked Evidence
@@ -24,7 +30,7 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
 ## Open items
 
-- Complete all implementation local gates and audit exact changed paths.
+- Complete all correction local gates and audit exact changed paths.
 - Push one exact branch and open one unmerged PR with required checks.
 - Obtain independent technical audit of exact PR head/tree/base.
 - Maintainer must decide any canonical promotion or merge; the implementer

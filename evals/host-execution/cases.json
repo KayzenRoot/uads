@@ -18,5 +18,12 @@
   { "id": "HEB17", "name": "receipt cannot satisfy gates or finalize" },
   { "id": "HEB18", "name": "receipt history is bounded" },
   { "id": "HEB19", "name": "CLI output is deterministic and privacy-safe" },
-  { "id": "HEB20", "name": "existing adapter lifecycle remains compatible" }
+  { "id": "HEB20", "name": "existing adapter lifecycle remains compatible" },
+  { "id": "HEB21", "name": "accepted handoff rejects current execution run drift" },
+  { "id": "HEB22", "name": "accepted handoff rejects current orchestration identity drift" },
+  { "id": "HEB23", "name": "accepted handoff rejects stale host ownership" },
+  { "id": "HEB24", "name": "accepted handoff rejects a semantically replaced bundle" },
+  { "id": "HEB25", "name": "unchanged accepted handoff transitions normally" },
+  { "id": "HEB26", "name": "approval-gated handoff fails closed without proof" },
+  { "id": "HEB27", "name": "completed receipt cannot substitute for approval" }
 ]

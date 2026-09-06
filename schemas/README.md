@@ -18,6 +18,12 @@ prompt, output, or absolute host path, and it is not gate evidence or approval.
 The current receipt is stored in the global sidecar with a fixed 32-entry
 history retention bound.
 
+Correction 01 additionally requires current-authority revalidation before a
+mutating transition and fail-closed `APPROVAL_AUTHORIZATION_MISSING` when the
+current Work Order declares approval-gated actions without an exact durable
+authorization proof. The schema remains closed; receipt state is never an
+approval authority.
+
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 
 The `ci-gate-receipt.schema.json` contract is the Stage A exact-SHA CI receipt. The `github-direct-review-evidence.schema.json` contract is the Stage B strict, versioned canonical evidence; it binds source CI run/attempt provenance, the Direct Review workflow, bounded test/evaluation/audit summaries, security and Linux/Windows compatibility status, release identity, artifact provenance, and explicit PASS/FAIL/INCOMPLETE verdicts. Corrected-release security proofs also persist the observed GitHub event/ref fields and, for Dependency Review same-tree mode, the exact merged-PR base/source identity. Unavailable counts remain `null` with an uppercase `COUNT_PARSE_UNAVAILABLE:*` reason code. `github-review-index.schema.json` is the small release table of contents containing only independently verifiable canonical pointers and identities; it is not evidence by itself.

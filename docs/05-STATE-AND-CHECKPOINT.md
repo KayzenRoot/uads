@@ -48,3 +48,13 @@ direct terminal outcome from `ACCEPTED`); terminal receipts cannot be
 rewritten. History retention is fixed at 32 valid entries and corrupt JSON
 fails closed. Receipts are operational status only: they never replace gate
 evidence, assurance, review, or finalize state.
+
+Before every mutating receipt transition, UADS reconstructs the current Host
+Dispatch artifacts and compares them with the accepted bundle. A changed
+execution run, Work Order, routing decision, specialist selection, model plan,
+runtime, current-change identity, adapter ownership, target root, or bundle
+fails closed with a stable reason code; the previous receipt remains unchanged.
+Approval-gated Work Orders also fail closed at handoff with
+`APPROVAL_AUTHORIZATION_MISSING` when no existing durable authorization proof
+can be verified for the current identity. A receipt or caller-provided state
+never creates that authority.

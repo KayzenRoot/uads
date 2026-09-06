@@ -73,9 +73,27 @@ independent audit approves the exact PR head.
 - The implementation Work Order is the only new implementation authority;
   its checkpoint delta remains review-pending until maintainer action.
 
+## Correction 01 — Current-Identity & Approval-Boundary Enforcement
+
+The independent audit identified two HIGH findings on PR #19 head
+`00aab691814486fe8ee3c608a98a2c5dc10a94c8` / tree
+`acef397ce681eee2ee3ceb52a33884a0654d1669`: mutating transitions trusted an
+unchanged persisted bundle after current orchestration drift, and handoff did
+not enforce `autonomyBoundary.requiresApproval`. This correction keeps the
+same Work Order, branch, PR, architecture freeze, and release boundary.
+
+The correction reconstructs current Host Dispatch artifacts before every
+mutating transition and fails closed on execution-run, Work Order/routing,
+specialist, model/runtime, current-change, adapter ownership, target-root, or
+semantic bundle drift. The current architecture has no durable authorization
+proof primitive; therefore any current Work Order with non-empty
+`requiresApproval` is rejected at handoff with the schema-closed
+`APPROVAL_AUTHORIZATION_MISSING` reason. No receipt, CLI flag, or prose is
+treated as approval.
+
 ## Acceptance criteria
 
-- [ ] HEB01–HEB20 pass on the exact implementation source.
+- [ ] HEB01–HEB20 and HEB21–HEB27 pass on the exact implementation source.
 - [ ] Handoff fails closed for missing/corrupt/tampered/stale/replayed,
       cross-project, wrong-adapter, cross-root, unsupported, blocked, and
       mismatched identities.
@@ -89,6 +107,12 @@ independent audit approves the exact PR head.
       fabricate unproven subagent, parallel, provider, or model capability.
 - [ ] A completed receipt cannot satisfy evidence, gates, assurance, review,
       finalize, release, or deployment authority.
+- [ ] Every mutating receipt transition revalidates current authority rather
+      than trusting receipt-plus-old-bundle equality; drift leaves the prior
+      receipt unchanged.
+- [ ] Approval-gated handoff fails closed with
+      `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof
+      exists, and completed receipts cannot substitute for approval.
 - [ ] Existing adapter lifecycle behavior and the full pre-existing validation
       matrix remain passing; total existing tests do not decrease from 48 files
       and 354 tests.
@@ -100,8 +124,9 @@ independent audit approves the exact PR head.
   `npm run lint`, `npm run typecheck`, `npm test`, all existing evals,
   `npm run eval:host-execution`, `npm run validate`, and
   `npm audit --audit-level=high`.
-- Focused: `npm run eval:host-execution` with HEB01–HEB20 and direct schema,
-  privacy, ZPF, replay, transition, and adapter lifecycle assertions.
+- Focused: `npm run eval:host-execution` with HEB01–HEB27 and direct schema,
+  privacy, ZPF, replay, current-identity, approval, transition, and adapter
+  lifecycle assertions.
 - Hosted: exact-head Foundation, CodeQL, Dependency Review, Linux Node 20,
   Windows Node 20, and required direct-review/security proof checks.
 - Evidence Bundle:
