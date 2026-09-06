@@ -28,9 +28,16 @@ Deterministic evidence reuse with content-aware validity, conservative gate poli
 
 ## Next increments (planned)
 
-1. Broader specialist catalog (still not a marketplace)
-2. Provider adapters mapping capability classes to models
-3. Cursor adapter depth + generic/Codex execution — **selected as the sole Prompt 012 capability**
+1. Broader specialist catalog (still not a marketplace) — FUTURE; the bounded
+   Prompt 009 catalog is sufficient for current routing and the complete 30+
+   catalog remains explicitly deferred.
+2. Provider adapters mapping capability classes to models — FUTURE for live
+   provider-specific adapters; the provider-neutral capability/profile mapping
+   and host-managed compatibility needed by the current contract are already
+   delivered by Prompt 008.
+3. Cursor adapter depth + generic/Codex execution — **selected as the sole
+   Prompt 012 capability**, limited to the host execution/receipt boundary
+   after the already delivered dispatch-bundle preparation.
 4. UGAS integration (reserved under `integrations/ugas/`)
 
 ## Prompt 012 — Scope freeze (planning only)
@@ -41,10 +48,15 @@ for an already validated Host Dispatch Bundle. This is a planning decision,
 not an implementation claim. The current release remains `0.11.1` and the
 current host adapters still stop at sidecar-only preparation.
 
-The selection is NECESSARY for the staged adapter-depth roadmap item because
-the current product can prepare an identity-bound handoff but cannot yet
-execute that handoff through an ownership-safe host boundary or record a
-bounded completion/failure receipt. The selected capability must preserve
+The selection is NECESSARY for the staged adapter-depth roadmap item after
+reconciling the two preceding items against the pre-freeze repository state.
+Prompt 009 already delivers the bounded specialist registry, while Prompt 008
+already delivers provider-neutral capability/profile mapping and explicit
+host-managed compatibility; live provider adapters are not a prerequisite
+because provider invocation remains host-owned and out of scope. The current
+product can prepare an identity-bound handoff but cannot yet execute that
+handoff through an ownership-safe host boundary or record a bounded
+completion/failure receipt. The selected capability must preserve
 global-first state, zero project footprint, provider neutrality, explicit
 approval ownership, and fail-closed identity checks.
 

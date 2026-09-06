@@ -2,7 +2,7 @@
 
 Status: `PROPOSED; READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
-Branch: `docs/prompt-012-scope-freeze`
+Branch: `docs/eng-prompt-012-host-execution-boundary-001`
 Baseline Git SHA: `96f2965d0ec26e00968052999b20876c13578a51`
 Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 Scope class: `architectural`
@@ -33,6 +33,12 @@ not implement the capability.
   provide a bounded execution receipt.
 - The roadmap explicitly lists “Cursor adapter depth + generic/Codex
   execution” as the third next increment.
+- Pre-freeze reconciliation confirms that Prompt 009's bounded catalog is
+  delivered while broader catalog expansion remains future, and that Prompt
+  008's provider-neutral capability/profile mapping plus host-managed mode are
+  already sufficient for the current contract. Live provider adapters are not
+  a predecessor because provider invocation remains host-owned and out of
+  scope.
 - F24 and the current DoD prove preparation and identity binding, not host
   execution completion.
 - UGAS is a reserved stub and is not a prerequisite for this stage.
@@ -213,3 +219,19 @@ is unresolved, runtime/source implementation is added during planning, a
 version/release/tag changes, Prompt 011 evidence is rewritten, any identity
 or privacy proof is unavailable, or any unresolved HIGH/CRITICAL planning
 inconsistency remains.
+
+## CORRECTION 01 — Necessity and identity reconciliation
+
+Audit finding addressed by this correction: the decision matrix must evaluate
+the two roadmap items preceding host execution, and the Work Order identity
+must be repeated by the branch and pull request. The corrected matrix records
+the bounded Prompt 009 catalog as delivered with broader expansion FUTURE; it
+records Prompt 008's bounded provider-neutral mapping as delivered with live
+provider adapters FUTURE; and it retains exactly one NECESSARY candidate,
+host execution depth. The necessity proof uses only pre-freeze sources and
+does not use the new Prompt 012 DoD text as evidence.
+
+Correction identity: `Prompt 012 Scope Freeze — Correction 01 / Necessity &
+Identity Reconciliation`.
+
+PR title: `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`.

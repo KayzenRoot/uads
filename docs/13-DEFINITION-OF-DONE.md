@@ -236,3 +236,8 @@ adapter compatibility without provider calls from the kernel.
 This section records selection criteria, not completed product behavior. UGAS,
 provider gateways, dashboards, marketplaces, deployment automation, and other
 unselected roadmap items remain outside Prompt 012.
+
+The selection proof is not derived from this newly added future-implementation
+acceptance block. It uses only the pre-freeze roadmap, Prompt 008/009/010/011
+completion records, the current adapter preparation contract, and the
+corresponding source/schema evidence.

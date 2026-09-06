@@ -2,6 +2,8 @@
 
 Status: `PROPOSED; PRE-IMPLEMENTATION`
 Work Order: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
+Branch: `docs/eng-prompt-012-host-execution-boundary-001`
+PR title: `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`
 Baseline: `96f2965d0ec26e00968052999b20876c13578a51`
 Architecture Freeze: `v0.2` — no bump proposed
 
@@ -18,6 +20,15 @@ Prompt 011 is externally closed at final main
 `96f2965d0ec26e00968052999b20876c13578a51`, tree
 `4fb7004d1ff923cd03f3df9f085ca248c2e49b67`; its closure is historical input,
 not a reason to rewrite the Prompt 011 records.
+
+The two preceding roadmap candidates were reconciled against the pre-freeze
+state before selecting this increment. Prompt 009's bounded registry is
+delivered; only its broader 30+ expansion remains future. Prompt 008's
+provider-neutral capability/profile mapping, evidence-bearing Model Execution
+Plan, and explicit host-managed compatibility are delivered without provider
+calls. Live provider adapters are therefore a future expansion, not a
+predecessor for the selected host boundary; provider invocation remains owned
+by the host.
 
 ## Decision
 
@@ -63,6 +74,14 @@ evidence, assurance, and finalize contracts accept the current digest.
    external-service risk.
 4. No selected capability — rejected because the staged roadmap and current
    adapter contract show a specific prepared-handoff-to-execution gap.
+
+## Correction 01 reconciliation
+
+The independent audit's necessity finding is resolved by expanding the matrix
+to include roadmap items 1 and 2 and by binding the branch and PR title to the
+Work Order identity. The selection proof is based only on pre-freeze roadmap,
+requirements, scope, DoD, adapter, model-routing, schema, and implementation
+records; the new Prompt 012 acceptance text is not used to prove necessity.
 
 ## Freeze and rollback rule
 

@@ -43,3 +43,12 @@ runtime source, schemas, tests, workflows, dependencies, version metadata,
 release assets, tags, sidecar runtime state, provider behavior, credentials,
 or external service state. It does not rewrite Prompt 011 history or promote
 canonical product state by itself.
+
+## Correction 01 reconciliation
+
+`Prompt 012 Scope Freeze — Correction 01 / Necessity & Identity
+Reconciliation` expands the decision matrix to the two roadmap items that
+precede host execution, records the pre-freeze Prompt 008/009 outcomes and
+their relationship to the selected boundary, and binds the Work Order identity
+to the branch and PR title. The correction remains planning-only; no runtime
+implementation or canonical promotion is authorized.

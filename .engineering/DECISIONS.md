@@ -38,3 +38,13 @@ This ledger is repository governance, not UADS runtime state. Entries are append
 - Required proof before implementation acceptance: strict receipt schema, bundle/execution identity binding, target-root ownership binding, replay/staleness/tamper rejection, bounded privacy-safe persistence, zero project footprint, explicit approval boundary, Linux/Windows adapter coverage, and complete local/external validation appropriate to the changed contract.
 - Alternatives rejected: selecting deep UGAS integration because it is merely reserved on the roadmap; selecting a provider gateway because it violates the current provider-neutral boundary; selecting dashboard/marketplace/deployment because no current DoD requires them; selecting no capability because the roadmap has an objectively identified adapter-execution gap.
 - Evidence: `ROADMAP.md`, `docs/02-REQUIREMENTS.md`, `docs/03-SCOPE.md`, `docs/04-ARCHITECTURE.md`, `docs/11-ADAPTERS.md`, `docs/13-DEFINITION-OF-DONE.md`, `integrations/ugas/README.md`, `src/adapters/host-dispatch.ts`, `schemas/host-dispatch-bundle.schema.json`, `tests/host-adapters.test.ts`, and the Prompt 011 final external audit recorded in GitHub PR #16 comment `5554582899`.
+
+## DEC-ENG-005 — Prompt 012 Correction 01 / necessity and identity reconciliation
+
+- Status: `PROPOSED`
+- Work Order: `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`
+- Decision: Retain exactly one NECESSARY capability, bounded provider-neutral host execution and receipt depth, after explicitly reconciling roadmap items 1 and 2 against pre-freeze evidence. Prompt 009's bounded catalog is delivered and broader catalog expansion is FUTURE. Prompt 008's provider-neutral capability/profile mapping and `host-managed` compatibility are delivered; live provider-specific adapters are FUTURE and not a predecessor because provider invocation remains host-owned.
+- Identity: The branch is `docs/eng-prompt-012-host-execution-boundary-001` and the PR title is `docs: ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001 scope freeze`.
+- Circularity rule: The necessity proof uses only pre-freeze roadmap, requirements, scope, DoD, adapter, model-routing, schema, and implementation records; the new Prompt 012 DoD acceptance text is not evidence of necessity.
+- Correction record: `Prompt 012 Scope Freeze — Correction 01 / Necessity & Identity Reconciliation`.
+- Evidence: `.engineering/reports/EVIDENCE-BUNDLE-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md` and `.engineering/checkpoints/CORRECTION-DELTA-PROMPT-012-HOST-EXECUTION-BOUNDARY-001.md`.

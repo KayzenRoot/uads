@@ -89,6 +89,15 @@ Generic Agent Skills adapter contract only enough to accept an explicit,
 identity-bound handoff and persist a bounded execution receipt. It must not
 turn the kernel into a provider gateway or autonomous approval authority.
 
+The two earlier roadmap candidates were reconciled before this selection. The
+bounded Prompt 009 registry (11 core roles and 14 domain profiles) satisfies
+the current catalog contract; broader 30+ expansion is FUTURE. Prompt 008's
+provider-neutral profile/capability mapping and `host-managed` compatibility
+mode satisfy the current mapping boundary; live provider adapters remain
+FUTURE and are not required before host execution because provider invocation
+belongs to the host. These statements are reconciliations of pre-freeze
+behavior, not completion claims for the Prompt 012 implementation.
+
 This planning decision does not add runtime behavior, a new project footprint,
 credentials, provider calls, or release artifacts. The future Work Order must
 retain global-first state, zero project footprint, current Work Order/routing/

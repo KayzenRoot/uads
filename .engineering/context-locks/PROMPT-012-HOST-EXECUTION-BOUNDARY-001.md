@@ -33,11 +33,24 @@ and are not silently treated as pre-edit inputs.
 - Action: Re-inspected the affected hierarchy, created this `RELOCKED` record,
   and required independent review before any implementation.
 
+- Source: `ROADMAP.md`, `docs/02-REQUIREMENTS.md`, `docs/03-SCOPE.md`,
+  `docs/13-DEFINITION-OF-DONE.md`, `docs/14-BACKLOG.md`,
+  `.engineering/DECISIONS.md`, the Prompt 012 ADR, Work Order, Checkpoint,
+  and Evidence Bundle
+- Reason: Correction 01 expanded the necessity matrix to reconcile roadmap
+  items 1 and 2 and aligned the branch/PR identity; the original planning
+  lock therefore had to be re-inspected rather than silently reused.
+- Action: Re-inspected pre-freeze Prompt 008/009/010/011 evidence, recorded the
+  correction delta, refreshed the affected planning records, and kept the lock
+  `RELOCKED` pending independent re-audit.
+
 ## Relock evidence
 
-- Re-inspection: `git diff --check`, targeted `rg` source-hierarchy review,
-  exact baseline/tree verification, and the post-edit validation matrix in the
-  Evidence Bundle.
+- Re-inspection: baseline `git show` of the pre-freeze roadmap, requirements,
+  scope, adapters, model-routing, DoD, and backlog records; targeted `rg`
+  source/code/schema/test review; branch/PR identity inspection; and the
+  correction validation matrix in the Evidence Bundle.
 - New lock: this file, with baseline fingerprints retained and expected stale
-  events made explicit.
+  events made explicit. The corrected records are a post-lock planning state,
+  not evidence that runtime behavior was implemented.
 - No runtime/source implementation path is included in the planning delta.
