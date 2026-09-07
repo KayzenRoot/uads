@@ -119,13 +119,14 @@ asset/fund transfers, and on-chain transaction execution fail closed with
 does not authorize a handoff; no external approval provider or service is
 introduced. `approvedBoundaries` is only a planning signal and cannot create
 positive authorization proof; Host Dispatch recomputes the projection from the
-current Work Order's canonical action signals and fails closed when the
+current Work Order's persisted objective, scope, requested artifacts, and
+destructive/domain/risk signals and fails closed when the
 persisted projection disagrees. Old sidecars remain readable conservatively,
 while stale bundles without the active projection cannot authorize mutation.
 
 ## Acceptance criteria
 
-- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB42 pass on the exact implementation source.
+- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB43 pass on the exact implementation source.
 - [ ] Handoff fails closed for missing/corrupt/tampered/stale/replayed,
       cross-project, wrong-adapter, cross-root, unsupported, blocked, and
       mismatched identities.
@@ -148,7 +149,8 @@ while stale bundles without the active projection cannot authorize mutation.
       `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof
       exists, and completed receipts cannot substitute for approval.
 - [ ] Active approval classification is fixed-vocabulary, planner-derived,
-      digest-bound, recomputed at Host Dispatch, tamper-resistant, fails closed
+      digest-bound, recomputed at Host Dispatch from all persisted canonical
+      action signals, tamper-resistant, fails closed
       when sensitive intent is ambiguous, and is not bypassable by caller
       booleans, prose boundaries, or receipt state.
 - [ ] Existing adapter lifecycle behavior and the full pre-existing validation

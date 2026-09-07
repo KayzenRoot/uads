@@ -608,4 +608,18 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["production deployment"]);
     expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
   });
+
+  it("HEB43 binds requested-artifact approval intent through the Work Order", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Prepare the package",
+      domainSignals: ["release"],
+      requestedArtifacts: ["Publish the package release to npm"],
+      inScope: ["package release"],
+    });
+    expect(value.planned.workOrder.requestedArtifacts).toEqual(["Publish the package release to npm"]);
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
 });

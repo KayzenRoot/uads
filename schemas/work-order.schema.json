@@ -65,6 +65,8 @@
     },
     "riskReasons": { "type": "array", "items": { "type": "string" } },
     "constraints": { "type": "array", "items": { "type": "string" } },
+    "requestedArtifacts": { "type": "array", "items": { "type": "string" } },
+    "destructiveSignals": { "type": "array", "items": { "type": "string" } },
     "domains": { "type": "array", "items": { "type": "string" } },
     "affectedAreas": { "type": "array", "items": { "type": "string" } },
     "specialists": { "type": "array", "items": { "type": "string" } },

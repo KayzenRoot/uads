@@ -116,6 +116,8 @@ export type WorkOrder = {
   riskLevel: RiskLevel;
   riskReasons: string[];
   constraints?: string[];
+  requestedArtifacts?: string[];
+  destructiveSignals?: string[];
   domains: string[];
   affectedAreas: string[];
   specialists: string[];
