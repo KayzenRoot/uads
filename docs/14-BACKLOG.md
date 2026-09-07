@@ -1,12 +1,11 @@
 # 14 — Backlog
 
-## Prompt 012 frozen selection (planning only)
+## Prompt 012 scope freeze (historical planning record)
 
-The sole NECESSARY next capability is bounded provider-neutral host execution
-and receipt handling after `uads adapters prepare`. It is represented by
-Work Order `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001` and is not implemented
-by this planning delta. Its boundary and proof obligations are recorded in
-the Prompt 012 ADR and Work Order.
+The sole NECESSARY next capability was bounded provider-neutral host execution
+and receipt handling after `uads adapters prepare`. It was represented by
+Work Order `ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`; this section records
+the historical planning delta, its boundary, and its proof obligations.
 
 Roadmap reconciliation for this freeze: the bounded Prompt 009 catalog is
 already delivered, so only the broader 30+ catalog remains FUTURE. Prompt
@@ -14,6 +13,26 @@ already delivered, so only the broader 30+ catalog remains FUTURE. Prompt
 compatibility are already delivered; live provider-specific adapters remain
 FUTURE, are not required to cross the host execution boundary, and remain
 excluded from Prompt 012.
+
+## Prompt 012 Implementation 001 - delivered and closed
+
+The bounded Host Execution and Receipt Boundary defined by the historical
+scope freeze is implemented on `main` and was merged through PR #19. The
+delivered capability provides a provider-neutral handoff after a current
+Host Dispatch Bundle, schema-closed sidecar-only receipts, current and
+immutable history with 32-entry retention, current-authority revalidation,
+and fail-closed replay, stale, tamper, and approval-intent handling.
+
+The implementation is externally verified at final `main` SHA
+`bb27398d8caa80be4a550dc1c1a96e0042fdd808` and tree
+`cdc9db75a4e4dd07ac41ec562847a303a375b2ac`. UADS records bounded outcome
+facts only: the host remains responsible for IDE, agent, and provider
+execution, and UADS does not invoke providers or execute arbitrary commands.
+
+This delivery does not close the deferred backlog items. The broader 30+
+specialist catalog, live provider-specific adapters, UGAS integration,
+provider gateway, dashboard/control plane, marketplace, cloud/enterprise
+server, and deployment automation remain FUTURE.
 
 Prompt 006 delivered Evidence Cache and the Cost Governor. Remaining ideas that must **not** land in this increment:
 

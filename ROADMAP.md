@@ -35,18 +35,21 @@ Deterministic evidence reuse with content-aware validity, conservative gate poli
    provider-specific adapters; the provider-neutral capability/profile mapping
    and host-managed compatibility needed by the current contract are already
    delivered by Prompt 008.
-3. Cursor adapter depth + generic/Codex execution — **selected as the sole
-   Prompt 012 capability**, limited to the host execution/receipt boundary
-   after the already delivered dispatch-bundle preparation.
+3. Cursor adapter depth + generic/Codex execution - **DELIVERED for the
+   bounded Prompt 012 scope**, limited to the Host Execution/Receipt Boundary
+   after the already delivered dispatch-bundle preparation. The bounded
+   capability is implemented and merged on `main` through PR #19; host/provider
+   execution remains owned by the host and is not a UADS provider gateway.
 4. UGAS integration (reserved under `integrations/ugas/`)
 
-## Prompt 012 — Scope freeze (planning only)
+## Prompt 012 - Scope freeze (historical planning record)
 
-Prompt 012 freezes exactly one next capability for a later implementation
-increment: a bounded, provider-neutral host execution and receipt boundary
-for an already validated Host Dispatch Bundle. This is a planning decision,
-not an implementation claim. The current release remains `0.11.1` and the
-current host adapters still stop at sidecar-only preparation.
+Prompt 012 froze exactly one capability for a later implementation increment:
+a bounded, provider-neutral host execution and receipt boundary for an
+already validated Host Dispatch Bundle. This paragraph is now historical
+planning context. At freeze time, the release remained `0.11.1` and host
+adapters stopped at sidecar-only preparation; Implementation 001 was later
+delivered after its independent review and is recorded below.
 
 The selection is NECESSARY for the staged adapter-depth roadmap item after
 reconciling the two preceding items against the pre-freeze repository state.
@@ -54,9 +57,10 @@ Prompt 009 already delivers the bounded specialist registry, while Prompt 008
 already delivers provider-neutral capability/profile mapping and explicit
 host-managed compatibility; live provider adapters are not a prerequisite
 because provider invocation remains host-owned and out of scope. The current
-product can prepare an identity-bound handoff but cannot yet execute that
+product could prepare an identity-bound handoff but could not yet execute that
 handoff through an ownership-safe host boundary or record a bounded
-completion/failure receipt. The selected capability must preserve
+completion/failure receipt. Those historical constraints defined the
+implementation that followed and required preservation of
 global-first state, zero project footprint, provider neutrality, explicit
 approval ownership, and fail-closed identity checks.
 
@@ -66,8 +70,25 @@ dashboards, marketplaces, deployment automation, and other expansions remain
 excluded.
 
 The frozen Work Order is
-`ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`; implementation must not begin
-until its independent review is complete.
+`ENG-PROMPT-012-HOST-EXECUTION-BOUNDARY-001`. Its independent review gate
+was the prerequisite recorded by the historical planning decision.
+
+## Prompt 012 - Implementation 001 (delivered)
+
+The bounded, provider-neutral Host Execution and Receipt Boundary is
+implemented and merged on `main` through PR #19. It follows a current
+Host Dispatch Bundle with an ownership-safe handoff, a strict sidecar-only
+Host Execution Receipt, current and immutable history, 32-entry retention,
+current-authority revalidation, and fail-closed replay, stale, tamper, and
+approval-intent checks. HEB01-HEB52 and the complete validation matrix pass
+for the final `main` identity
+`bb27398d8caa80be4a550dc1c1a96e0042fdd808`.
+
+The common Cursor, Codex, and Generic Agent Skills contract records bounded
+host outcome facts only. UADS does not invoke providers, run arbitrary host
+commands, or create approval proof; the host owns IDE/agent/provider
+execution, and active approval-gated intent remains fail-closed without
+durable authorization proof.
 
 ## Explicitly later
 
