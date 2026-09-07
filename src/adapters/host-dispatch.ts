@@ -202,19 +202,28 @@ function buildAssignments(
   }));
 }
 
+function assertPersistedApprovalSignals(workOrder: WorkOrder): asserts workOrder is WorkOrder & {
+  requestedArtifacts: string[];
+  destructiveSignals: string[];
+} {
+  if (!Array.isArray(workOrder.requestedArtifacts) || !Array.isArray(workOrder.destructiveSignals)) {
+    throw new HostDispatchError("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
+  }
+}
+
 function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): ActiveApprovalGatedAction[] {
   return classifyActiveApprovalGatedActions({
     schema: "uads.intake",
     schemaVersion: "0.2.0",
     objective: workOrder.objective,
     constraints: workOrder.constraints ?? [],
-    requestedArtifacts: workOrder.requestedArtifacts ?? [],
+    requestedArtifacts: workOrder.requestedArtifacts,
     inScope: workOrder.includedScope,
     outOfScope: workOrder.outOfScope,
     acceptanceCriteria: workOrder.acceptanceCriteria,
     domainSignals: workOrder.domains,
     riskSignals: workOrder.specialistRiskSignals ?? [],
-    destructiveSignals: workOrder.destructiveSignals ?? (workOrder.specialistRiskSignals ?? []).filter((signal) => signal.includes("destructive")),
+    destructiveSignals: workOrder.destructiveSignals,
     affectedAreas: workOrder.affectedAreas,
     uncertainties: [],
     approvedBoundaries: [],
@@ -228,13 +237,13 @@ function activeApprovalAmbiguityFromWorkOrder(workOrder: WorkOrder): boolean {
     schemaVersion: "0.2.0",
     objective: workOrder.objective,
     constraints: workOrder.constraints ?? [],
-    requestedArtifacts: workOrder.requestedArtifacts ?? [],
+    requestedArtifacts: workOrder.requestedArtifacts,
     inScope: workOrder.includedScope,
     outOfScope: workOrder.outOfScope,
     acceptanceCriteria: workOrder.acceptanceCriteria,
     domainSignals: workOrder.domains,
     riskSignals: workOrder.specialistRiskSignals ?? [],
-    destructiveSignals: workOrder.destructiveSignals ?? (workOrder.specialistRiskSignals ?? []).filter((signal) => signal.includes("destructive")),
+    destructiveSignals: workOrder.destructiveSignals,
     affectedAreas: workOrder.affectedAreas,
     uncertainties: [],
     approvedBoundaries: [],
@@ -262,6 +271,7 @@ export function readCurrentHostDispatchArtifacts(
   if (!workOrder || !routing || !contextPlan) {
     throw new HostDispatchError("host dispatch requires current Work Order, Routing Decision, and Context Plan");
   }
+  assertPersistedApprovalSignals(workOrder);
   if (
     checkpoint.projectId !== ctx.projectId ||
     workOrder.projectId !== ctx.projectId ||

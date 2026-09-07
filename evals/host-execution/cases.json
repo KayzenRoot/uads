@@ -41,5 +41,6 @@
   { "id": "HEB40", "name": "caller-supplied package authorization prose cannot authorize publication" },
   { "id": "HEB41", "name": "ambiguous sensitive approval intent fails closed" },
   { "id": "HEB42", "name": "promotion to production is classified as gated deployment" },
-  { "id": "HEB43", "name": "requested-artifact approval intent remains bound through the Work Order" }
+  { "id": "HEB43", "name": "requested-artifact approval intent remains bound through the Work Order" },
+  { "id": "HEB44", "name": "legacy Work Orders without canonical approval signals fail closed" }
 ]

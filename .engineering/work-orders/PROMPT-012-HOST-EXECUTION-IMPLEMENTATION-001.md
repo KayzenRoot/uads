@@ -121,12 +121,14 @@ introduced. `approvedBoundaries` is only a planning signal and cannot create
 positive authorization proof; Host Dispatch recomputes the projection from the
 current Work Order's persisted objective, scope, requested artifacts, and
 destructive/domain/risk signals and fails closed when the
-persisted projection disagrees. Old sidecars remain readable conservatively,
-while stale bundles without the active projection cannot authorize mutation.
+persisted projection disagrees. Legacy sidecars missing the new canonical
+signals fail closed with an explicit migration error; they are never
+reinterpreted as safe or approved. Stale bundles without the active projection
+cannot authorize mutation.
 
 ## Acceptance criteria
 
-- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB43 pass on the exact implementation source.
+- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB44 pass on the exact implementation source.
 - [ ] Handoff fails closed for missing/corrupt/tampered/stale/replayed,
       cross-project, wrong-adapter, cross-root, unsupported, blocked, and
       mismatched identities.

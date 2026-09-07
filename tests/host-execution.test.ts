@@ -622,4 +622,20 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     ]);
     expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
   });
+
+  it("HEB44 fails closed for legacy Work Orders without canonical approval signals", () => {
+    const value = preparedFixture();
+    const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+    rewrite(workOrderPath, (workOrder) => {
+      const { requestedArtifacts: _requestedArtifacts, destructiveSignals: _destructiveSignals, ...legacy } = workOrder;
+      return legacy;
+    });
+    expect(() => prepareHostDispatchBundle({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      schemaRoot: ROOT,
+    })).toThrow("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
+  });
 });
