@@ -1,9 +1,10 @@
 # Evidence Bundle — `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
-Status: `PARTIAL`
+Status: `APPROVED_FOR_MERGE`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `c8ce23e7797ff158772128fc8ed97ffbab056b4f`
 Head Git SHA: `pending; authoritative PR head must be read from GitHub`
+Approved source SHA/tree: `6087d29380c456ba2f44551c7f9388e8b4439b7f` / `1e5d0d2326a69cf38d112775aae12bf921c5c7bf`
 
 ## Claims
 
@@ -23,8 +24,9 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 | Correction 01 security diff scan | `review` | scan `9c05c447-430e-4d42-9919-0eee9704c090` | PASS | complete coverage; 0 reportable findings; TAC status unavailable in this session |
 | Full implementation validation matrix | `command` | `npm run validate` | PASS | post-correction official matrix completed successfully; 49 test files / 406 tests |
 | High-severity dependency audit | `command` | `npm audit --audit-level=high` | PASS | 0 vulnerabilities reported after clean `npm ci` |
-| Exact hosted checks | `github` | implementation PR head | PENDING | Foundation, CodeQL, Dependency Review, Linux/Windows Node 20 |
-| Independent technical audit | `review` | implementation PR | PENDING | implementer cannot supply approval |
+| Exact hosted checks | `github` | source head `6087d29380c456ba2f44551c7f9388e8b4439b7f` | PASS | Foundation `34133880887`, CodeQL `34133880910`, Dependency Review `34133880987`, Compatibility `34133881041` all passed on the approved source head |
+| Independent technical audit | `review` | PR #19 comment `5572564086` | PASS | APPROVED for the exact source head/tree and authorized one bounded promotion delta plus protected merge |
+| Post-approval promotion authorization | `review` | PR #19 comment `5572564086` | PASS | Work Order/Checkpoint/Evidence promotion is governance/evidence-only; fresh promotion-head checks and post-merge verification remain required |
 
 ## Identity binding
 
@@ -54,9 +56,9 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   orchestration identity drift, stale ownership/root, semantic bundle
   replacement, unchanged transitions, missing approval proof, and completed
   receipt non-substitution.
-- Hosted exact-head checks and independent audit remain pending until the
-  correction commit is pushed and reviewed; no self-approval or merge is
-  permitted.
+- This historical Correction 01 state was superseded by the approved source
+  head and post-approval status delta recorded below; no source self-approval
+  is implied.
 
 ## Correction 02 — Active Approval Intent Classification
 
@@ -83,8 +85,8 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   binding, and explicit legacy-sidecar migration failure.
 - The prior fixture behavior that globally cleared `requiresApproval` was
   removed. Local focused/full validation and the high-severity dependency audit
-  pass on the final working tree; exact hosted checks and independent audit
-  remain pending until this correction is committed and pushed.
+  pass on the final working tree; exact source-head hosted checks and
+  independent audit are recorded as PASS below.
 
 ## Correction 03 - Canonical Approval Signal Closure
 
@@ -106,9 +108,26 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   publication, constraints-only production deployment, post-prepare
   classification drift, missing legacy constraints, benign constraints,
   caller authorization bypass attempts, and completed-receipt substitution.
-- The final full-suite count is recorded above; exact hosted checks and
-  independent audit remain pending until the bounded Correction 03 commit is
-  pushed and reviewed. No status-only evidence commit is authorized.
+- The final full-suite count and exact source-head hosted checks are recorded
+  above. Independent approval is recorded in PR #19 comment `5572564086`;
+  this single bounded status delta is the authorized promotion record. No
+  status-only follow-up commit is authorized.
+
+## Post-approval promotion authorization
+
+- External audit comment `5572564086` records `APPROVED` for source head
+  `6087d29380c456ba2f44551c7f9388e8b4439b7f` / tree
+  `1e5d0d2326a69cf38d112775aae12bf921c5c7bf` against base
+  `c8ce23e7797ff158772128fc8ed97ffbab056b4f`.
+- Foundation `34133880887` / job `101780177395`, CodeQL
+  `34133880910` / job `101780177650`, Dependency Review
+  `34133880987` / job `101780177243`, and Compatibility
+  `34133881041` jobs `101780177946` and `101780178026` passed on that exact
+  approved source head.
+- This commit changes only the Work Order, Checkpoint Delta, and Evidence
+  Bundle governance state. Its new post-promotion head is intentionally not
+  persisted here; fresh checks and the protected merge must use GitHub's
+  authoritative head.
 
 ## Privacy review
 
@@ -117,10 +136,11 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 - [x] Generated/cache/vendored material and runtime sidecar state are excluded.
 - [x] Receipt JSON is schema-closed and omits provider identity and output.
 - [x] ZPF remains true; all operational state is under the global sidecar.
-- [ ] Hosted exact-head and independent-review proof is still pending.
+- [x] Approved source-head hosted checks and independent-review proof are
+      recorded; fresh promotion-head checks remain required before merge.
 
 ## Delivery status
 
-Implementation is review-ready only after final local/hosted evidence is
-recorded. Do not merge or release from this bundle; do not mark Prompt 012
-complete before independent audit and maintainer-controlled merge.
+The implementation source is approved for one bounded promotion delta and
+protected merge. Do not release or mark Prompt 012 complete before the
+promotion-head checks and required post-merge independent verification pass.

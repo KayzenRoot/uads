@@ -1,13 +1,13 @@
 # Checkpoint Delta — `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
-Status: `PROPOSED`
-Canonical promotion: `PENDING_MAINTAINER`
+Status: `ACCEPTED`
+Canonical promotion: `PROMOTED`
 Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
 ## Lifecycle transition
 
 - Before: `Prompt 012 scope freeze accepted on main c8ce23e; implementation not started`
-- After proposed: `bounded Host Execution/Receipt implementation present on the exact feature branch; review pending`
+- After approved: `bounded Host Execution/Receipt implementation accepted and promoted for protected merge on the exact feature branch; post-merge verification pending`
 
 ## Completed steps
 
@@ -48,21 +48,40 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 - Preserved provider neutrality, global-first/ZPF behavior, existing gate and
   assurance authority, release immutability, and Architecture Freeze v0.2.
 - Recorded passing local implementation evidence in the linked Evidence Bundle;
-  hosted checks and independent audit remain pending until the PR head exists.
+  exact source-head hosted checks and independent audit are approved by PR #19
+  comment `5572564086`; the single bounded promotion delta is authorized.
+
+## Post-approval promotion
+
+- External audit comment `5572564086` records `APPROVED` for source head
+  `6087d29380c456ba2f44551c7f9388e8b4439b7f` / tree
+  `1e5d0d2326a69cf38d112775aae12bf921c5c7bf` against base
+  `c8ce23e7797ff158772128fc8ed97ffbab056b4f`.
+- Foundation `34133880887` / job `101780177395`, CodeQL
+  `34133880910` / job `101780177650`, Dependency Review
+  `34133880987` / job `101780177243`, and Compatibility
+  `34133881041` jobs `101780177946` and `101780178026` passed on the exact
+  approved source head.
+- Work Order and Evidence Bundle are promoted for one governance/evidence-only
+  status delta. Fresh checks must run on that new promotion head before the
+  protected squash merge; post-merge identities are read directly from GitHub.
 
 ## Open items
 
-- Local focused correction gates pass for HEB01–HEB52; HEB44 and HEB49 cover
-  explicit legacy sidecar migration failures. Complete the full local matrix
-  and audit the exact changed paths after the correction patch is pushed.
-- Push one exact branch and open one unmerged PR with required checks.
-- Obtain independent technical audit of exact PR head/tree/base.
-- Maintainer must decide any canonical promotion or merge; the implementer
-  cannot promote this delta or mark Prompt 012 complete.
+- Push the single bounded promotion commit to the existing PR #19 branch and
+  rerun the exact-head hosted checks.
+- Protected squash merge PR #19 through the normal branch-protection flow only
+  after every required check passes.
+- Read the resulting main SHA/tree and all post-merge proof runs directly from
+  GitHub; no recursive closeout commit is permitted.
+- Complete the independent final post-merge audit before marking Prompt 012
+  closed or starting a future capability.
 
 ## Safety statement
 
-This delta does not authorize provider invocation, arbitrary command execution,
-approval, merge, release, tag mutation, or canonical promotion. It records a
-review-pending implementation proposal and must remain `PROPOSED` /
-`PENDING_MAINTAINER` until an independent reviewer and maintainer act.
+This delta authorizes only the bounded governance/evidence promotion state,
+fresh exact-head checks, protected squash merge, and read-only post-merge
+verification described by external audit comment `5572564086`. It does not
+authorize provider invocation, arbitrary command execution, implementation or
+schema/test changes, version/release/tag mutation, or any broader capability.
+Prompt 012 remains open until the required post-merge audit is complete.
