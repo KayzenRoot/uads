@@ -126,9 +126,38 @@ signals fail closed with an explicit migration error; they are never
 reinterpreted as safe or approved. Stale bundles without the active projection
 cannot authorize mutation.
 
+## Correction 03 - Canonical Approval Signal Closure
+
+The follow-up audit identified a residual HIGH classification gap: the active
+approval corpus omitted the canonical `constraints` and `acceptanceCriteria`
+fields even though both are planning inputs persisted into the Work Order. An
+approval-gated action stated only in either field could therefore evade the
+active projection and leave `activeApprovalIntentAmbiguous` false.
+
+Correction 03 keeps the same Work Order, branch, PR #19, Architecture Freeze
+v0.2, version/package identity, and release boundary. The classifier corpus
+now includes objective, constraints, included scope, requested artifacts,
+acceptance criteria, domain/risk signals, and destructive signals. It
+continues to exclude `outOfScope` as positive intent and
+`approvedBoundaries` as authorization proof. The fixed vocabulary and
+per-task ambiguity behavior remain unchanged.
+
+`constraints` is now included in `computeWorkOrderRoutingDigest()` so any
+approval classification derived from it is bound to the same Work Order/model
+routing identity. Host Dispatch recomputes from the persisted canonical set
+and requires `constraints`, `requestedArtifacts`, and `destructiveSignals` to
+be present. A legacy sidecar missing `constraints` fails closed with the same
+explicit migration error rather than being replaced with `[]`. Changes to a
+canonical field after prepare therefore stale the prior bundle/handoff and do
+not let a receipt, caller flag, or prose boundary authorize the changed intent.
+HEB45-HEB52 cover constraints-only and acceptance-criteria-only publication,
+constraints-only production deployment, classification drift, legacy missing
+constraints, benign constraints, caller bypass attempts, and completed
+receipt non-substitution.
+
 ## Acceptance criteria
 
-- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB44 pass on the exact implementation source.
+- [x] HEB01–HEB20, HEB21–HEB27, HEB28–HEB44, and HEB45–HEB52 pass on the exact implementation source.
 - [ ] Handoff fails closed for missing/corrupt/tampered/stale/replayed,
       cross-project, wrong-adapter, cross-root, unsupported, blocked, and
       mismatched identities.
@@ -151,13 +180,19 @@ cannot authorize mutation.
       `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof
       exists, and completed receipts cannot substitute for approval.
 - [ ] Active approval classification is fixed-vocabulary, planner-derived,
-      digest-bound, recomputed at Host Dispatch from all persisted canonical
-      action signals, tamper-resistant, fails closed
-      when sensitive intent is ambiguous, and is not bypassable by caller
-      booleans, prose boundaries, or receipt state.
+  digest-bound, recomputed at Host Dispatch from all persisted canonical
+  action signals, tamper-resistant, fails closed
+  when sensitive intent is ambiguous, and is not bypassable by caller
+  booleans, prose boundaries, or receipt state.
+- [ ] `constraints` and `acceptanceCriteria` participate in active approval
+      classification; `constraints` is included in the Work Order routing
+      digest and is required for newly planned approval decisions.
+- [ ] Legacy Work Orders missing persisted `constraints` fail closed through
+      explicit migration handling; benign constraints do not blanket-block
+      normal work; canonical constraint drift stales the old handoff.
 - [ ] Existing adapter lifecycle behavior and the full pre-existing validation
-      matrix remain passing; total existing tests do not decrease from 48 files
-      and 354 tests.
+      matrix remain passing; total tests do not decrease from 49 files and 398
+      tests.
 - [ ] Independent audit approves the exact PR head; the PR remains unmerged.
 
 ## Required gates and evidence
@@ -166,7 +201,7 @@ cannot authorize mutation.
   `npm run lint`, `npm run typecheck`, `npm test`, all existing evals,
   `npm run eval:host-execution`, `npm run validate`, and
   `npm audit --audit-level=high`.
-- Focused: `npm run eval:host-execution` with HEB01–HEB27 and direct schema,
+- Focused: `npm run eval:host-execution` with HEB01–HEB52 and direct schema,
   privacy, ZPF, replay, current-identity, approval, transition, and adapter
   lifecycle assertions.
 - Hosted: exact-head Foundation, CodeQL, Dependency Review, Linux Node 20,

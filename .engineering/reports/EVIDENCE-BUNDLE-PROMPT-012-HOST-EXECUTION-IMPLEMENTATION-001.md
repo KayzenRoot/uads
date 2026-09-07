@@ -10,18 +10,18 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 | Claim | Kind | Reference | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Parent scope freeze is accepted and exact | `github` | main `c8ce23e7797ff158772128fc8ed97ffbab056b4f`, tree `4818ba203b241191afba43ff92ded3a6f3d2781d` | PASS | Parent implementation authorization was explicit and separate |
-| Baseline validation passed | `command` | `npm run validate` | PASS | 48 files / 354 tests plus existing eval and protocol gates |
+| Baseline validation passed | `command` | `npm run validate` | PASS | Prior implementation baseline: 49 files / 398 tests plus existing eval and protocol gates |
 | Package installation is clean | `command` | `npm ci` | PASS | 0 reported vulnerabilities |
 | Strict Host Execution Receipt schema exists | `file` | `schemas/host-execution-receipt.schema.json` | PASS | additionalProperties=false, closed states/reasons |
 | Handoff revalidates current identities | `file` | `src/adapters/host-execution.ts`, `src/adapters/host-dispatch.ts` | PASS | bundle, orchestration, run, adapter, ownership, root, and change identities |
 | Receipts are global-sidecar-only and bounded | `file` | `src/lib/workspace.ts`, `src/adapters/host-execution.ts` | PASS | atomic current/history; fixed 32-entry retention; no project writes |
 | All three adapters share the contract | `test` | `tests/host-execution.test.ts` HEB15/HEB20 | PASS | Cursor, Codex, Generic Agent Skills |
 | Receipt cannot authorize gates or finalize | `test` | `tests/host-execution.test.ts` HEB17 | PASS | execution evidence/review/finalize state remains unchanged |
-| Focused HEB01–HEB44 suite | `test` | `npm run eval:host-execution` | PASS | 44 tests cover Correction 01 plus active/ambiguous approval classification, caller-prose rejection, production-promotion classification, requested-artifact binding, and legacy fail-closed handling |
-| Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 394 tests passed |
-| Official post-correction foundation matrix | `command` | `npm run validate` | PASS | lint, typecheck, build, full test suite, all evals, skills/actions/direct-review/CI-receipt/engineering validation passed |
+| Focused HEB01–HEB52 suite | `test` | `npm run eval:host-execution` | PASS | 52 tests cover Correction 01/02 plus canonical constraints and acceptance-criteria approval signals, identity drift, legacy fail-closed handling, benign constraints, and receipt non-substitution |
+| Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 406 tests passed after Correction 03 |
+| Official post-correction foundation matrix | `command` | `npm run validate` | PASS | lint, typecheck, build, 49 test files / 406 tests, all evals, skills/actions/direct-review/CI-receipt/engineering validation passed |
 | Correction 01 security diff scan | `review` | scan `9c05c447-430e-4d42-9919-0eee9704c090` | PASS | complete coverage; 0 reportable findings; TAC status unavailable in this session |
-| Full implementation validation matrix | `command` | `npm run validate` | PASS | post-correction official matrix completed successfully |
+| Full implementation validation matrix | `command` | `npm run validate` | PASS | post-correction official matrix completed successfully; 49 test files / 406 tests |
 | High-severity dependency audit | `command` | `npm audit --audit-level=high` | PASS | 0 vulnerabilities reported after clean `npm ci` |
 | Exact hosted checks | `github` | implementation PR head | PENDING | Foundation, CodeQL, Dependency Review, Linux/Windows Node 20 |
 | Independent technical audit | `review` | implementation PR | PENDING | implementer cannot supply approval |
@@ -34,7 +34,7 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 - Context Lock: `.engineering/context-locks/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
 - Baseline: `.engineering/baselines/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
-- Change summary: `Correction 01 current-identity enforcement plus Correction 02 active/ambiguous approval-intent classification; exact PR head is authoritative from GitHub`
+- Change summary: `Correction 01 current-identity enforcement plus Correction 02 active/ambiguous approval-intent classification and Correction 03 canonical approval-signal closure; exact PR head is authoritative from GitHub`
 
 ## Correction 01 — Current-Identity & Approval-Boundary Enforcement
 
@@ -85,6 +85,30 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   removed. Local focused/full validation and the high-severity dependency audit
   pass on the final working tree; exact hosted checks and independent audit
   remain pending until this correction is committed and pushed.
+
+## Correction 03 - Canonical Approval Signal Closure
+
+- Root cause addressed: `approvalCorpus()` omitted the persisted canonical
+  `constraints` and `acceptanceCriteria` fields, so approval-gated intent
+  stated only in either field could escape active classification.
+- The corpus now includes objective, constraints, included scope, requested
+  artifacts, acceptance criteria, domain/risk signals, and destructive signals.
+  `outOfScope` remains a limit rather than positive intent, and
+  `approvedBoundaries` remains excluded from authorization proof.
+- `constraints` now participates in `computeWorkOrderRoutingDigest()`, binding
+  constraint-derived approval classification to the existing Work Order/model
+  routing identity rather than creating a parallel digest.
+- Host Dispatch requires persisted `constraints` in addition to
+  `requestedArtifacts` and `destructiveSignals`; legacy Work Orders missing
+  the field fail closed with explicit migration handling and are never made
+  safe by `?? []`.
+- HEB45–HEB52 pass for constraints-only and acceptance-criteria-only package
+  publication, constraints-only production deployment, post-prepare
+  classification drift, missing legacy constraints, benign constraints,
+  caller authorization bypass attempts, and completed-receipt substitution.
+- The final full-suite count is recorded above; exact hosted checks and
+  independent audit remain pending until the bounded Correction 03 commit is
+  pushed and reviewed. No status-only evidence commit is authorized.
 
 ## Privacy review
 

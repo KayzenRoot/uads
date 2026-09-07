@@ -79,13 +79,15 @@ fail closed and leave the earlier receipt intact. The existing Work Order
 autonomy boundary is authoritative, but its `requiresApproval` list is a
 global policy catalog rather than current-action evidence. UADS derives the
 schema-closed `activeApprovalGatedActions` projection from canonical planning
-inputs. When that active list is non-empty and the repository/runtime has no
+inputs: objective, included scope, requested artifacts, constraints,
+acceptance criteria, and domain/risk/destructive signals. When that active list is non-empty and the repository/runtime has no
 verifiable durable authorization record for the exact current identity,
 handoff is blocked with `APPROVAL_AUTHORIZATION_MISSING`. Receipt state, CLI
 flags, booleans, and caller-supplied prose in `approvedBoundaries` cannot serve
 as approval evidence. Host Dispatch recomputes the projection from current
-Work Order action signals; promotion to production is classified as
-production deployment.
+Work Order action signals and fails closed for legacy Work Orders missing a
+persisted canonical signal such as `constraints`; promotion to production is
+classified as production deployment.
 Sensitive requests that do not prove a fixed class set
 `activeApprovalIntentAmbiguous` and fail closed for that task rather than
 globally blocking unrelated work.

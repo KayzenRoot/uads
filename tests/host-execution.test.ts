@@ -24,6 +24,8 @@ type FixtureOptions = {
   riskSignals?: string[];
   destructiveSignals?: string[];
   requestedArtifacts?: string[];
+  constraints?: string[];
+  acceptanceCriteria?: string[];
   inScope?: string[];
   approvedBoundaries?: string[];
   affectedAreas?: string[];
@@ -49,10 +51,11 @@ function fixture(adapterId: AdapterId = "generic-agent-skills", options: Fixture
       riskSignals: options.riskSignals ?? [],
       destructiveSignals: options.destructiveSignals ?? [],
       requestedArtifacts: options.requestedArtifacts ?? [],
+      constraints: options.constraints ?? [],
       affectedAreas: options.affectedAreas ?? ["src"],
       inScope: options.inScope ?? ["src"],
       approvedBoundaries: options.approvedBoundaries ?? [],
-      acceptanceCriteria: ["the change is verified"],
+      acceptanceCriteria: options.acceptanceCriteria ?? ["the change is verified"],
       classifier: "host-structured",
     },
   });
@@ -637,5 +640,143 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
       hostHome: value.target,
       schemaRoot: ROOT,
     })).toThrow("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
+  });
+
+  it("HEB45 classifies package publication stated only in constraints", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Prepare the release package",
+      domainSignals: ["release"],
+      inScope: ["package release"],
+      constraints: ["Publish the package release to npm"],
+    });
+    expect(value.planned.workOrder.constraints).toEqual(["Publish the package release to npm"]);
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB46 classifies package publication stated only in acceptance criteria", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Prepare the release package",
+      domainSignals: ["release"],
+      inScope: ["package release"],
+      acceptanceCriteria: ["Publish the package release to npm"],
+    });
+    expect(value.planned.workOrder.acceptanceCriteria).toEqual(["Publish the package release to npm"]);
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB47 classifies production deployment stated only in constraints", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Prepare the deployment plan",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["production environment"],
+      constraints: ["Deploy the application to production"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["production deployment"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB48 rejects the old handoff after a constraint changes approval classification", () => {
+    const value = preparedFixture();
+    const accepted = handoff(value);
+    const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+    rewrite(workOrderPath, (workOrder) => ({
+      ...workOrder,
+      constraints: ["Deploy the application to production"],
+    }));
+    expect(() => transitionHostExecutionReceipt({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      state: "STARTED",
+      schemaRoot: ROOT,
+    })).toThrow(/stale|mismatch|approval/i);
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(accepted);
+  });
+
+  it("HEB49 fails closed for legacy Work Orders without persisted constraints", () => {
+    const value = preparedFixture();
+    const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+    rewrite(workOrderPath, (workOrder) => {
+      const { constraints: _constraints, ...legacy } = workOrder;
+      return legacy;
+    });
+    expect(() => prepareHostDispatchBundle({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      schemaRoot: ROOT,
+    })).toThrow("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
+  });
+
+  it("HEB50 accepts benign constraints without blanket blocking normal work", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      constraints: ["Keep the change local to the repository", "Run the verification tests"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
+    expect(handoff(value).state).toBe("ACCEPTED");
+  });
+
+  it("HEB51 cannot bypass constraint-derived approval with caller flags or boundaries", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Prepare the release package",
+      domainSignals: ["release"],
+      inScope: ["package release"],
+      constraints: ["Publish the package release to npm"],
+      approvedBoundaries: ["package/release publication authorized"],
+      callerFields: {
+        approvalAuthorized: true,
+        authorized: true,
+        bypassApproval: true,
+      },
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB52 cannot use a completed receipt as approval after constraint-derived intent changes", () => {
+    const value = preparedFixture();
+    const accepted = handoff(value);
+    transitionHostExecutionReceipt({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      state: "STARTED",
+      schemaRoot: ROOT,
+    });
+    const completed = transitionHostExecutionReceipt({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      state: "COMPLETED",
+      schemaRoot: ROOT,
+    });
+    const workOrderPath = path.join(value.context.paths.workOrders, `${value.planned.workOrder.workOrderId}.json`);
+    rewrite(workOrderPath, (workOrder) => ({
+      ...workOrder,
+      constraints: ["Publish the package release to npm"],
+    }));
+    expect(() => transitionHostExecutionReceipt({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      state: "STARTED",
+      schemaRoot: ROOT,
+    })).toThrow(/terminal|stale|mismatch|approval/i);
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(completed);
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).not.toEqual(accepted);
   });
 });

@@ -91,6 +91,7 @@ export function computeWorkOrderRoutingDigest(workOrder: WorkOrder): string {
     outOfScope: workOrder.outOfScope,
     riskLevel: workOrder.riskLevel,
     riskReasons: workOrder.riskReasons,
+    constraints: workOrder.constraints ?? [],
     requestedArtifacts: workOrder.requestedArtifacts ?? [],
     destructiveSignals: workOrder.destructiveSignals ?? [],
     domains: workOrder.domains,

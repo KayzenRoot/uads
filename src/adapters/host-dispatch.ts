@@ -203,12 +203,13 @@ function buildAssignments(
 }
 
 type PersistedApprovalWorkOrder = WorkOrder & {
+  constraints: string[];
   requestedArtifacts: string[];
   destructiveSignals: string[];
 };
 
 function assertPersistedApprovalSignals(workOrder: WorkOrder): asserts workOrder is PersistedApprovalWorkOrder {
-  if (!Array.isArray(workOrder.requestedArtifacts) || !Array.isArray(workOrder.destructiveSignals)) {
+  if (!Array.isArray(workOrder.constraints) || !Array.isArray(workOrder.requestedArtifacts) || !Array.isArray(workOrder.destructiveSignals)) {
     throw new HostDispatchError("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
   }
 }
@@ -218,7 +219,7 @@ function activeApprovalClassificationFromWorkOrder(workOrder: PersistedApprovalW
     schema: "uads.intake",
     schemaVersion: "0.2.0",
     objective: workOrder.objective,
-    constraints: workOrder.constraints ?? [],
+    constraints: workOrder.constraints,
     requestedArtifacts: workOrder.requestedArtifacts,
     inScope: workOrder.includedScope,
     outOfScope: workOrder.outOfScope,
@@ -238,7 +239,7 @@ function activeApprovalAmbiguityFromWorkOrder(workOrder: PersistedApprovalWorkOr
     schema: "uads.intake",
     schemaVersion: "0.2.0",
     objective: workOrder.objective,
-    constraints: workOrder.constraints ?? [],
+    constraints: workOrder.constraints,
     requestedArtifacts: workOrder.requestedArtifacts,
     inScope: workOrder.includedScope,
     outOfScope: workOrder.outOfScope,

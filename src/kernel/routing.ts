@@ -272,8 +272,10 @@ function normalizedApprovalText(value: string): string {
 function approvalCorpus(input: NormalizedIntake): string {
   return [
     input.objective,
+    ...input.constraints,
     ...input.inScope,
     ...input.requestedArtifacts,
+    ...input.acceptanceCriteria,
     ...input.domainSignals,
     ...input.riskSignals,
     ...input.destructiveSignals,

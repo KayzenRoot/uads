@@ -35,6 +35,16 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
   promotion-to-production classification, and requested-artifact binding.
   Host Dispatch recomputes the active projection from all persisted canonical
   Work Order action signals.
+- Applied Correction 03: the active approval corpus now includes persisted
+  `constraints` and `acceptanceCriteria`, and `constraints` participates in
+  the existing Work Order routing digest. Host Dispatch requires persisted
+  constraints and fails closed for legacy Work Orders that lack them instead
+  of treating absence as `[]` or evidence of safety.
+- Added HEB45–HEB52 coverage for constraints-only and acceptance-criteria-only
+  package publication, constraints-only production deployment, post-prepare
+  approval-classification drift, legacy missing constraints, benign
+  constraints, caller authorization bypass, and completed-receipt
+  non-substitution.
 - Preserved provider neutrality, global-first/ZPF behavior, existing gate and
   assurance authority, release immutability, and Architecture Freeze v0.2.
 - Recorded passing local implementation evidence in the linked Evidence Bundle;
@@ -42,9 +52,9 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
 ## Open items
 
-- Local correction gates pass for HEB01–HEB43; HEB44 covers explicit legacy
-  sidecar migration failure. Audit the exact changed paths after the
-  correction patch is pushed.
+- Local focused correction gates pass for HEB01–HEB52; HEB44 and HEB49 cover
+  explicit legacy sidecar migration failures. Complete the full local matrix
+  and audit the exact changed paths after the correction patch is pushed.
 - Push one exact branch and open one unmerged PR with required checks.
 - Obtain independent technical audit of exact PR head/tree/base.
 - Maintainer must decide any canonical promotion or merge; the implementer

@@ -306,3 +306,21 @@ Complete only when all are true:
 - HEB01–HEB27 remain green and HEB28–HEB42 prove the correction without
   changing gate, assurance, review, finalize, release, version, or merge
   semantics.
+
+## Prompt 012 Implementation 001 - Correction 03
+
+Complete only when all are true:
+
+- `constraints` and `acceptanceCriteria` participate in the fixed-vocabulary
+  active approval classification, while `outOfScope` and `approvedBoundaries`
+  remain excluded from positive intent/authorization proof.
+- `constraints` is included in the existing Work Order routing digest and the
+  Host Dispatch recomputation uses the same persisted canonical planning set.
+- Newly planned Work Orders persist `constraints`; legacy Work Orders missing
+  it fail closed through explicit migration handling and are never replaced by
+  an empty array as evidence of safety.
+- Constraint-only package publication and production deployment fail closed;
+  benign constraints remain handoffable; post-prepare constraint drift stales
+  the old bundle/handoff; and receipts/caller signals cannot authorize it.
+- HEB01–HEB44 and HEB45–HEB52 pass, with the test count at least 49 files and
+  398 tests.
