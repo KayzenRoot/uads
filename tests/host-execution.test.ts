@@ -573,15 +573,17 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     expect(handoff(value).state).toBe("ACCEPTED");
   });
 
-  it("HEB40 recognizes only the exact canonical package authorization boundary", () => {
+  it("HEB40 does not treat caller-supplied package authorization prose as proof", () => {
     const value = preparedFixture("generic-agent-skills", {
       objective: "Publish the package release to npm",
       domainSignals: ["release"],
       approvedBoundaries: ["package/release publication authorized"],
       inScope: ["package release"],
     });
-    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
-    expect(handoff(value).state).toBe("ACCEPTED");
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
   });
 
   it("HEB41 fails closed for an ambiguous sensitive approval intent", () => {
@@ -593,6 +595,17 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     });
     expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
     expect(value.planned.workOrder.autonomyBoundary.activeApprovalIntentAmbiguous).toBe(true);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB42 classifies promotion to production as a gated deployment", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Promote the release to production",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["production release"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["production deployment"]);
     expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
   });
 });

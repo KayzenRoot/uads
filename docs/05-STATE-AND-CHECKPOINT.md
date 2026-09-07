@@ -61,8 +61,10 @@ one of those actions. UADS derives the schema-closed
 scope, and planning signals. Only a non-empty active list fails closed at
 handoff with `APPROVAL_AUTHORIZATION_MISSING` when no existing durable
 authorization proof can be verified for the current identity. The active list
-is bound into the Work Order digest and Host Dispatch Bundle identity. A
-receipt or caller-provided boolean/state never creates that authority.
+is bound into the Work Order digest and Host Dispatch Bundle identity. Host
+Dispatch recomputes it from current Work Order action signals, so a persisted
+projection, caller-provided boolean/state, or `approvedBoundaries` prose never
+creates that authority.
 When sensitive signals imply an action but do not prove a fixed class,
 `activeApprovalIntentAmbiguous` is bound to the same identities and blocks only
 that task fail-closed.

@@ -29,10 +29,11 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
   only a non-empty active projection blocks handoff with
   `APPROVAL_AUTHORIZATION_MISSING`.
 - Removed the fixture behavior that rewrote `requiresApproval` to an empty
-  array and added HEB28–HEB41 coverage for safe handoff, each active gated
-  class, classification tamper, caller-boolean bypass attempts, lifecycle
-  compatibility, the canonical authorized-publication boundary, and ambiguous
-  sensitive intent.
+  array and added HEB28–HEB42 coverage for safe handoff, each active gated
+  class, classification tamper, caller-boolean bypass attempts, caller-prose
+  rejection, lifecycle compatibility, ambiguous sensitive intent, and
+  promotion-to-production classification. Host Dispatch recomputes the active
+  projection from current canonical Work Order action signals.
 - Preserved provider neutrality, global-first/ZPF behavior, existing gate and
   assurance authority, release immutability, and Architecture Freeze v0.2.
 - Recorded passing local implementation evidence in the linked Evidence Bundle;
@@ -40,9 +41,9 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 
 ## Open items
 
-- Local correction gates pass for HEB01–HEB40; HEB41 covers ambiguous
-  sensitive intent. Audit the exact changed paths after the correction patch is
-  pushed.
+- Local correction gates pass for HEB01–HEB41; HEB42 covers promotion-to-
+  production classification. Audit the exact changed paths after the
+  correction patch is pushed.
 - Push one exact branch and open one unmerged PR with required checks.
 - Obtain independent technical audit of exact PR head/tree/base.
 - Maintainer must decide any canonical promotion or merge; the implementer

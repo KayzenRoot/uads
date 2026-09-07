@@ -147,10 +147,13 @@ is rejected without rewriting the accepted receipt. The Work Order
 `requiresApproval` list is a global policy catalog and may be non-empty for a
 safe plan; it does not by itself block handoff. UADS derives the fixed-
 vocabulary `activeApprovalGatedActions` projection from canonical objective,
-scope, and domain/risk/destructive signals. A non-empty active projection
+scope, and domain/risk/destructive signals. Host Dispatch recomputes the
+projection from the current Work Order and does not trust persisted active
+fields. A non-empty active projection
 blocks with `APPROVAL_AUTHORIZATION_MISSING` because this architecture has no
 durable authorization-proof primitive. No receipt, CLI field, caller boolean,
-or prose can authorize the action.
+or caller-supplied prose boundary can authorize the action. Promotion to
+production is treated as production deployment.
 Sensitive signals that imply an action but do not prove a fixed class set
 `activeApprovalIntentAmbiguous`, which is bound into the same identities and
 blocks that task with the same reason code.

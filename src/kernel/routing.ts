@@ -259,12 +259,6 @@ export const ACTIVE_APPROVAL_GATED_ACTIONS: readonly ActiveApprovalGatedAction[]
   "on-chain transaction execution",
 ];
 
-const RELEASE_AUTHORIZED_BOUNDARIES = new Set([
-  "package release publication authorized",
-  "authorized package release publication",
-  "publishing package release already authorized",
-]);
-
 function normalizedApprovalText(value: string): string {
   return value
     .normalize("NFD")
@@ -325,7 +319,15 @@ export function classifyActiveApprovalGatedActions(input: NormalizedIntake): Act
     "wipe",
     "reset hard",
   ]);
-  const deploymentIntent = hasApprovalTerm(corpus, ["deploy", "deployment", "rollout", "roll out"]);
+  const deploymentIntent = hasApprovalTerm(corpus, [
+    "deploy",
+    "deployment",
+    "rollout",
+    "roll out",
+    "promote",
+    "promoting",
+    "promotion",
+  ]);
   const transferIntent = hasApprovalTerm(corpus, [
     "transfer",
     "transferring",
@@ -376,9 +378,6 @@ export function classifyActiveApprovalGatedActions(input: NormalizedIntake): Act
   const releasePublicationIntent =
     hasApprovalTerm(corpus, ["publish", "publishing", "publication", "cut a release", "cut release"]) &&
     packageOrReleaseContext;
-  const releaseAlreadyAuthorized = input.approvedBoundaries
-    .map(normalizedApprovalText)
-    .some((boundary) => RELEASE_AUTHORIZED_BOUNDARIES.has(boundary));
   const materialCostIntent = hasApprovalTerm(corpus, [
     "spend",
     "spending",
@@ -403,7 +402,7 @@ export function classifyActiveApprovalGatedActions(input: NormalizedIntake): Act
     active.add("rotating real credentials");
   }
   if (gitContext && historyRewriteIntent) active.add("destructive Git history rewrite");
-  if (releasePublicationIntent && !releaseAlreadyAuthorized) {
+  if (releasePublicationIntent) {
     active.add("publishing package/release when not already authorized");
   }
   if (transferIntent && assetOrFundContext) active.add("transferring assets/funds");
@@ -423,10 +422,6 @@ export function isActiveApprovalIntentAmbiguous(input: NormalizedIntake): boolea
   const releasePublicationIntent =
     hasApprovalTerm(corpus, ["publish", "publishing", "publication", "cut a release", "cut release"]) &&
     hasApprovalTerm(corpus, ["package", "packages", "npm", "release", "releases", "registry"]);
-  const releaseAlreadyAuthorized = input.approvedBoundaries
-    .map(normalizedApprovalText)
-    .some((boundary) => RELEASE_AUTHORIZED_BOUNDARIES.has(boundary));
-  if (releasePublicationIntent && releaseAlreadyAuthorized) return false;
   const sensitiveContext = hasApprovalTerm(corpus, [
     "production", "prod", "database", "db", "postgres", "sql", "schema", "table", "migration",
     "web3", "blockchain", "on chain", "onchain", "smart contract", "wallet", "solidity",
@@ -442,7 +437,7 @@ export function isActiveApprovalIntentAmbiguous(input: NormalizedIntake): boolea
     "remove", "delete", "drop", "deploy", "provision", "rotate", "rotation", "regenerate",
     "publish", "publishing", "publication", "transfer", "send", "spend", "spending",
     "rewrite", "reset", "sign", "broadcast", "create", "destroy", "wipe", "truncate",
-    "cut release", "rollout", "swap", "withdraw", "payout", "deposit", "bridge", "purchase", "billing",
+    "cut release", "rollout", "promote", "promoting", "promotion", "swap", "withdraw", "payout", "deposit", "bridge", "purchase", "billing",
   ]);
 }
 

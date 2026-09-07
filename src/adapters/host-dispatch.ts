@@ -203,9 +203,6 @@ function buildAssignments(
 }
 
 function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): ActiveApprovalGatedAction[] {
-  if (workOrder.autonomyBoundary.activeApprovalGatedActions) {
-    return [...workOrder.autonomyBoundary.activeApprovalGatedActions];
-  }
   return classifyActiveApprovalGatedActions({
     schema: "uads.intake",
     schemaVersion: "0.2.0",
@@ -226,9 +223,6 @@ function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): Active
 }
 
 function activeApprovalAmbiguityFromWorkOrder(workOrder: WorkOrder): boolean {
-  if (workOrder.autonomyBoundary.activeApprovalIntentAmbiguous !== undefined) {
-    return workOrder.autonomyBoundary.activeApprovalIntentAmbiguous;
-  }
   return isActiveApprovalIntentAmbiguous({
     schema: "uads.intake",
     schemaVersion: "0.2.0",

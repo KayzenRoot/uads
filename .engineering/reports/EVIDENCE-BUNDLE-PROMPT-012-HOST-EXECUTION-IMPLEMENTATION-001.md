@@ -17,7 +17,7 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 | Receipts are global-sidecar-only and bounded | `file` | `src/lib/workspace.ts`, `src/adapters/host-execution.ts` | PASS | atomic current/history; fixed 32-entry retention; no project writes |
 | All three adapters share the contract | `test` | `tests/host-execution.test.ts` HEB15/HEB20 | PASS | Cursor, Codex, Generic Agent Skills |
 | Receipt cannot authorize gates or finalize | `test` | `tests/host-execution.test.ts` HEB17 | PASS | execution evidence/review/finalize state remains unchanged |
-| Focused HEB01–HEB41 suite | `test` | `npm run eval:host-execution` | PASS | 41 tests passed after the ambiguity guard; HEB21–HEB27 cover Correction 01 and HEB28–HEB41 cover Correction 02 |
+| Focused HEB01–HEB42 suite | `test` | `npm run eval:host-execution` | PASS | 42 tests cover Correction 01 plus active/ambiguous approval classification, caller-prose rejection, and production-promotion classification |
 | Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 394 tests passed |
 | Official post-correction foundation matrix | `command` | `npm run validate` | PASS | lint, typecheck, build, full test suite, all evals, skills/actions/direct-review/CI-receipt/engineering validation passed |
 | Correction 01 security diff scan | `review` | scan `9c05c447-430e-4d42-9919-0eee9704c090` | PASS | complete coverage; 0 reportable findings; TAC status unavailable in this session |
@@ -70,11 +70,15 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   Host Dispatch Bundle identity. Handoff and every mutating transition enforce
   the active projection and the per-task ambiguity marker, returning
   `APPROVAL_AUTHORIZATION_MISSING` without a durable exact-identity proof.
-- HEB28–HEB41 cover safe planner handoff, production deployment, destructive
+- Host Dispatch recomputes the projection from current canonical Work Order
+  action signals rather than trusting persisted active fields. `approvedBoundaries`
+  is not positive authorization proof; caller-supplied authorization prose,
+  flags, and receipt state cannot bypass the gate.
+- HEB28–HEB42 cover safe planner handoff, production deployment (including
   production database, Web3/on-chain transfer, material-cost infrastructure,
   credential rotation, Git history rewrite, package publication, tamper,
-  caller-boolean bypass, non-canonical authorization, compatibility, the exact
-  canonical authorized-publication boundary, and ambiguous sensitive intent.
+  caller-boolean bypass, caller-prose rejection, compatibility, ambiguous
+  sensitive intent, and promotion-to-production classification.
 - The prior fixture behavior that globally cleared `requiresApproval` was
   removed. Local focused/full validation and the high-severity dependency audit
   pass on the final working tree; exact hosted checks and independent audit

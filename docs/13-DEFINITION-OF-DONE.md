@@ -292,16 +292,17 @@ Complete only when all are true:
   work from canonical planning signals.
 - A normal planner-generated handoff, including the catalog's global entries,
   has an empty active list and is accepted without fixture mutation.
-- Production deployment, destructive production database operations,
+- Production deployment (including promotion to production), destructive production database operations,
   material-cost external infrastructure actions, real credential rotation,
   destructive Git history rewrites, unauthorized package/release publication,
   asset/fund transfers, and on-chain transaction execution fail closed with
   `APPROVAL_AUTHORIZATION_MISSING` without an exact durable authorization proof.
-- Active classification is schema-closed and bound into Work Order and Host
+- Active classification is schema-closed, recomputed from current Work Order
+  action signals, and bound into Work Order and Host
   Dispatch identity; tamper, drift, stale active state, caller booleans, and
   completed receipts cannot authorize a different handoff. Sensitive intent
   that cannot prove a fixed class is marked ambiguous and fails closed for its
   own task.
-- HEB01–HEB27 remain green and HEB28–HEB41 prove the correction without
+- HEB01–HEB27 remain green and HEB28–HEB42 prove the correction without
   changing gate, assurance, review, finalize, release, version, or merge
   semantics.
