@@ -1,13 +1,15 @@
 # Checkpoint Delta - ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001
 
-Status: PROPOSED
-Canonical promotion: PENDING_MAINTAINER
+Status: ACCEPTED
+Canonical promotion: PROMOTED
 Work Order identity: ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001
 
 ## Lifecycle transition
 
 - Before: Prompt 012 Implementation 001 merged and technically verified; canonical documentation drift remains.
-- After proposed: canonical truth reconciled in a bounded closeout branch; independent audit and maintainer acceptance pending.
+- After source approval: canonical truth reconciled in a bounded closeout
+  branch; the status promotion is accepted and protected merge is authorized
+  only after the new promotion-head checks pass.
 
 ## Completed steps
 
@@ -22,19 +24,25 @@ Work Order identity: ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001
 - Completed `git diff --check`, `npm run validate:engineering`, `npm run
   lint`, `npm run typecheck`, `npm run validate`, and
   `npm audit --audit-level=high`; all passed, including 49 files / 406 tests.
+- Confirmed independent APPROVED audit comment `5575199591` for the exact
+  source head/tree and the authorized three-file promotion scope.
+- Confirmed PR #20 is open, non-draft, MERGEABLE, CLEAN, and all required
+  source-head checks are PASS.
 
 ## Open items
 
-- Inspect the exact changed-file set, commit, push one bounded closeout commit,
-  and open the requested PR.
+- Apply one bounded status-promotion commit to the existing PR #20 branch.
 - Wait for Foundation, CodeQL, Dependency Review, Linux Node 20, and Windows
-  Node 20 checks on the exact closeout head.
-- Obtain independent audit of the closeout truth reconciliation.
-- Keep the closeout PR unmerged; no promotion or release is authorized.
+  Node 20 checks on the exact promotion head.
+- Protected squash-merge PR #20 through the normal branch flow after all checks
+  pass.
+- Perform the required read-only post-merge verification; do not add a commit
+  solely to persist the resulting main SHA/tree or hosted run IDs.
 
 ## Safety statement
 
-This delta changes only documentation and governance truth. It does not modify
-UADS runtime behavior, schemas, tests, evals, workflows, dependencies, version,
-tags, releases, assets, Architecture Freeze v0.2, Host Execution behavior, or
-Prompt 011 history. It does not self-approve and does not authorize merge.
+This delta changes only governance status and evidence. It does not modify UADS
+runtime behavior, schemas, tests, evals, workflows, dependencies, version,
+tags, releases, assets, Architecture Freeze v0.2, Host Execution behavior,
+Prompt 011 history, or approved product wording. It records external approval
+but does not bypass protected merge or authorize release promotion.

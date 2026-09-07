@@ -1,10 +1,10 @@
 # Work Order — `ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001`
 
-Status: `READY_FOR_REVIEW`
+Status: `APPROVED_FOR_PROTECTED_MERGE`
 Repository: `KayzenRoot/uads`
 Branch: `docs/eng-prompt-012-post-merge-closeout-001`
 Baseline Git SHA: `bb27398d8caa80be4a550dc1c1a96e0042fdd808`
-Head Git SHA: `pending; authoritative closeout PR head must be read from GitHub`
+Head Git SHA: `ade17fcbd39ea730695798eea3c91f642e9e3927` (approved source head; promotion head intentionally not persisted)
 Scope class: `local`
 Risk: `LOW`
 
@@ -61,27 +61,28 @@ immutability, provider neutrality, and sidecar-only behavior.
 - The host owns IDE/agent/provider execution. UADS records bounded outcome
   facts and does not invoke providers or execute arbitrary commands.
 - Active approval-gated intent remains fail-closed without durable proof.
-- Independent audit must review the closeout PR; this record does not
-  self-approve it.
+- Independent audit approved the exact source head/tree in comment
+  `5575199591`; protected merge remains subject to the promotion-head checks.
 
 ## Acceptance criteria
 
-- [ ] `ROADMAP.md` marks the scope-freeze section historical and records the
+- [x] `ROADMAP.md` marks the scope-freeze section historical and records the
       bounded Prompt 012 Implementation 001 capability as delivered.
-- [ ] `docs/14-BACKLOG.md` links the delivered implementation and PR #19
+- [x] `docs/14-BACKLOG.md` links the delivered implementation and PR #19
       while retaining all deferred FUTURE items.
-- [ ] `README.md` exposes Host Execution handoff/receipt behavior without
+- [x] `README.md` exposes Host Execution handoff/receipt behavior without
       implying provider execution or arbitrary host command authority.
-- [ ] `CHANGELOG.md` records Prompt 012 under `[Unreleased]` without a new
+- [x] `CHANGELOG.md` records Prompt 012 under `[Unreleased]` without a new
       version and without changing historical release entries.
-- [ ] Final main SHA/tree, PR #19 merge, Direct Review PASS, and same-tree
+- [x] Final main SHA/tree, PR #19 merge, Direct Review PASS, and same-tree
       Dependency Review proof remain correctly referenced.
-- [ ] VERSION/package, tags/releases/assets, Architecture Freeze v0.2, and
+- [x] VERSION/package, tags/releases/assets, Architecture Freeze v0.2, and
       Prompt 011 history remain unchanged.
-- [ ] No runtime/schema/test/workflow/dependency/security/release logic is
+- [x] No runtime/schema/test/workflow/dependency/security/release logic is
       changed.
-- [ ] All required local and exact closeout-head hosted checks pass.
-- [ ] Closeout PR remains unmerged and awaits independent audit.
+- [x] All required local and exact closeout-head hosted checks pass.
+- [x] Closeout PR remains unmerged and is ready for protected merge after the
+      authorized promotion delta.
 
 ## Required gates and evidence
 
@@ -104,24 +105,27 @@ immutability, provider neutrality, and sidecar-only behavior.
   dependency, release, version, tag, asset, or freeze changes.
 - Any FUTURE capability must be implemented to satisfy the wording.
 - Any required local/hosted check fails or is ambiguous.
-- The closeout PR is merged before independent audit.
+- The closeout PR is merged before the authorized promotion delta or its
+  promotion-head checks complete.
 
 ## Autonomy boundary
 
-- Safe autonomous actions: inspect the locked repository, make the bounded
-  documentation/governance edits, create the matching records, run local
-  validation, create the requested branch/commit/PR, and collect read-only
-  hosted evidence.
-- Requires maintainer/independent-review action: approval of canonical truth,
-  merge, release publication, tag/release mutation, or scope expansion.
+- Safe autonomous actions: apply this approved status/evidence delta, run the
+  required local validation, push the promotion commit, collect exact-head
+  hosted evidence, and use the normal protected merge flow.
+- Requires protected branch controls: bypassing protection, force-pushing,
+  release publication, tag/release mutation, or scope expansion.
 
 ## Review and delivery
 
-- Independent reviewer: repository maintainer / independent technical audit.
+- Independent reviewer: repository maintainer / independent technical audit;
+  approval comment `5575199591`.
 - PR title: `docs(ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001): reconcile Prompt 012 canonical truth`.
 - Evidence Bundle:
   `.engineering/reports/EVIDENCE-BUNDLE-ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001.md`.
 - Checkpoint Delta:
   `.engineering/checkpoints/CHECKPOINT-DELTA-ENG-PROMPT-012-POST-MERGE-CLOSEOUT-001.md`.
-- Delivery status before independent audit: `READY_FOR_REVIEW`.
-- Do not merge this closeout PR.
+- Delivery status: `APPROVED_FOR_PROTECTED_MERGE`.
+- Protected squash merge is authorized only after the promotion-head checks
+  pass; do not force-push, bypass protection, or create a recursive post-merge
+  commit.
