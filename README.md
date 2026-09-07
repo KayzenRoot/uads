@@ -18,7 +18,7 @@ This repository is the public open-source UADS product. Releases are published f
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
 - Global specialist registry with 25 bounded built-in profiles, deterministic domain/gate/evidence obligation coverage, independent assurance, and semantic stale-plan binding
-- Common Cursor/Codex/Generic Agent Skills adapters with ownership-safe global installation and sidecar-only Host Dispatch Bundles
+- Common Cursor/Codex/Generic Agent Skills adapters with ownership-safe global installation, sidecar-only Host Dispatch Bundles, and the bounded Host Execution handoff/Receipt Boundary with current-authority revalidation and 32-entry history retention
 - Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap
 
@@ -66,8 +66,16 @@ node dist/cli.js adapters list --json
 node dist/cli.js adapters detect --json
 node dist/cli.js adapters status --json
 node dist/cli.js adapters prepare generic-agent-skills --json
+node dist/cli.js adapters handoff generic-agent-skills --json
+node dist/cli.js adapters receipt generic-agent-skills --state <state> --json
 node dist/cli.js review
 ```
+
+Host Execution is a bounded handoff and receipt capability after adapter
+preparation. Receipts remain global and sidecar-only, with current and
+immutable history. UADS does not invoke model providers, execute arbitrary
+host commands, or create approval proof; the host owns IDE/agent/provider
+execution, and approval-gated intent fails closed without durable proof.
 
 `npm run lint` is TypeScript `tsc --noEmit` (compile/static check; not ESLint).
 
