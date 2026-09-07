@@ -419,7 +419,7 @@ function assertCurrentHostExecutionAuthority(
 }
 
 function assertApprovalBoundary(artifacts: HostDispatchCurrentArtifacts): void {
-  if (artifacts.activeApprovalGatedActions.length > 0) {
+  if (artifacts.activeApprovalIntentAmbiguous || artifacts.activeApprovalGatedActions.length > 0) {
     throw new HostExecutionError(
       "host execution handoff is blocked: APPROVAL_AUTHORIZATION_MISSING; no verifiable authorization record exists for the current approval-gated Work Order",
       "APPROVAL_AUTHORIZATION_MISSING",

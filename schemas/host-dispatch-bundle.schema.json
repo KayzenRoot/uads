@@ -107,6 +107,7 @@
         ]
       }
     },
+    "activeApprovalIntentAmbiguous": { "type": "boolean" },
     "riskLevel": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
     "scopeClass": { "enum": ["trivial", "local", "cross-cutting", "architectural"] },
     "capabilityClass": { "enum": ["economy", "balanced", "strong", "critical"] },

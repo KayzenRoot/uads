@@ -200,6 +200,7 @@ export type HostDispatchBundle = {
   indexDigest: string | null;
   currentChangeDigest: string | null;
   activeApprovalGatedActions?: ActiveApprovalGatedAction[];
+  activeApprovalIntentAmbiguous?: boolean;
   riskLevel: RiskLevel;
   scopeClass: ScopeClass;
   capabilityClass: CapabilityClass;

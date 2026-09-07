@@ -83,3 +83,6 @@ inputs. When that active list is non-empty and the repository/runtime has no
 verifiable durable authorization record for the exact current identity,
 handoff is blocked with `APPROVAL_AUTHORIZATION_MISSING`. Receipt state, CLI
 flags, booleans, and prose cannot serve as approval evidence.
+Sensitive requests that do not prove a fixed class set
+`activeApprovalIntentAmbiguous` and fail closed for that task rather than
+globally blocking unrelated work.

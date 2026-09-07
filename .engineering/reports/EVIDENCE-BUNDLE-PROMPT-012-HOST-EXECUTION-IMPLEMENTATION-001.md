@@ -17,7 +17,7 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 | Receipts are global-sidecar-only and bounded | `file` | `src/lib/workspace.ts`, `src/adapters/host-execution.ts` | PASS | atomic current/history; fixed 32-entry retention; no project writes |
 | All three adapters share the contract | `test` | `tests/host-execution.test.ts` HEB15/HEB20 | PASS | Cursor, Codex, Generic Agent Skills |
 | Receipt cannot authorize gates or finalize | `test` | `tests/host-execution.test.ts` HEB17 | PASS | execution evidence/review/finalize state remains unchanged |
-| Focused HEB01–HEB40 suite | `test` | `npm run eval:host-execution` | PASS | 40 tests passed; HEB21–HEB27 cover Correction 01 and HEB28–HEB40 cover Correction 02 |
+| Focused HEB01–HEB41 suite | `test` | `npm run eval:host-execution` | PASS | 41 tests passed after the ambiguity guard; HEB21–HEB27 cover Correction 01 and HEB28–HEB41 cover Correction 02 |
 | Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 394 tests passed |
 | Official post-correction foundation matrix | `command` | `npm run validate` | PASS | lint, typecheck, build, full test suite, all evals, skills/actions/direct-review/CI-receipt/engineering validation passed |
 | Correction 01 security diff scan | `review` | scan `9c05c447-430e-4d42-9919-0eee9704c090` | PASS | complete coverage; 0 reportable findings; TAC status unavailable in this session |
@@ -34,7 +34,7 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 - Context Lock: `.engineering/context-locks/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
 - Baseline: `.engineering/baselines/PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001.md`
-- Change summary: `Correction 01 adds current-identity revalidation and fail-closed approval-boundary enforcement; exact PR head is authoritative from GitHub`
+- Change summary: `Correction 01 current-identity enforcement plus Correction 02 active/ambiguous approval-intent classification; exact PR head is authoritative from GitHub`
 
 ## Correction 01 — Current-Identity & Approval-Boundary Enforcement
 
@@ -68,13 +68,13 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
   non-empty catalog.
 - The active projection is included in the Work Order routing digest and the
   Host Dispatch Bundle identity. Handoff and every mutating transition enforce
-  only the active projection, returning
+  the active projection and the per-task ambiguity marker, returning
   `APPROVAL_AUTHORIZATION_MISSING` without a durable exact-identity proof.
-- HEB28–HEB40 cover safe planner handoff, production deployment, destructive
+- HEB28–HEB41 cover safe planner handoff, production deployment, destructive
   production database, Web3/on-chain transfer, material-cost infrastructure,
   credential rotation, Git history rewrite, package publication, tamper,
-  caller-boolean bypass, non-canonical authorization, compatibility, and the
-  exact canonical authorized-publication boundary.
+  caller-boolean bypass, non-canonical authorization, compatibility, the exact
+  canonical authorized-publication boundary, and ambiguous sensitive intent.
 - The prior fixture behavior that globally cleared `requiresApproval` was
   removed. Local focused/full validation and the high-severity dependency audit
   pass on the final working tree; exact hosted checks and independent audit

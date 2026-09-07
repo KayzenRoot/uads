@@ -151,6 +151,9 @@ scope, and domain/risk/destructive signals. A non-empty active projection
 blocks with `APPROVAL_AUTHORIZATION_MISSING` because this architecture has no
 durable authorization-proof primitive. No receipt, CLI field, caller boolean,
 or prose can authorize the action.
+Sensitive signals that imply an action but do not prove a fixed class set
+`activeApprovalIntentAmbiguous`, which is bound into the same identities and
+blocks that task with the same reason code.
 # Specialist delegation contract
 
 Adapters may invoke the lean `agents/uads-*.md` descriptors selected by the sidecar Specialist Selection Plan. The kernel emits role-specific assignments with objective, relevant affected areas/files/gates, evidence obligations, risk, forbidden scope, dependency group, and parallel eligibility. Adapters must not invent profiles, call providers from the kernel, execute approval-gated actions, or treat a stale/blocked plan as dispatch authorization.

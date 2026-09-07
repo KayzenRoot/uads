@@ -160,6 +160,7 @@ export type WorkOrder = {
     safeAutonomous: string[];
     requiresApproval: string[];
     activeApprovalGatedActions?: ActiveApprovalGatedAction[];
+    activeApprovalIntentAmbiguous?: boolean;
   };
   nextAction: string;
 };

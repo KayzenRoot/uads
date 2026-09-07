@@ -27,6 +27,9 @@ routing digest and Host Dispatch Bundle identity; only a non-empty active list
 fails closed with `APPROVAL_AUTHORIZATION_MISSING` when no exact durable
 authorization proof exists. The schemas remain closed, old sidecars remain
 readable conservatively, and receipt state is never an approval authority.
+Sensitive but unclassifiable current work also sets the schema-closed
+`activeApprovalIntentAmbiguous` identity field and is blocked only for that
+task.
 
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 

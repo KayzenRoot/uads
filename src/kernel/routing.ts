@@ -412,10 +412,45 @@ export function classifyActiveApprovalGatedActions(input: NormalizedIntake): Act
   return ACTIVE_APPROVAL_GATED_ACTIONS.filter((action) => active.has(action));
 }
 
+/**
+ * Detects a sensitive request whose available canonical signals do not prove
+ * one of the fixed approval classes. Such a task is blocked per-task rather
+ * than making the global policy catalog block every normal handoff.
+ */
+export function isActiveApprovalIntentAmbiguous(input: NormalizedIntake): boolean {
+  if (classifyActiveApprovalGatedActions(input).length > 0) return false;
+  const corpus = approvalCorpus(input);
+  const releasePublicationIntent =
+    hasApprovalTerm(corpus, ["publish", "publishing", "publication", "cut a release", "cut release"]) &&
+    hasApprovalTerm(corpus, ["package", "packages", "npm", "release", "releases", "registry"]);
+  const releaseAlreadyAuthorized = input.approvedBoundaries
+    .map(normalizedApprovalText)
+    .some((boundary) => RELEASE_AUTHORIZED_BOUNDARIES.has(boundary));
+  if (releasePublicationIntent && releaseAlreadyAuthorized) return false;
+  const sensitiveContext = hasApprovalTerm(corpus, [
+    "production", "prod", "database", "db", "postgres", "sql", "schema", "table", "migration",
+    "web3", "blockchain", "on chain", "onchain", "smart contract", "wallet", "solidity",
+    "infrastructure", "external infrastructure", "cloud", "kubernetes", "terraform", "aws", "gcp", "azure",
+    "credential", "credentials", "secret", "secrets", "api key", "access key",
+    "git", "git history", "force push", "rebase",
+    "package", "packages", "npm", "release", "releases", "registry",
+    "asset", "assets", "fund", "funds", "money", "token", "tokens",
+  ]);
+  if (!sensitiveContext) return false;
+  return hasApprovalTerm(corpus, [
+    "change", "modify", "update", "alter", "operate", "execute", "run", "apply", "migrate",
+    "remove", "delete", "drop", "deploy", "provision", "rotate", "rotation", "regenerate",
+    "publish", "publishing", "publication", "transfer", "send", "spend", "spending",
+    "rewrite", "reset", "sign", "broadcast", "create", "destroy", "wipe", "truncate",
+    "cut release", "rollout", "swap", "withdraw", "payout", "deposit", "bridge", "purchase", "billing",
+  ]);
+}
+
 export function autonomyBoundary(intake: NormalizedIntake): {
   safeAutonomous: string[];
   requiresApproval: string[];
   activeApprovalGatedActions: ActiveApprovalGatedAction[];
+  activeApprovalIntentAmbiguous: boolean;
 } {
   const requiresApproval: string[] = [];
   if (intake.destructiveSignals.length > 0 || intake.riskSignals.includes("destructive")) {
@@ -448,5 +483,6 @@ export function autonomyBoundary(intake: NormalizedIntake): {
       "publishing packages/releases when not already authorized",
     ]),
     activeApprovalGatedActions: classifyActiveApprovalGatedActions(intake),
+    activeApprovalIntentAmbiguous: isActiveApprovalIntentAmbiguous(intake),
   };
 }

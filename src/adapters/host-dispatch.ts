@@ -11,7 +11,7 @@ import {
   MODEL_ROUTING_POLICY_DIGEST,
   routeModel,
 } from "../kernel/model-router.js";
-import { classifyActiveApprovalGatedActions } from "../kernel/routing.js";
+import { classifyActiveApprovalGatedActions, isActiveApprovalIntentAmbiguous } from "../kernel/routing.js";
 import {
   isModelExecutionPlanCurrent,
   readCurrentModelExecutionPlan,
@@ -83,6 +83,7 @@ export type HostDispatchCurrentArtifacts = {
   executionRunId: string | null;
   currentChangeDigest: string | null;
   activeApprovalGatedActions: ActiveApprovalGatedAction[];
+  activeApprovalIntentAmbiguous: boolean;
 };
 
 function stableValue(value: unknown): unknown {
@@ -224,6 +225,29 @@ function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): Active
   });
 }
 
+function activeApprovalAmbiguityFromWorkOrder(workOrder: WorkOrder): boolean {
+  if (workOrder.autonomyBoundary.activeApprovalIntentAmbiguous !== undefined) {
+    return workOrder.autonomyBoundary.activeApprovalIntentAmbiguous;
+  }
+  return isActiveApprovalIntentAmbiguous({
+    schema: "uads.intake",
+    schemaVersion: "0.2.0",
+    objective: workOrder.objective,
+    constraints: workOrder.constraints ?? [],
+    requestedArtifacts: [],
+    inScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    domainSignals: workOrder.domains,
+    riskSignals: workOrder.specialistRiskSignals ?? [],
+    destructiveSignals: (workOrder.specialistRiskSignals ?? []).filter((signal) => signal.includes("destructive")),
+    affectedAreas: workOrder.affectedAreas,
+    uncertainties: [],
+    approvedBoundaries: [],
+    classifier: "host-structured",
+  });
+}
+
 export function readCurrentHostDispatchArtifacts(
   input: {
     adapterId: HostAdapterId;
@@ -338,6 +362,7 @@ export function readCurrentHostDispatchArtifacts(
     throw new HostDispatchError("current execution run identity is mismatched");
   }
   const activeApprovalGatedActions = activeApprovalClassificationFromWorkOrder(workOrder);
+  const activeApprovalIntentAmbiguous = activeApprovalAmbiguityFromWorkOrder(workOrder);
   return {
     checkpoint,
     workOrder,
@@ -355,6 +380,7 @@ export function readCurrentHostDispatchArtifacts(
     executionRunId: currentExecution?.executionRunId ?? null,
     currentChangeDigest: currentExecution?.currentChangeDigest ?? null,
     activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous,
   };
 }
 
@@ -405,6 +431,7 @@ export function assertHostDispatchBundleMatchesCurrent(
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
     activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
   };
   const expectedBundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
   if (bundle.bundleId !== expectedBundleId) {
@@ -443,6 +470,7 @@ export function assertHostDispatchBundleMatchesCurrent(
     indexDigest: artifacts.currentIndexDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
     riskLevel: artifacts.workOrder.riskLevel,
     scopeClass: artifacts.workOrder.scopeClass,
     capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,
@@ -518,6 +546,7 @@ export function prepareHostDispatchBundle(input: {
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
     activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
   };
   const bundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
   const planParallelGroups = artifacts.specialistPlan.dispatch.parallelEligibleGroups;
@@ -556,6 +585,7 @@ export function prepareHostDispatchBundle(input: {
     indexDigest: artifacts.currentIndexDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
     riskLevel: artifacts.workOrder.riskLevel,
     scopeClass: artifacts.workOrder.scopeClass,
     capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,

@@ -583,4 +583,16 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
     expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
     expect(handoff(value).state).toBe("ACCEPTED");
   });
+
+  it("HEB41 fails closed for an ambiguous sensitive approval intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Modify the production environment",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["production environment"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalIntentAmbiguous).toBe(true);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
 });

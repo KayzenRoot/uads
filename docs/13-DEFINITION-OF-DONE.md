@@ -299,7 +299,9 @@ Complete only when all are true:
   `APPROVAL_AUTHORIZATION_MISSING` without an exact durable authorization proof.
 - Active classification is schema-closed and bound into Work Order and Host
   Dispatch identity; tamper, drift, stale active state, caller booleans, and
-  completed receipts cannot authorize a different handoff.
-- HEB01–HEB27 remain green and HEB28–HEB40 prove the correction without
+  completed receipts cannot authorize a different handoff. Sensitive intent
+  that cannot prove a fixed class is marked ambiguous and fails closed for its
+  own task.
+- HEB01–HEB27 remain green and HEB28–HEB41 prove the correction without
   changing gate, assurance, review, finalize, release, version, or merge
   semantics.

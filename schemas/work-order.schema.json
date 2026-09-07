@@ -156,7 +156,8 @@
               "on-chain transaction execution"
             ]
           }
-        }
+        },
+        "activeApprovalIntentAmbiguous": { "type": "boolean" }
       }
     },
     "nextAction": { "type": "string" }

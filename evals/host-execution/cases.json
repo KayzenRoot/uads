@@ -38,5 +38,6 @@
   { "id": "HEB37", "name": "caller approval booleans cannot bypass active classification" },
   { "id": "HEB38", "name": "non-canonical package authorization cannot bypass active classification" },
   { "id": "HEB39", "name": "normal prepare and dispatch remain compatible" },
-  { "id": "HEB40", "name": "only the exact canonical package authorization boundary is recognized" }
+  { "id": "HEB40", "name": "only the exact canonical package authorization boundary is recognized" },
+  { "id": "HEB41", "name": "ambiguous sensitive approval intent fails closed" }
 ]
