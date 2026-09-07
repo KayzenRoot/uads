@@ -1,10 +1,13 @@
 # Work Order - ENG-UADS-RELEASE-0120-001
 
-Status: READY_FOR_REVIEW
+Status: APPROVED_FOR_PROTECTED_MERGE
 Repository: KayzenRoot/uads
 Branch: release/eng-uads-release-0120-001
 Baseline Git SHA: 88d9bbea41522fe5cbbbf658c1e216ecc41fd063
-Head Git SHA: pending; authoritative release-preparation PR head must be read from GitHub
+Approved source head: a79ccd1e44723c7a4258b754c1a698bfc9ce82c7
+Approved source tree: b8862a886d2fc7b5fb9825fffc6389a0b7d8beb4
+Promotion and final main identities are returned externally and are not
+persisted here as self-referential current/final state.
 Scope class: local
 Risk: HIGH
 
@@ -67,7 +70,8 @@ major-release decision.
 - Any change to v0.11.1 or older changelog entries, tags, releases, or assets.
 - Creating or moving a v0.12.0 tag.
 - Creating a GitHub Release, uploading assets, or dispatching release workflow.
-- Merging the release-preparation PR before independent audit.
+- Merging except through normal protected flow after independent audit and
+  promotion-head checks.
 
 ## Dependencies and assumptions
 
@@ -75,8 +79,8 @@ major-release decision.
 - Prompt 012 is complete and is the parent release input.
 - Release publication remains a separate post-merge action requiring independent
   approval and exact-main CI, Direct Review, and security proof.
-- Current source delivery status remains READY_FOR_REVIEW, PROPOSED, or
-  PENDING_MAINTAINER until independent audit.
+- Current source delivery status is APPROVED_FOR_PROTECTED_MERGE after the
+  independent audit; release publication remains NOT STARTED / NOT AUTHORIZED.
 - The release-preparation records do not self-authorize merge or publication.
 
 ## Acceptance criteria
@@ -95,10 +99,12 @@ major-release decision.
 - [ ] No v0.12.0 tag or GitHub Release exists.
 - [x] Required local gates pass with 49 test files, 406 tests, HEB 52/52,
       full validation, and npm audit at high severity.
-- [ ] Required hosted PR checks pass on the exact PR head.
-- [ ] Governance records remain review-pending and do not self-approve.
-- [ ] The release-preparation PR remains open and unmerged for independent
-      review.
+- [x] Required hosted PR checks pass on the approved source head; the
+      promotion head must be revalidated before protected merge.
+- [x] Governance records reflect the independent approval and do not
+      self-approve publication.
+- [x] The release-preparation PR remains open and unmerged pending the
+      promotion-head checks and protected merge.
 
 ## Required gates and evidence
 
@@ -143,5 +149,6 @@ major-release decision.
   .engineering/reports/EVIDENCE-BUNDLE-ENG-UADS-RELEASE-0120-001.md.
 - Checkpoint Delta:
   .engineering/checkpoints/CHECKPOINT-DELTA-ENG-UADS-RELEASE-0120-001.md.
-- Delivery status: READY_FOR_REVIEW.
+- Delivery status: APPROVED_FOR_PROTECTED_MERGE; publication NOT STARTED /
+  NOT AUTHORIZED.
 - Do not merge, tag, publish, dispatch release workflow, or upload assets.

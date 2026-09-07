@@ -1,15 +1,16 @@
 # Checkpoint Delta - ENG-UADS-RELEASE-0120-001
 
-Status: PROPOSED
-Canonical promotion: PENDING_MAINTAINER
+Status: PROMOTED
+Canonical promotion: PENDING_PROTECTED_MERGE
 Work Order identity: ENG-UADS-RELEASE-0120-001
 
 ## Lifecycle transition
 
 - Before: Prompt 012 is fully closed; main is at 0.11.1 and release metadata
   still describes the current release.
-- After proposed: v0.12.0 release metadata is prepared on a bounded branch and
-  is ready for independent release audit; no tag, release, or publication exists.
+- After promoted: the independently approved v0.12.0 release metadata is
+  promoted for one protected squash merge; no tag, release, or publication
+  exists.
 
 ## Completed steps
 
@@ -29,20 +30,29 @@ Work Order identity: ENG-UADS-RELEASE-0120-001
 - Ran the required local validation successfully: npm ci; engineering,
   lint, typecheck, test 49/49 files and 406/406 tests; HEB 52/52; full
   validation; and npm audit at high severity.
+- Confirmed independent APPROVED audit comment 5576830887 binds PR #21 to the
+  exact source head/tree and authorizes one status-promotion delta followed by
+  normal protected squash merge.
+- Confirmed source-head Foundation, CodeQL, Dependency Review, and
+  Compatibility checks passed with the approved identities.
+- Prepared exactly one governance/evidence-only promotion delta; promotion and
+  final identities will be returned externally rather than persisted here.
 
 ## Open items
 
-- Inspect the exact changed-file set and create one bounded preparation commit.
-- Push the branch and open the single release-preparation PR.
-- Wait for Foundation, CodeQL, Dependency Review, Linux Node 20, and Windows
-  Node 20 on the exact PR head.
-- Obtain independent release audit and maintainer acceptance.
-- Keep the PR open and unmerged; do not create a tag, release, asset, or
-  dispatch the release workflow.
+- Run the required local validation after the promotion delta.
+- Push the single promotion commit and wait for Foundation, CodeQL, Dependency
+  Review, Linux Node 20, and Windows Node 20 on its exact head.
+- Complete the normal protected squash merge of PR #21 only after all checks
+  pass.
+- Read final main identities and complete the post-merge release-ready
+  verification, including final security proof and Direct Review.
+- Do not create a tag, release, asset, or dispatch the release workflow.
 
 ## Safety statement
 
-This delta changes only release metadata and governance records. It does not
+This promoted delta changes only governance and evidence records. It does not
 modify runtime, schemas, tests, evals, workflows, dependencies, security
 proof logic, Architecture Freeze v0.2, FUTURE scope, historical releases, or
-tags. It does not self-authorize merge or release publication.
+tags. It authorizes only the normal protected merge after promotion-head
+checks; it does not authorize release publication.
