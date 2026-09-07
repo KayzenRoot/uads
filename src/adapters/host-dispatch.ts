@@ -202,16 +202,18 @@ function buildAssignments(
   }));
 }
 
-function assertPersistedApprovalSignals(workOrder: WorkOrder): asserts workOrder is WorkOrder & {
+type PersistedApprovalWorkOrder = WorkOrder & {
   requestedArtifacts: string[];
   destructiveSignals: string[];
-} {
+};
+
+function assertPersistedApprovalSignals(workOrder: WorkOrder): asserts workOrder is PersistedApprovalWorkOrder {
   if (!Array.isArray(workOrder.requestedArtifacts) || !Array.isArray(workOrder.destructiveSignals)) {
     throw new HostDispatchError("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
   }
 }
 
-function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): ActiveApprovalGatedAction[] {
+function activeApprovalClassificationFromWorkOrder(workOrder: PersistedApprovalWorkOrder): ActiveApprovalGatedAction[] {
   return classifyActiveApprovalGatedActions({
     schema: "uads.intake",
     schemaVersion: "0.2.0",
@@ -231,7 +233,7 @@ function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): Active
   });
 }
 
-function activeApprovalAmbiguityFromWorkOrder(workOrder: WorkOrder): boolean {
+function activeApprovalAmbiguityFromWorkOrder(workOrder: PersistedApprovalWorkOrder): boolean {
   return isActiveApprovalIntentAmbiguous({
     schema: "uads.intake",
     schemaVersion: "0.2.0",
