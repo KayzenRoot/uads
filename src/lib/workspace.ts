@@ -38,6 +38,9 @@ export type UadsPaths = {
   hostDispatch: string;
   currentHostDispatch: string;
   hostDispatchHistory: string;
+  hostExecution: string;
+  currentHostExecutionReceipt: string;
+  hostExecutionReceiptHistory: string;
   profile: string;
   currentState: string;
   repositoryMap: string;
@@ -93,6 +96,9 @@ export function getUadsPaths(projectId: string, uadsHome?: string): UadsPaths {
     hostDispatch: path.join(workspace, "host-dispatch"),
     currentHostDispatch: path.join(workspace, "host-dispatch", "current.json"),
     hostDispatchHistory: path.join(workspace, "host-dispatch", "history"),
+    hostExecution: path.join(workspace, "host-execution"),
+    currentHostExecutionReceipt: path.join(workspace, "host-execution", "current.json"),
+    hostExecutionReceiptHistory: path.join(workspace, "host-execution", "history"),
     profile: path.join(workspace, "profile.json"),
     currentState: path.join(workspace, "state", "current.json"),
     repositoryMap: path.join(workspace, "index", "repository-map.json"),
@@ -143,6 +149,8 @@ export function ensureWorkspace(projectId: string, uadsHome?: string): UadsPaths
     paths.specialistSelectionHistory,
     paths.hostDispatch,
     paths.hostDispatchHistory,
+    paths.hostExecution,
+    paths.hostExecutionReceiptHistory,
     path.join(paths.context, "impact-reports"),
     path.join(paths.context, "packs"),
     path.join(paths.context, "diagnostic-packs"),

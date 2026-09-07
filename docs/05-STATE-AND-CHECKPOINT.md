@@ -37,3 +37,36 @@ The 0.8.0 Model Execution Plan is persisted separately at `model-routing/current
 - Write checkpoints after each meaningful phase
 - On resume, read the latest checkpoint first
 - Treat sidecar files as durable but not source-of-truth for product code
+
+Prompt 012 adds the host execution receipt sidecar at
+`host-execution/current.json`, with immutable transition entries under
+`host-execution/history/<receipt-id>.json`. Handoff revalidates the current
+Host Dispatch Bundle and all bound orchestration identities before persisting
+`ACCEPTED`. Receipt transitions are limited to the closed
+`ACCEPTED → STARTED → COMPLETED|FAILED|BLOCKED` contract (a host may report a
+direct terminal outcome from `ACCEPTED`); terminal receipts cannot be
+rewritten. History retention is fixed at 32 valid entries and corrupt JSON
+fails closed. Receipts are operational status only: they never replace gate
+evidence, assurance, review, or finalize state.
+
+Before every mutating receipt transition, UADS reconstructs the current Host
+Dispatch artifacts and compares them with the accepted bundle. A changed
+execution run, Work Order, routing decision, specialist selection, model plan,
+runtime, current-change identity, adapter ownership, target root, or bundle
+fails closed with a stable reason code; the previous receipt remains unchanged.
+The Work Order `requiresApproval` list is a global policy catalog and may be
+non-empty for every plan; it is not evidence that the current handoff requests
+one of those actions. UADS derives the schema-closed
+`autonomyBoundary.activeApprovalGatedActions` list from the canonical objective,
+scope, requested artifacts, constraints, acceptance criteria, and planning
+signals. Only a non-empty active list fails closed at
+handoff with `APPROVAL_AUTHORIZATION_MISSING` when no existing durable
+authorization proof can be verified for the current identity. The active list
+is bound into the Work Order digest and Host Dispatch Bundle identity. Host
+Dispatch recomputes it from current Work Order action signals, requires
+persisted `constraints`, and fails closed for legacy absence, so a persisted
+projection, caller-provided boolean/state, or `approvedBoundaries` prose never
+creates that authority.
+When sensitive signals imply an action but do not prove a fixed class,
+`activeApprovalIntentAmbiguous` is bound to the same identities and blocks only
+that task fail-closed.

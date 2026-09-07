@@ -2,6 +2,7 @@ import { detectHostAdapter } from "./host-adapter-detect.js";
 import { getHostAdapterDefinition } from "./host-adapter-registry.js";
 import { installHostAdapter, uninstallHostAdapter } from "./host-adapter-install.js";
 import { prepareHostDispatchBundle } from "./host-dispatch.js";
+import { handoffHostExecution, transitionHostExecutionReceipt } from "./host-execution.js";
 import type {
   HostAdapter,
   HostAdapterDetectionInput,
@@ -17,5 +18,7 @@ export function getHostAdapter(adapterId: HostAdapterId): HostAdapter {
     install: (input: HostAdapterInstallInput = {}) => installHostAdapter(adapterId, input),
     uninstall: (input: HostAdapterUninstallInput = {}) => uninstallHostAdapter(adapterId, input),
     prepare: (input = {}) => prepareHostDispatchBundle({ adapterId, ...input }),
+    handoff: (input = {}) => handoffHostExecution({ adapterId, ...input }),
+    receipt: (input) => transitionHostExecutionReceipt({ adapterId, ...input }),
   };
 }

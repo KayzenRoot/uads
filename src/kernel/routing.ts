@@ -1,4 +1,4 @@
-import type { NormalizedIntake, RiskLevel, ScopeClass } from "./types.js";
+import type { ActiveApprovalGatedAction, NormalizedIntake, RiskLevel, ScopeClass } from "./types.js";
 import { IMPLEMENTER_ROLE, INDEPENDENT_REVIEWER_ROLE } from "./types.js";
 import { unique } from "./ids.js";
 import { GATE_REGISTRY } from "./gates.js";
@@ -248,9 +248,206 @@ export function selectGates(input: {
   return gates;
 }
 
+export const ACTIVE_APPROVAL_GATED_ACTIONS: readonly ActiveApprovalGatedAction[] = [
+  "production deployment",
+  "destructive production database operation",
+  "spending money / material-cost external infrastructure action",
+  "rotating real credentials",
+  "destructive Git history rewrite",
+  "publishing package/release when not already authorized",
+  "transferring assets/funds",
+  "on-chain transaction execution",
+];
+
+function normalizedApprovalText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function approvalCorpus(input: NormalizedIntake): string {
+  return [
+    input.objective,
+    ...input.constraints,
+    ...input.inScope,
+    ...input.requestedArtifacts,
+    ...input.acceptanceCriteria,
+    ...input.domainSignals,
+    ...input.riskSignals,
+    ...input.destructiveSignals,
+  ]
+    .map(normalizedApprovalText)
+    .filter(Boolean)
+    .join(" ");
+}
+
+function hasApprovalTerm(corpus: string, terms: string[]): boolean {
+  return terms.some((term) => {
+    const normalized = normalizedApprovalText(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^| )${normalized}(?: |$)`).test(corpus);
+  });
+}
+
+/**
+ * Classifies only explicit, schema-closed approval intent in the current
+ * requested work. The global policy catalog remains in requiresApproval;
+ * this result is the current-handoff enforcement projection.
+ */
+export function classifyActiveApprovalGatedActions(input: NormalizedIntake): ActiveApprovalGatedAction[] {
+  const corpus = approvalCorpus(input);
+  const production = hasApprovalTerm(corpus, ["production", "prod"]);
+  const databaseContext = hasApprovalTerm(corpus, ["database", "db", "postgres", "sql", "schema", "table", "migration"]);
+  const web3Context = hasApprovalTerm(corpus, ["web3", "blockchain", "on chain", "onchain", "smart contract", "wallet", "solidity"]);
+  const infrastructureContext = hasApprovalTerm(corpus, [
+    "infrastructure",
+    "external infrastructure",
+    "cloud",
+    "kubernetes",
+    "terraform",
+    "aws",
+    "gcp",
+    "azure",
+  ]);
+  const destructiveIntent = hasApprovalTerm(corpus, [
+    "destructive",
+    "drop",
+    "truncate",
+    "delete",
+    "destroy",
+    "wipe",
+    "reset hard",
+  ]);
+  const deploymentIntent = hasApprovalTerm(corpus, [
+    "deploy",
+    "deployment",
+    "rollout",
+    "roll out",
+    "promote",
+    "promoting",
+    "promotion",
+  ]);
+  const transferIntent = hasApprovalTerm(corpus, [
+    "transfer",
+    "transferring",
+    "send",
+    "withdraw",
+    "withdrawal",
+    "payout",
+    "deposit",
+    "bridge",
+    "swap",
+  ]);
+  const assetOrFundContext = hasApprovalTerm(corpus, ["asset", "assets", "fund", "funds", "money", "token", "tokens"]);
+  const onChainIntent = hasApprovalTerm(corpus, [
+    "transaction",
+    "execute",
+    "submit",
+    "sign",
+    "broadcast",
+    "mint",
+    "burn",
+    "transfer",
+    "withdraw",
+    "send",
+    "swap",
+    "deploy contract",
+  ]);
+  const credentialContext = hasApprovalTerm(corpus, [
+    "credential",
+    "credentials",
+    "secret",
+    "secrets",
+    "api key",
+    "api keys",
+    "access key",
+    "real credentials",
+  ]);
+  const gitContext = hasApprovalTerm(corpus, ["git", "git history", "force push", "rebase", "reset hard"]);
+  const historyRewriteIntent = hasApprovalTerm(corpus, [
+    "rewrite history",
+    "history rewrite",
+    "rewrite git history",
+    "force push",
+    "rebase",
+    "reset hard",
+    "filter branch",
+  ]);
+  const packageOrReleaseContext = hasApprovalTerm(corpus, ["package", "packages", "npm", "release", "releases", "registry"]);
+  const releasePublicationIntent =
+    hasApprovalTerm(corpus, ["publish", "publishing", "publication", "cut a release", "cut release"]) &&
+    packageOrReleaseContext;
+  const materialCostIntent = hasApprovalTerm(corpus, [
+    "spend",
+    "spending",
+    "money",
+    "cost",
+    "costs",
+    "paid",
+    "billing",
+    "budget",
+    "material cost",
+    "availability impact",
+    "purchase",
+  ]);
+
+  const active = new Set<ActiveApprovalGatedAction>();
+  if (production && deploymentIntent) active.add("production deployment");
+  if (production && databaseContext && destructiveIntent) active.add("destructive production database operation");
+  if (infrastructureContext && materialCostIntent) {
+    active.add("spending money / material-cost external infrastructure action");
+  }
+  if (credentialContext && hasApprovalTerm(corpus, ["rotate", "rotation", "rotating", "regenerate"])) {
+    active.add("rotating real credentials");
+  }
+  if (gitContext && historyRewriteIntent) active.add("destructive Git history rewrite");
+  if (releasePublicationIntent) {
+    active.add("publishing package/release when not already authorized");
+  }
+  if (transferIntent && assetOrFundContext) active.add("transferring assets/funds");
+  if (web3Context && onChainIntent) active.add("on-chain transaction execution");
+
+  return ACTIVE_APPROVAL_GATED_ACTIONS.filter((action) => active.has(action));
+}
+
+/**
+ * Detects a sensitive request whose available canonical signals do not prove
+ * one of the fixed approval classes. Such a task is blocked per-task rather
+ * than making the global policy catalog block every normal handoff.
+ */
+export function isActiveApprovalIntentAmbiguous(input: NormalizedIntake): boolean {
+  if (classifyActiveApprovalGatedActions(input).length > 0) return false;
+  const corpus = approvalCorpus(input);
+  const releasePublicationIntent =
+    hasApprovalTerm(corpus, ["publish", "publishing", "publication", "cut a release", "cut release"]) &&
+    hasApprovalTerm(corpus, ["package", "packages", "npm", "release", "releases", "registry"]);
+  const sensitiveContext = hasApprovalTerm(corpus, [
+    "production", "prod", "database", "db", "postgres", "sql", "schema", "table", "migration",
+    "web3", "blockchain", "on chain", "onchain", "smart contract", "wallet", "solidity",
+    "infrastructure", "external infrastructure", "cloud", "kubernetes", "terraform", "aws", "gcp", "azure",
+    "credential", "credentials", "secret", "secrets", "api key", "access key",
+    "git", "git history", "force push", "rebase",
+    "package", "packages", "npm", "release", "releases", "registry",
+    "asset", "assets", "fund", "funds", "money", "token", "tokens",
+  ]);
+  if (!sensitiveContext) return false;
+  return hasApprovalTerm(corpus, [
+    "change", "modify", "update", "alter", "operate", "execute", "run", "apply", "migrate",
+    "remove", "delete", "drop", "deploy", "provision", "rotate", "rotation", "regenerate",
+    "publish", "publishing", "publication", "transfer", "send", "spend", "spending",
+    "rewrite", "reset", "sign", "broadcast", "create", "destroy", "wipe", "truncate",
+    "cut release", "rollout", "promote", "promoting", "promotion", "swap", "withdraw", "payout", "deposit", "bridge", "purchase", "billing",
+  ]);
+}
+
 export function autonomyBoundary(intake: NormalizedIntake): {
   safeAutonomous: string[];
   requiresApproval: string[];
+  activeApprovalGatedActions: ActiveApprovalGatedAction[];
+  activeApprovalIntentAmbiguous: boolean;
 } {
   const requiresApproval: string[] = [];
   if (intake.destructiveSignals.length > 0 || intake.riskSignals.includes("destructive")) {
@@ -282,5 +479,7 @@ export function autonomyBoundary(intake: NormalizedIntake): {
       "destructive Git history rewrite",
       "publishing packages/releases when not already authorized",
     ]),
+    activeApprovalGatedActions: classifyActiveApprovalGatedActions(intake),
+    activeApprovalIntentAmbiguous: isActiveApprovalIntentAmbiguous(intake),
   };
 }

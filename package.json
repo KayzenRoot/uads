@@ -55,6 +55,7 @@
     "eval:model-routing": "node dist/eval/model-routing.js",
     "eval:specialist-routing": "node dist/eval/specialist-routing.js",
     "eval:adapters": "node dist/eval/adapters.js",
+    "eval:host-execution": "vitest run --maxWorkers=1 tests/host-execution.test.ts",
     "eval:assurance": "node dist/eval/assurance.js",
     "eval:fault-injection": "node dist/eval/fault-injection.js",
     "validate:direct-review": "node scripts/github/validate-direct-review.mjs",

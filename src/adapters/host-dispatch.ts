@@ -11,6 +11,7 @@ import {
   MODEL_ROUTING_POLICY_DIGEST,
   routeModel,
 } from "../kernel/model-router.js";
+import { classifyActiveApprovalGatedActions, isActiveApprovalIntentAmbiguous } from "../kernel/routing.js";
 import {
   isModelExecutionPlanCurrent,
   readCurrentModelExecutionPlan,
@@ -36,7 +37,7 @@ import {
 import { loadSpecialistRegistry } from "../kernel/specialist-registry.js";
 import type { ModelExecutionPlan } from "../kernel/model-types.js";
 import { readCurrentExecutionRun } from "../kernel/execution-persist.js";
-import type { Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "../kernel/types.js";
+import type { ActiveApprovalGatedAction, Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "../kernel/types.js";
 import {
   detectHostAdapter,
   resolveHostTarget,
@@ -65,7 +66,7 @@ export class HostDispatchError extends Error {
   }
 }
 
-type CurrentArtifacts = {
+export type HostDispatchCurrentArtifacts = {
   checkpoint: Checkpoint;
   workOrder: WorkOrder;
   routing: RoutingDecision;
@@ -81,6 +82,8 @@ type CurrentArtifacts = {
   currentIndexDigest: string;
   executionRunId: string | null;
   currentChangeDigest: string | null;
+  activeApprovalGatedActions: ActiveApprovalGatedAction[];
+  activeApprovalIntentAmbiguous: boolean;
 };
 
 function stableValue(value: unknown): unknown {
@@ -176,7 +179,7 @@ function predecessorRoles(
 
 function buildAssignments(
   workOrder: WorkOrder,
-  specialistPlan: CurrentArtifacts["specialistPlan"],
+  specialistPlan: HostDispatchCurrentArtifacts["specialistPlan"],
   contextPlan: ContextPlan,
   parallel: boolean,
 ): HostDispatchAssignment[] {
@@ -199,7 +202,59 @@ function buildAssignments(
   }));
 }
 
-function readRequiredArtifacts(
+type PersistedApprovalWorkOrder = WorkOrder & {
+  constraints: string[];
+  requestedArtifacts: string[];
+  destructiveSignals: string[];
+};
+
+function assertPersistedApprovalSignals(workOrder: WorkOrder): asserts workOrder is PersistedApprovalWorkOrder {
+  if (!Array.isArray(workOrder.constraints) || !Array.isArray(workOrder.requestedArtifacts) || !Array.isArray(workOrder.destructiveSignals)) {
+    throw new HostDispatchError("current Work Order lacks persisted canonical approval signals; legacy sidecar requires explicit migration");
+  }
+}
+
+function activeApprovalClassificationFromWorkOrder(workOrder: PersistedApprovalWorkOrder): ActiveApprovalGatedAction[] {
+  return classifyActiveApprovalGatedActions({
+    schema: "uads.intake",
+    schemaVersion: "0.2.0",
+    objective: workOrder.objective,
+    constraints: workOrder.constraints,
+    requestedArtifacts: workOrder.requestedArtifacts,
+    inScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    domainSignals: workOrder.domains,
+    riskSignals: workOrder.specialistRiskSignals ?? [],
+    destructiveSignals: workOrder.destructiveSignals,
+    affectedAreas: workOrder.affectedAreas,
+    uncertainties: [],
+    approvedBoundaries: [],
+    classifier: "host-structured",
+  });
+}
+
+function activeApprovalAmbiguityFromWorkOrder(workOrder: PersistedApprovalWorkOrder): boolean {
+  return isActiveApprovalIntentAmbiguous({
+    schema: "uads.intake",
+    schemaVersion: "0.2.0",
+    objective: workOrder.objective,
+    constraints: workOrder.constraints,
+    requestedArtifacts: workOrder.requestedArtifacts,
+    inScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    domainSignals: workOrder.domains,
+    riskSignals: workOrder.specialistRiskSignals ?? [],
+    destructiveSignals: workOrder.destructiveSignals,
+    affectedAreas: workOrder.affectedAreas,
+    uncertainties: [],
+    approvedBoundaries: [],
+    classifier: "host-structured",
+  });
+}
+
+export function readCurrentHostDispatchArtifacts(
   input: {
     adapterId: HostAdapterId;
     cwd?: string;
@@ -207,7 +262,7 @@ function readRequiredArtifacts(
     hostHome?: string;
     schemaRoot: string;
   },
-): CurrentArtifacts {
+): HostDispatchCurrentArtifacts {
   const ctx = resolveProjectContext(input.cwd ?? process.cwd(), input.uadsHome);
   const checkpoint = readCurrentCheckpoint(ctx.paths, input.schemaRoot);
   if (!checkpoint?.workOrderId || !checkpoint.routingDecisionId) {
@@ -219,6 +274,7 @@ function readRequiredArtifacts(
   if (!workOrder || !routing || !contextPlan) {
     throw new HostDispatchError("host dispatch requires current Work Order, Routing Decision, and Context Plan");
   }
+  assertPersistedApprovalSignals(workOrder);
   if (
     checkpoint.projectId !== ctx.projectId ||
     workOrder.projectId !== ctx.projectId ||
@@ -312,6 +368,8 @@ function readRequiredArtifacts(
   ) {
     throw new HostDispatchError("current execution run identity is mismatched");
   }
+  const activeApprovalGatedActions = activeApprovalClassificationFromWorkOrder(workOrder);
+  const activeApprovalIntentAmbiguous = activeApprovalAmbiguityFromWorkOrder(workOrder);
   return {
     checkpoint,
     workOrder,
@@ -328,7 +386,130 @@ function readRequiredArtifacts(
     currentIndexDigest,
     executionRunId: currentExecution?.executionRunId ?? null,
     currentChangeDigest: currentExecution?.currentChangeDigest ?? null,
+    activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous,
   };
+}
+
+function executionProjection(artifacts: HostDispatchCurrentArtifacts): HostDispatchBundle["execution"] {
+  const hostParallel = artifacts.hostRuntime.capabilities.parallelAgents === true;
+  const hostSubagents = artifacts.hostRuntime.capabilities.subagents === true;
+  const parallel =
+    artifacts.modelPlan.execution.parallel &&
+    hostParallel &&
+    artifacts.specialistPlan.dispatch.parallelEligibleGroups.length > 0;
+  const roleDispatch =
+    artifacts.modelPlan.execution.roleDispatch === "subagents" && hostSubagents
+      ? "subagents"
+      : "role-cycling";
+  return {
+    parallel,
+    roleDispatch,
+    reasonCodes: [
+      ...(parallel ? ["HOST_PARALLEL_PROVEN"] : ["SEQUENTIAL_FALLBACK"]),
+      ...(roleDispatch === "subagents" ? ["HOST_SUBAGENTS_PROVEN"] : ["ROLE_CYCLING_FALLBACK"]),
+    ].sort(),
+  };
+}
+
+export function assertHostDispatchBundleMatchesCurrent(
+  bundle: HostDispatchBundle,
+  artifacts: HostDispatchCurrentArtifacts,
+  adapterId: HostAdapterId,
+): void {
+  const modelPlanDigest = digest(artifacts.modelPlan);
+  const routingDecisionDigest = digest(artifacts.routing);
+  const execution = executionProjection(artifacts);
+  const identity = {
+    adapterId,
+    adapterContractVersion: HOST_ADAPTER_CONTRACT_VERSION,
+    projectId: artifacts.workOrder.projectId,
+    workOrderId: artifacts.workOrder.workOrderId,
+    routingDecisionId: artifacts.routing.routingDecisionId,
+    workOrderDigest: computeWorkOrderRoutingDigest(artifacts.workOrder),
+    routingDecisionDigest,
+    specialistSelectionPlanId: artifacts.specialistPlan.selectionPlanId,
+    specialistSelectionDigest: artifacts.specialistPlan.selectionDigest,
+    modelPlanId: artifacts.modelPlan.planId,
+    modelPlanDigest,
+    runtimeIdentityDigest: artifacts.hostRuntime.identityDigest,
+    modelRuntimeIdentityDigest: artifacts.modelRuntimeIdentityDigest,
+    hostTargetRootDigest: artifacts.hostTargetRootDigest,
+    currentChangeDigest: artifacts.currentChangeDigest,
+    indexDigest: artifacts.currentIndexDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
+  };
+  const expectedBundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
+  if (bundle.bundleId !== expectedBundleId) {
+    throw new HostDispatchError("host dispatch bundle identity is stale or tampered");
+  }
+
+  const expected: Partial<HostDispatchBundle> = {
+    adapterId,
+    adapterContractVersion: HOST_ADAPTER_CONTRACT_VERSION,
+    adapterDetectionStatus: artifacts.adapterDetection.status,
+    adapterVersion: artifacts.adapterDetection.version,
+    projectId: artifacts.workOrder.projectId,
+    workOrderId: artifacts.workOrder.workOrderId,
+    routingDecisionId: artifacts.routing.routingDecisionId,
+    executionRunId: artifacts.executionRunId,
+    workOrderDigest: identity.workOrderDigest,
+    routingDecisionDigest,
+    specialistSelectionPlanId: artifacts.specialistPlan.selectionPlanId,
+    specialistSelectionDigest: artifacts.specialistPlan.selectionDigest,
+    specialistRegistryDigest: artifacts.specialistPlan.registryDigest,
+    specialistPolicyDigest: artifacts.specialistPlan.policyDigest,
+    specialistGateContractDigest: artifacts.specialistPlan.gateContractDigest,
+    specialistChangeDigest: artifacts.specialistPlan.changeDigest,
+    specialistImpactDigest: artifacts.specialistPlan.impactDigest,
+    modelPlanId: artifacts.modelPlan.planId,
+    modelPlanDigest,
+    modelRuntimeIdentityDigest: artifacts.modelRuntimeIdentityDigest,
+    modelRegistryDigest: artifacts.modelRegistryDigest,
+    modelPolicyDigest: artifacts.modelPolicyDigest,
+    runtimeId: artifacts.hostRuntime.runtimeId,
+    runtimeIdentityDigest: artifacts.hostRuntime.identityDigest,
+    hostTargetRootDigest: artifacts.hostTargetRootDigest,
+    hostCapabilities: artifacts.hostRuntime.capabilities,
+    contextPackId: artifacts.contextPlan.contextPackId ?? null,
+    impactReportId: artifacts.contextPlan.impactReportId ?? null,
+    indexDigest: artifacts.currentIndexDigest,
+    currentChangeDigest: artifacts.currentChangeDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
+    riskLevel: artifacts.workOrder.riskLevel,
+    scopeClass: artifacts.workOrder.scopeClass,
+    capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,
+    contextRadius: artifacts.workOrder.contextRadius,
+    includedScope: [...artifacts.workOrder.includedScope],
+    outOfScope: [...artifacts.workOrder.outOfScope],
+    selectedGates: [...artifacts.workOrder.qualityGates],
+    requiredEvidence: [...artifacts.workOrder.requiredEvidence],
+    requiredAssuranceRoles: [...artifacts.workOrder.assuranceReviewers],
+    dependencyGroups: artifacts.specialistPlan.dispatch.dependencyGroups.map((group) => [...group]),
+    parallelEligibleGroups:
+      execution.parallel
+        ? artifacts.specialistPlan.dispatch.parallelEligibleGroups.map((group) => [...group])
+        : [],
+    execution,
+    limits: {
+      tokenSoftLimit: artifacts.workOrder.tokenBudget.softLimit,
+      tokenHardLimit: artifacts.workOrder.tokenBudget.hardLimit,
+      contextRadius: artifacts.workOrder.contextRadius,
+    },
+    assignments: buildAssignments(artifacts.workOrder, artifacts.specialistPlan, artifacts.contextPlan, execution.parallel),
+    status: "PREPARED",
+  };
+  for (const [key, value] of Object.entries(expected)) {
+    const actual = bundle[key as keyof HostDispatchBundle];
+    if (JSON.stringify(stableValue(actual)) !== JSON.stringify(stableValue(value))) {
+      throw new HostDispatchError(`host dispatch bundle current identity mismatch: ${key}`);
+    }
+  }
+  if (artifacts.executionRunId === null || bundle.executionRunId === null) {
+    throw new HostDispatchError("host execution requires a current execution run");
+  }
 }
 
 export function prepareHostDispatchBundle(input: {
@@ -340,7 +521,7 @@ export function prepareHostDispatchBundle(input: {
 }): HostDispatchBundle {
   const schemaRoot = input.schemaRoot ?? findPackageRoot();
   const ctx = resolveProjectContext(input.cwd ?? process.cwd(), input.uadsHome);
-  const artifacts = readRequiredArtifacts({ ...input, schemaRoot });
+  const artifacts = readCurrentHostDispatchArtifacts({ ...input, schemaRoot });
   const modelPlanDigest = digest(artifacts.modelPlan);
   const routingDecisionDigest = digest(artifacts.routing);
   const hostParallel = artifacts.hostRuntime.capabilities.parallelAgents === true;
@@ -371,6 +552,8 @@ export function prepareHostDispatchBundle(input: {
     hostTargetRootDigest: artifacts.hostTargetRootDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
   };
   const bundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
   const planParallelGroups = artifacts.specialistPlan.dispatch.parallelEligibleGroups;
@@ -408,6 +591,8 @@ export function prepareHostDispatchBundle(input: {
     impactReportId: artifacts.contextPlan.impactReportId ?? null,
     indexDigest: artifacts.currentIndexDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
+    activeApprovalIntentAmbiguous: artifacts.activeApprovalIntentAmbiguous,
     riskLevel: artifacts.workOrder.riskLevel,
     scopeClass: artifacts.workOrder.scopeClass,
     capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,

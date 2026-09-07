@@ -268,6 +268,8 @@ export function planFromIntake(input: {
     riskLevel: risk.level,
     riskReasons: risk.reasons,
     constraints: input.intake.constraints,
+    requestedArtifacts: input.intake.requestedArtifacts,
+    destructiveSignals: input.intake.destructiveSignals,
     domains: domainIds,
     affectedAreas: input.intake.affectedAreas,
     specialists: specialistPlan.selected.map((item) => item.specialistId),

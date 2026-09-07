@@ -677,6 +677,17 @@ export function runDispatch(input: {
     throw error;
   }
 
+  // Dispatch changes the durable Work Order status from planned to active.
+  // Rebind the model plan to that exact current identity before publishing the
+  // execution run, so a later host handoff never relies on a pre-dispatch plan.
+  modelPlan = ensureCurrentModelPlan({
+    ctx,
+    workOrder: { ...workOrder, status: "active", updatedAt: createdAt },
+    contextPlan,
+    schemaRoot,
+    changeDigest: computeLiveChangeDigest(ctx.repoRoot),
+  });
+
   const run: ExecutionRun = {
     schema: "uads.execution-run",
     schemaVersion: "0.3.0",

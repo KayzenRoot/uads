@@ -37,8 +37,10 @@ import {
   runAdaptersDetectCommand,
   runAdaptersExplainCommand,
   runAdaptersInstallCommand,
+  runAdaptersHandoffCommand,
   runAdaptersListCommand,
   runAdaptersPrepareCommand,
+  runAdaptersReceiptCommand,
   runAdaptersStatusCommand,
   runAdaptersUninstallCommand,
 } from "./commands/adapters.js";
@@ -193,6 +195,26 @@ adapters
   .option("--json", "JSON output")
   .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
     process.stdout.write(runAdaptersPrepareCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("handoff")
+  .description("Accept a current identity-bound dispatch bundle for host-owned execution without invoking a provider")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersHandoffCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+adapters
+  .command("receipt")
+  .description("Record one schema-defined host execution outcome for the current receipt")
+  .argument("<adapter>", "cursor | codex | generic-agent-skills")
+  .requiredOption("--state <state>", "ACCEPTED | STARTED | COMPLETED | FAILED | BLOCKED")
+  .option("--reason-code <code>", "stable reason code; repeat for bounded additional codes", (value: string, previous: string[] = []) => [...previous, value], [])
+  .option("--host-home <path>", "explicit host home override")
+  .option("--json", "JSON output")
+  .action((adapter: string, options: { state: string; reasonCode?: string[]; hostHome?: string; json?: boolean }) => {
+    process.stdout.write(runAdaptersReceiptCommand({ adapter, state: options.state, reasonCodes: options.reasonCode, hostHome: options.hostHome, json: options.json }));
   });
 
 program

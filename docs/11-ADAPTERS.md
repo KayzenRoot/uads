@@ -104,11 +104,61 @@ uads adapters explain <adapter>
 uads adapters install <adapter>
 uads adapters uninstall <adapter>
 uads adapters prepare <adapter>
+uads adapters handoff <adapter>
+uads adapters receipt <adapter> --state <state> [--reason-code <code>]
 ```
 
 JSON output is schema-shaped and omits raw host paths. `status` and `detect`
 are non-installing operations. All three adapters use the same Skill + CLI
 contract; a host that requires project-local files is outside this freeze.
+
+## Host Execution Receipt
+
+`uads adapters handoff <adapter>` is the single bounded seam after
+`prepare`. It reads the current global `Host Dispatch Bundle`, reconstructs
+current Work Order/routing/specialist/model/runtime/context/impact/execution
+state, verifies adapter ownership and target-root identity, and persists one
+`ACCEPTED` receipt only when every identity matches. It does not invoke a
+provider, run a shell command, accept command text, or choose a model.
+
+The strict `schemas/host-execution-receipt.schema.json` contract binds at
+least the receipt/handoff ID, bundle ID/digest, adapter contract, project,
+Work Order/digest, routing/digest, specialist plan/digest, model plan/digest,
+model/runtime identity digests, non-null execution run, target-root digest,
+current change digest, state, UTC timestamps, stable reason codes, and receipt
+digest. No provider ID, prompt, output, token, credential, or absolute path is
+durable.
+
+The current receipt is global-only at
+`~/.uads/workspaces/<project-id>/host-execution/current.json`; immutable
+transition entries are retained at
+`~/.uads/workspaces/<project-id>/host-execution/history/`. Retention is capped
+at 32 valid entries. Corruption, digest mismatch, stale/cross-project or
+cross-root identity, unsupported ownership, missing execution run, and replay
+fail closed. `uads adapters receipt <adapter> --state <state>` only records
+the closed outcome transition and never changes gate evidence, assurance,
+review, or finalize state.
+
+Every mutating receipt transition reconstructs the current dispatch artifacts
+and rechecks the accepted bundle, execution run, Work Order/routing,
+specialist selection, model/runtime, current-change, adapter ownership,
+target-root, and active approval-classification identities. A stale transition
+is rejected without rewriting the accepted receipt. The Work Order
+`requiresApproval` list is a global policy catalog and may be non-empty for a
+safe plan; it does not by itself block handoff. UADS derives the fixed-
+vocabulary `activeApprovalGatedActions` projection from canonical objective,
+scope, requested artifacts, constraints, acceptance criteria, and
+domain/risk/destructive signals. Host Dispatch recomputes the projection from
+the current Work Order and does not trust persisted active fields. A non-empty active projection
+blocks with `APPROVAL_AUTHORIZATION_MISSING` because this architecture has no
+durable authorization-proof primitive. No receipt, CLI field, caller boolean,
+or caller-supplied prose boundary can authorize the action. Promotion to
+production is treated as production deployment. Newly planned Work Orders
+persist `constraints`; legacy Work Orders missing that canonical field fail
+closed for explicit migration instead of being treated as safe.
+Sensitive signals that imply an action but do not prove a fixed class set
+`activeApprovalIntentAmbiguous`, which is bound into the same identities and
+blocks that task with the same reason code.
 # Specialist delegation contract
 
 Adapters may invoke the lean `agents/uads-*.md` descriptors selected by the sidecar Specialist Selection Plan. The kernel emits role-specific assignments with objective, relevant affected areas/files/gates, evidence obligations, risk, forbidden scope, dependency group, and parallel eligibility. Adapters must not invent profiles, call providers from the kernel, execute approval-gated actions, or treat a stale/blocked plan as dispatch authorization.

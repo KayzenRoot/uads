@@ -8,6 +8,34 @@ relative ownership resources, conservative capability provenance, bounded role
 assignments, and identity digests; raw host paths, credentials, full prompts,
 and arbitrary commands are not part of the contracts.
 
+Prompt 012 adds `host-execution-receipt.schema.json` v0.1.0. It is a closed,
+provider-neutral receipt for one current Host Dispatch Bundle handoff. It binds
+the bundle, project, Work Order, routing, specialist, model/runtime, execution
+run, target-root, change, adapter, and receipt identities. Its only states are
+`ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED`; reason codes are
+schema-enumerated. The receipt contains no provider call, credential, command,
+prompt, output, or absolute host path, and it is not gate evidence or approval.
+The current receipt is stored in the global sidecar with a fixed 32-entry
+history retention bound.
+
+Correction 01 additionally requires current-authority revalidation before a
+mutating transition. Correction 02 distinguishes the non-empty Work Order
+`requiresApproval` policy catalog from the schema-closed,
+planner-derived `autonomyBoundary.activeApprovalGatedActions` projection of
+the current requested work. Correction 03 defines that canonical signal set as
+objective, included scope, requested artifacts, constraints, acceptance
+criteria, and domain/risk/destructive signals. The active projection is bound
+into the Work Order routing digest and Host Dispatch Bundle identity; only a
+non-empty active list fails closed with `APPROVAL_AUTHORIZATION_MISSING` when
+no exact durable authorization proof exists. Newly planned Work Orders persist
+`constraints`; legacy sidecars missing it fail closed for explicit migration
+instead of being treated as safe. The schemas remain closed, old sidecars
+remain readable conservatively, and receipt state is never an approval
+authority.
+Sensitive but unclassifiable current work also sets the schema-closed
+`activeApprovalIntentAmbiguous` identity field and is blocked only for that
+task.
+
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 
 The `ci-gate-receipt.schema.json` contract is the Stage A exact-SHA CI receipt. The `github-direct-review-evidence.schema.json` contract is the Stage B strict, versioned canonical evidence; it binds source CI run/attempt provenance, the Direct Review workflow, bounded test/evaluation/audit summaries, security and Linux/Windows compatibility status, release identity, artifact provenance, and explicit PASS/FAIL/INCOMPLETE verdicts. Corrected-release security proofs also persist the observed GitHub event/ref fields and, for Dependency Review same-tree mode, the exact merged-PR base/source identity. Unavailable counts remain `null` with an uppercase `COUNT_PARSE_UNAVAILABLE:*` reason code. `github-review-index.schema.json` is the small release table of contents containing only independently verifiable canonical pointers and identities; it is not evidence by itself.

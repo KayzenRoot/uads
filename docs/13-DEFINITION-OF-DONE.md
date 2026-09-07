@@ -241,3 +241,86 @@ The selection proof is not derived from this newly added future-implementation
 acceptance block. It uses only the pre-freeze roadmap, Prompt 008/009/010/011
 completion records, the current adapter preparation contract, and the
 corresponding source/schema evidence.
+
+## Prompt 012 Host Execution Boundary / Implementation 001
+
+This implementation is ready only when the exact implementation Work Order is
+independently reviewed and all of the following are proven without a release
+or merge in this increment:
+
+- A strict, schema-closed, provider-neutral Host Execution Receipt binds the
+  current Host Dispatch Bundle and every required Work Order, routing,
+  specialist, model/runtime, execution-run, target-root, change, adapter, and
+  receipt integrity identity.
+- Handoff reconstructs and revalidates current orchestration state and fails
+  closed for missing, corrupt, tampered, stale, replayed, cross-project,
+  cross-adapter, cross-root, unsupported, blocked, or mismatched state.
+- `ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED` are the only
+  states; transitions are bounded, reason codes are stable, terminal facts
+  are immutable, and duplicate handoff side effects are not created.
+- Current and immutable-history receipts use atomic writes, safe identifiers,
+  fixed 32-entry retention, corruption detection, privacy-safe identifiers,
+  and zero project footprint. Raw prompts, model output, commands, tokens,
+  credentials, environment dumps, and absolute host paths are rejected.
+- Cursor, Codex, and Generic Agent Skills share one contract. Unknown host
+  capabilities narrow or block behavior and never add specialists, gates,
+  evidence, scope, parallelism, or model quality.
+- A completed receipt cannot satisfy command evidence, selected gates,
+  independent assurance, review, finalize, release, or deployment semantics.
+- HEB01–HEB20, the existing validation matrix, exact-SHA hosted checks, and
+  independent audit evidence pass. The implementation PR remains unmerged;
+  Prompt 012 is not marked complete by the implementer.
+
+## Prompt 012 Implementation 001 - Correction 01
+
+Complete only when all are true:
+
+- Every mutating Host Execution receipt transition reconstructs and validates current orchestration/host authority against the accepted bundle.
+- Execution-run, Work Order/routing, specialist, model/runtime, current-change, adapter ownership, target-root, and semantic bundle drift fail closed without rewriting the earlier receipt.
+- Approval-gated handoff reads the existing Work Order autonomy boundary and returns `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof exists.
+- No receipt state, CLI flag, caller prose, provider call, network operation, credential, or arbitrary command creates approval authority.
+- HEB01-HEB20 and HEB21-HEB27 pass, with the original 49-file/374-test baseline preserved or increased.
+- The correction remains on PR #19, unmerged and unreleased, pending independent re-audit of the exact new head.
+
+## Prompt 012 Implementation 001 - Correction 02
+
+Complete only when all are true:
+
+- The planner preserves the non-empty global `requiresApproval` policy
+  catalog and derives a fixed-vocabulary
+  `autonomyBoundary.activeApprovalGatedActions` list for the current requested
+  work from canonical planning signals.
+- A normal planner-generated handoff, including the catalog's global entries,
+  has an empty active list and is accepted without fixture mutation.
+- Production deployment (including promotion to production), destructive production database operations,
+  material-cost external infrastructure actions, real credential rotation,
+  destructive Git history rewrites, unauthorized package/release publication,
+  asset/fund transfers, and on-chain transaction execution fail closed with
+  `APPROVAL_AUTHORIZATION_MISSING` without an exact durable authorization proof.
+- Active classification is schema-closed, recomputed from current Work Order
+  action signals, and bound into Work Order and Host
+  Dispatch identity; tamper, drift, stale active state, caller booleans, and
+  completed receipts cannot authorize a different handoff. Sensitive intent
+  that cannot prove a fixed class is marked ambiguous and fails closed for its
+  own task.
+- HEB01–HEB27 remain green and HEB28–HEB42 prove the correction without
+  changing gate, assurance, review, finalize, release, version, or merge
+  semantics.
+
+## Prompt 012 Implementation 001 - Correction 03
+
+Complete only when all are true:
+
+- `constraints` and `acceptanceCriteria` participate in the fixed-vocabulary
+  active approval classification, while `outOfScope` and `approvedBoundaries`
+  remain excluded from positive intent/authorization proof.
+- `constraints` is included in the existing Work Order routing digest and the
+  Host Dispatch recomputation uses the same persisted canonical planning set.
+- Newly planned Work Orders persist `constraints`; legacy Work Orders missing
+  it fail closed through explicit migration handling and are never replaced by
+  an empty array as evidence of safety.
+- Constraint-only package publication and production deployment fail closed;
+  benign constraints remain handoffable; post-prepare constraint drift stales
+  the old bundle/handoff; and receipts/caller signals cannot authorize it.
+- HEB01–HEB44 and HEB45–HEB52 pass, with the test count at least 49 files and
+  398 tests.

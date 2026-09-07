@@ -53,3 +53,41 @@ Corrected-release authorization is fail-closed. Scorecard evidence must be an ex
 The Dependency Review workflow runs for every `pull_request` targeting `main`, including documentation-only changes, so every candidate main commit can produce the required proof. This coverage rule does not make the proof optional: absent, pending, failed, ambiguous, mismatched, cross-PR, or tampered Dependency Review evidence remains non-authorizing.
 
 Canonical post-main Direct Review generation performs bounded readiness polling for pending security proofs. The timeout is explicit and remains non-authorizing: failure, ambiguity, mismatch, cancellation, skipping, tampering, or timeout cannot become `PASS`.
+
+## Host execution boundary
+
+Host Execution receipts are global-sidecar-only, schema-closed, atomic,
+bounded, and bound to the current dispatch bundle, adapter ownership/root
+digest, project, Work Order, routing, specialist, model/runtime, execution-run,
+and change identities. Handoff never accepts command text, provider endpoints,
+credentials, model output, raw prompts, arbitrary capabilities, caller
+authorization booleans, or absolute host paths. The host owns the actual
+IDE/agent/provider invocation; UADS records only bounded outcome state.
+
+`ACCEPTED`, `STARTED`, `COMPLETED`, `FAILED`, and `BLOCKED` are the only receipt
+states. Replays and impossible transitions are rejected; terminal receipts are
+immutable. A receipt is never command PASS evidence, gate evidence,
+independent review, assurance, or finalize authorization.
+
+## Current identity and approval correction
+
+Receipt mutation is authorized only after reconstructing and revalidating the
+current Host Dispatch artifacts, not merely by comparing the receipt with the
+previously persisted bundle. Execution-run, Work Order/routing, specialist,
+model/runtime, current-change, adapter ownership, target-root, and bundle drift
+fail closed and leave the earlier receipt intact. The existing Work Order
+autonomy boundary is authoritative, but its `requiresApproval` list is a
+global policy catalog rather than current-action evidence. UADS derives the
+schema-closed `activeApprovalGatedActions` projection from canonical planning
+inputs: objective, included scope, requested artifacts, constraints,
+acceptance criteria, and domain/risk/destructive signals. When that active list is non-empty and the repository/runtime has no
+verifiable durable authorization record for the exact current identity,
+handoff is blocked with `APPROVAL_AUTHORIZATION_MISSING`. Receipt state, CLI
+flags, booleans, and caller-supplied prose in `approvedBoundaries` cannot serve
+as approval evidence. Host Dispatch recomputes the projection from current
+Work Order action signals and fails closed for legacy Work Orders missing a
+persisted canonical signal such as `constraints`; promotion to production is
+classified as production deployment.
+Sensitive requests that do not prove a fixed class set
+`activeApprovalIntentAmbiguous` and fail closed for that task rather than
+globally blocking unrelated work.
