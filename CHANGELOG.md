@@ -4,20 +4,30 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
-### Prompt 012
+## [0.12.0] - 2026-09-07
+
+### Highlights
 
 - Delivered the bounded, provider-neutral Host Execution handoff and Receipt
-contract after a current Host Dispatch Bundle, merged through PR #19.
-
+  Boundary after a current Host Dispatch Bundle for the common Cursor, Codex,
+  and Generic Agent Skills contract.
 - Added global sidecar-only current/history receipts with 32-entry retention,
-  current-authority revalidation, replay/stale/tamper protection, and
-  fail-closed approval-intent classification.
-- The common Cursor, Codex, and Generic Agent Skills adapter contract records
-  bounded host outcomes only; HEB01-HEB52 and the complete validation matrix
-  pass, with final post-merge verification externally recorded.
+  current-authority revalidation, replay/stale/tamper defenses, and fail-closed
+  handling for active approval-intent operations.
+- The contract records bounded host outcomes only; the host remains responsible
+  for IDE, agent, and provider execution.
 
-This entry does not select a release version. UADS does not invoke providers
-or execute arbitrary host commands; the host remains the owner of execution.
+### Verification
+
+- HEB01-HEB52, 49 test files, and 406 tests passed in the final Prompt 012
+  post-merge validation at main SHA
+  `88d9bbea41522fe5cbbbf658c1e216ecc41fd063`.
+- Release publication remains gated on exact-main CI, Direct Review, and the
+  corrected exact-SHA/same-tree security proof set.
+
+UADS does not invoke providers, execute arbitrary host commands, create durable
+approval proof, or implement dashboards, marketplaces, deep UGAS integration,
+live provider adapters, or other FUTURE features.
 
 ## [0.11.1] - 2026-09-05
 
