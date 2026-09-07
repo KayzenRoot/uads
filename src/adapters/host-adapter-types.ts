@@ -1,5 +1,5 @@
 import type { RuntimeCapabilities } from "../kernel/model-types.js";
-import type { CapabilityClass, ContextRadius, RiskLevel, ScopeClass } from "../kernel/types.js";
+import type { ActiveApprovalGatedAction, CapabilityClass, ContextRadius, RiskLevel, ScopeClass } from "../kernel/types.js";
 import type { HostAdapterRootBinding } from "./host-adapter-root.js";
 
 export type { HostAdapterRootBinding, HostRootKind, HostRootSourceClass } from "./host-adapter-root.js";
@@ -199,6 +199,7 @@ export type HostDispatchBundle = {
   impactReportId: string | null;
   indexDigest: string | null;
   currentChangeDigest: string | null;
+  activeApprovalGatedActions?: ActiveApprovalGatedAction[];
   riskLevel: RiskLevel;
   scopeClass: ScopeClass;
   capabilityClass: CapabilityClass;

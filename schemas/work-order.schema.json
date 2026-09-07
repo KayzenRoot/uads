@@ -139,7 +139,24 @@
       "required": ["safeAutonomous", "requiresApproval"],
       "properties": {
         "safeAutonomous": { "type": "array", "items": { "type": "string" } },
-        "requiresApproval": { "type": "array", "items": { "type": "string" } }
+        "requiresApproval": { "type": "array", "items": { "type": "string" } },
+        "activeApprovalGatedActions": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "production deployment",
+              "destructive production database operation",
+              "spending money / material-cost external infrastructure action",
+              "rotating real credentials",
+              "destructive Git history rewrite",
+              "publishing package/release when not already authorized",
+              "transferring assets/funds",
+              "on-chain transaction execution"
+            ]
+          }
+        }
       }
     },
     "nextAction": { "type": "string" }

@@ -18,37 +18,44 @@ import { tempDirs } from "./helpers.js";
 const ROOT = process.cwd();
 type AdapterId = "cursor" | "codex" | "generic-agent-skills";
 
+type FixtureOptions = {
+  objective?: string;
+  domainSignals?: string[];
+  riskSignals?: string[];
+  destructiveSignals?: string[];
+  requestedArtifacts?: string[];
+  inScope?: string[];
+  approvedBoundaries?: string[];
+  affectedAreas?: string[];
+  callerFields?: Record<string, unknown>;
+};
+
 function hostHome(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "uads-host-exec-test-"));
 }
 
-function fixture(adapterId: AdapterId = "generic-agent-skills", requiresApproval: string[] = []) {
+function fixture(adapterId: AdapterId = "generic-agent-skills", options: FixtureOptions = {}) {
   const dirs = tempDirs();
   seedFrontend(dirs.repo);
   const planned = runPlan({
     cwd: dirs.repo,
     uadsHome: dirs.home,
     intake: {
+      ...(options.callerFields ?? {}),
       schema: "uads.intake",
       schemaVersion: "0.2.0",
-      objective: "Change the primary button color.",
-      domainSignals: ["frontend"],
-      affectedAreas: ["src"],
-      inScope: ["src"],
+      objective: options.objective ?? "Change the primary button color.",
+      domainSignals: options.domainSignals ?? ["frontend"],
+      riskSignals: options.riskSignals ?? [],
+      destructiveSignals: options.destructiveSignals ?? [],
+      requestedArtifacts: options.requestedArtifacts ?? [],
+      affectedAreas: options.affectedAreas ?? ["src"],
+      inScope: options.inScope ?? ["src"],
+      approvedBoundaries: options.approvedBoundaries ?? [],
       acceptanceCriteria: ["the change is verified"],
       classifier: "host-structured",
     },
   });
-  const plannedContext = resolveProjectContext(dirs.repo, dirs.home);
-  const workOrderPath = path.join(plannedContext.paths.workOrders, `${planned.workOrder.workOrderId}.json`);
-  rewrite(workOrderPath, (workOrder) => ({
-    ...workOrder,
-    autonomyBoundary: {
-      ...(workOrder.autonomyBoundary as Record<string, unknown>),
-      requiresApproval: [...requiresApproval],
-    },
-  }));
-  planned.workOrder.autonomyBoundary.requiresApproval = [...requiresApproval];
   const target = hostHome();
   installHostAdapter(adapterId, { hostHome: target, uadsHome: dirs.home, packageRoot: ROOT }, ROOT);
   const dispatched = runDispatch({ cwd: dirs.repo, uadsHome: dirs.home, session: "implementation-session" });
@@ -56,8 +63,8 @@ function fixture(adapterId: AdapterId = "generic-agent-skills", requiresApproval
   return { ...dirs, target, planned, dispatched, context, adapterId };
 }
 
-function preparedFixture(adapterId: AdapterId = "generic-agent-skills", requiresApproval: string[] = []) {
-  const value = fixture(adapterId, requiresApproval);
+function preparedFixture(adapterId: AdapterId = "generic-agent-skills", options: FixtureOptions = {}) {
+  const value = fixture(adapterId, options);
   const bundle = prepareHostDispatchBundle({
     adapterId,
     cwd: value.repo,
@@ -351,7 +358,7 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
       expect(thrown, mutation.label).toBeDefined();
       expect((thrown as { reasonCode?: string }).reasonCode, mutation.label).toMatch(/BUNDLE_STALE|SPECIALIST_SELECTION_INVALID|MODEL_PLAN_BLOCKED|CHANGE_IDENTITY_MISMATCH/);
     }
-  });
+  }, 300_000);
 
   it("HEB23 rejects a transition after host ownership becomes stale", () => {
     const value = preparedFixture();
@@ -388,7 +395,13 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
   });
 
   it("HEB26 blocks an approval-gated handoff without an existing authorization proof", () => {
-    const value = preparedFixture("generic-agent-skills", ["production deployment"]);
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Deploy the application to production",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["deployment"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toContain("production deployment");
     expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
     expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toBeNull();
   });
@@ -403,7 +416,7 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
       ...workOrder,
       autonomyBoundary: {
         ...(workOrder.autonomyBoundary as Record<string, unknown>),
-        requiresApproval: ["production deployment"],
+        activeApprovalGatedActions: ["production deployment"],
       },
     }));
     expectHostExecutionReason(
@@ -411,5 +424,163 @@ describe("Prompt 012 Host Execution Boundary", { timeout: 180_000 }, () => {
       "TERMINAL_IMMUTABLE",
     );
     expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(completed);
+  });
+
+  it("HEB28 keeps the global approval catalog without blocking a safe planner handoff", () => {
+    const value = preparedFixture();
+    expect(value.planned.workOrder.autonomyBoundary.requiresApproval.length).toBeGreaterThan(0);
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
+    expect(handoff(value).state).toBe("ACCEPTED");
+  });
+
+  it("HEB29 blocks an active production deployment intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Deploy the application to production",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["deployment"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["production deployment"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB30 blocks an active destructive production database intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Drop the production users table",
+      domainSignals: ["frontend"],
+      affectedAreas: ["src"],
+      inScope: ["production database"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["destructive production database operation"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB31 blocks active Web3 asset transfer and on-chain execution", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Transfer assets and execute a transaction",
+      domainSignals: ["frontend"],
+      affectedAreas: ["src"],
+      requestedArtifacts: ["web3 on-chain context"],
+      inScope: ["asset transfer"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "transferring assets/funds",
+      "on-chain transaction execution",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB32 blocks explicit material-cost external infrastructure intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Provision paid cloud infrastructure with material cost impact",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["external infrastructure"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "spending money / material-cost external infrastructure action",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB33 blocks real credential rotation intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Rotate real production API credentials",
+      domainSignals: ["frontend"],
+      affectedAreas: ["src"],
+      inScope: ["credential rotation"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["rotating real credentials"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB34 blocks destructive Git history rewrite intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Rewrite Git history and force push the branch",
+      inScope: ["Git history"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["destructive Git history rewrite"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB35 blocks package publication without the canonical authorization boundary", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Publish the package release to npm",
+      domainSignals: ["release"],
+      inScope: ["package release"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB36 rejects active approval classification tamper after prepare", () => {
+    const value = preparedFixture();
+    const accepted = handoff(value);
+    rewrite(value.context.paths.currentHostDispatch, (bundle) => {
+      const changed = { ...bundle, activeApprovalGatedActions: ["production deployment"] };
+      const { bundleDigest: _ignored, ...withoutDigest } = changed;
+      return { ...changed, bundleDigest: sha256Hex(JSON.stringify(stableValue(withoutDigest))) };
+    });
+    expectHostExecutionReason(
+      () => transitionHostExecutionReceipt({ adapterId: value.adapterId, cwd: value.repo, uadsHome: value.home, hostHome: value.target, state: "STARTED", schemaRoot: ROOT }),
+      "BUNDLE_STALE",
+    );
+    expect(readCurrentHostExecutionReceipt(value.context.paths, ROOT)).toEqual(accepted);
+  });
+
+  it("HEB37 ignores caller approval booleans and still fails closed for active intent", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Deploy the application to production",
+      domainSignals: ["cloud-devops"],
+      riskSignals: ["infrastructure"],
+      inScope: ["deployment"],
+      callerFields: {
+        approvalAuthorized: true,
+        authorized: true,
+        bypassApproval: true,
+      },
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual(["production deployment"]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB38 keeps package publication gated unless the exact canonical boundary is present", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Publish the package release to npm",
+      domainSignals: ["release"],
+      approvedBoundaries: ["authorized by release manager"],
+      inScope: ["package release"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([
+      "publishing package/release when not already authorized",
+    ]);
+    expectHostExecutionReason(() => handoff(value), "APPROVAL_AUTHORIZATION_MISSING");
+  });
+
+  it("HEB39 preserves normal prepare and dispatch compatibility", () => {
+    const value = fixture();
+    const bundle = prepareHostDispatchBundle({
+      adapterId: value.adapterId,
+      cwd: value.repo,
+      uadsHome: value.home,
+      hostHome: value.target,
+      schemaRoot: ROOT,
+    });
+    expect(bundle.status).toBe("PREPARED");
+    expect(bundle.activeApprovalGatedActions).toEqual([]);
+    expect(handoff(value).state).toBe("ACCEPTED");
+  });
+
+  it("HEB40 recognizes only the exact canonical package authorization boundary", () => {
+    const value = preparedFixture("generic-agent-skills", {
+      objective: "Publish the package release to npm",
+      domainSignals: ["release"],
+      approvedBoundaries: ["package/release publication authorized"],
+      inScope: ["package release"],
+    });
+    expect(value.planned.workOrder.autonomyBoundary.activeApprovalGatedActions).toEqual([]);
+    expect(handoff(value).state).toBe("ACCEPTED");
   });
 });

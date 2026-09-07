@@ -86,14 +86,41 @@ The correction reconstructs current Host Dispatch artifacts before every
 mutating transition and fails closed on execution-run, Work Order/routing,
 specialist, model/runtime, current-change, adapter ownership, target-root, or
 semantic bundle drift. The current architecture has no durable authorization
-proof primitive; therefore any current Work Order with non-empty
-`requiresApproval` is rejected at handoff with the schema-closed
-`APPROVAL_AUTHORIZATION_MISSING` reason. No receipt, CLI flag, or prose is
-treated as approval.
+proof primitive; therefore a non-empty active approval classification is
+rejected at handoff with the schema-closed
+`APPROVAL_AUTHORIZATION_MISSING` reason. The global `requiresApproval` catalog
+is not current-action evidence. No receipt, CLI flag, or prose is treated as
+approval.
+
+## Correction 02 — Active Approval Intent Classification
+
+The follow-up audit identified that Correction 01 enforced the global
+`autonomyBoundary.requiresApproval` policy catalog as though it were evidence
+that the current handoff requested an approval-gated action. Because the
+planner intentionally retains the bounded catalog on ordinary Work Orders,
+that implementation blocked safe local handoffs and the old fixture concealed
+the defect by rewriting the catalog to an empty list.
+
+Correction 02 preserves the same Work Order, branch, PR #19, Architecture
+Freeze v0.2, version/package identity, and release boundary. It adds the
+deterministic schema-closed `activeApprovalGatedActions` projection, derived
+from canonical objective, scope, and domain/risk/destructive planning signals.
+It uses a fixed vocabulary of eight approval classes, binds the projection to
+the Work Order routing digest and Host Dispatch Bundle identity, and enforces
+only a non-empty active projection. The global catalog remains intact.
+
+Production deployment, destructive production database operations, explicit
+material-cost external infrastructure actions, real credential rotation,
+destructive Git history rewrites, unauthorized package/release publication,
+asset/fund transfers, and on-chain transaction execution fail closed with
+`APPROVAL_AUTHORIZATION_MISSING`. Ambiguous or caller-supplied boolean intent
+does not authorize a handoff; no external approval provider or service is
+introduced. Old sidecars remain readable conservatively, while stale bundles
+without the active projection cannot authorize mutation.
 
 ## Acceptance criteria
 
-- [ ] HEB01–HEB20 and HEB21–HEB27 pass on the exact implementation source.
+- [x] HEB01–HEB20, HEB21–HEB27, and HEB28–HEB40 pass on the exact implementation source.
 - [ ] Handoff fails closed for missing/corrupt/tampered/stale/replayed,
       cross-project, wrong-adapter, cross-root, unsupported, blocked, and
       mismatched identities.
@@ -110,9 +137,14 @@ treated as approval.
 - [ ] Every mutating receipt transition revalidates current authority rather
       than trusting receipt-plus-old-bundle equality; drift leaves the prior
       receipt unchanged.
-- [ ] Approval-gated handoff fails closed with
+- [ ] Safe planner-generated work remains handoffable with the global
+      `requiresApproval` catalog intact and an empty active classification.
+- [ ] Active approval-gated handoff fails closed with
       `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof
       exists, and completed receipts cannot substitute for approval.
+- [ ] Active approval classification is fixed-vocabulary, planner-derived,
+      digest-bound, tamper-resistant, and not bypassable by caller booleans or
+      receipt state.
 - [ ] Existing adapter lifecycle behavior and the full pre-existing validation
       matrix remain passing; total existing tests do not decrease from 48 files
       and 354 tests.

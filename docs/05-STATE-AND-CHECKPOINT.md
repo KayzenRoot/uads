@@ -54,7 +54,12 @@ Dispatch artifacts and compares them with the accepted bundle. A changed
 execution run, Work Order, routing decision, specialist selection, model plan,
 runtime, current-change identity, adapter ownership, target root, or bundle
 fails closed with a stable reason code; the previous receipt remains unchanged.
-Approval-gated Work Orders also fail closed at handoff with
-`APPROVAL_AUTHORIZATION_MISSING` when no existing durable authorization proof
-can be verified for the current identity. A receipt or caller-provided state
-never creates that authority.
+The Work Order `requiresApproval` list is a global policy catalog and may be
+non-empty for every plan; it is not evidence that the current handoff requests
+one of those actions. UADS derives the schema-closed
+`autonomyBoundary.activeApprovalGatedActions` list from the canonical objective,
+scope, and planning signals. Only a non-empty active list fails closed at
+handoff with `APPROVAL_AUTHORIZATION_MISSING` when no existing durable
+authorization proof can be verified for the current identity. The active list
+is bound into the Work Order digest and Host Dispatch Bundle identity. A
+receipt or caller-provided boolean/state never creates that authority.

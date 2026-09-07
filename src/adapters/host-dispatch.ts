@@ -11,6 +11,7 @@ import {
   MODEL_ROUTING_POLICY_DIGEST,
   routeModel,
 } from "../kernel/model-router.js";
+import { classifyActiveApprovalGatedActions } from "../kernel/routing.js";
 import {
   isModelExecutionPlanCurrent,
   readCurrentModelExecutionPlan,
@@ -36,7 +37,7 @@ import {
 import { loadSpecialistRegistry } from "../kernel/specialist-registry.js";
 import type { ModelExecutionPlan } from "../kernel/model-types.js";
 import { readCurrentExecutionRun } from "../kernel/execution-persist.js";
-import type { Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "../kernel/types.js";
+import type { ActiveApprovalGatedAction, Checkpoint, ContextPlan, RoutingDecision, WorkOrder } from "../kernel/types.js";
 import {
   detectHostAdapter,
   resolveHostTarget,
@@ -81,6 +82,7 @@ export type HostDispatchCurrentArtifacts = {
   currentIndexDigest: string;
   executionRunId: string | null;
   currentChangeDigest: string | null;
+  activeApprovalGatedActions: ActiveApprovalGatedAction[];
 };
 
 function stableValue(value: unknown): unknown {
@@ -199,6 +201,29 @@ function buildAssignments(
   }));
 }
 
+function activeApprovalClassificationFromWorkOrder(workOrder: WorkOrder): ActiveApprovalGatedAction[] {
+  if (workOrder.autonomyBoundary.activeApprovalGatedActions) {
+    return [...workOrder.autonomyBoundary.activeApprovalGatedActions];
+  }
+  return classifyActiveApprovalGatedActions({
+    schema: "uads.intake",
+    schemaVersion: "0.2.0",
+    objective: workOrder.objective,
+    constraints: workOrder.constraints ?? [],
+    requestedArtifacts: [],
+    inScope: workOrder.includedScope,
+    outOfScope: workOrder.outOfScope,
+    acceptanceCriteria: workOrder.acceptanceCriteria,
+    domainSignals: workOrder.domains,
+    riskSignals: workOrder.specialistRiskSignals ?? [],
+    destructiveSignals: (workOrder.specialistRiskSignals ?? []).filter((signal) => signal.includes("destructive")),
+    affectedAreas: workOrder.affectedAreas,
+    uncertainties: [],
+    approvedBoundaries: [],
+    classifier: "host-structured",
+  });
+}
+
 export function readCurrentHostDispatchArtifacts(
   input: {
     adapterId: HostAdapterId;
@@ -312,6 +337,7 @@ export function readCurrentHostDispatchArtifacts(
   ) {
     throw new HostDispatchError("current execution run identity is mismatched");
   }
+  const activeApprovalGatedActions = activeApprovalClassificationFromWorkOrder(workOrder);
   return {
     checkpoint,
     workOrder,
@@ -328,6 +354,7 @@ export function readCurrentHostDispatchArtifacts(
     currentIndexDigest,
     executionRunId: currentExecution?.executionRunId ?? null,
     currentChangeDigest: currentExecution?.currentChangeDigest ?? null,
+    activeApprovalGatedActions,
   };
 }
 
@@ -377,6 +404,7 @@ export function assertHostDispatchBundleMatchesCurrent(
     hostTargetRootDigest: artifacts.hostTargetRootDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
   };
   const expectedBundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
   if (bundle.bundleId !== expectedBundleId) {
@@ -414,6 +442,7 @@ export function assertHostDispatchBundleMatchesCurrent(
     impactReportId: artifacts.contextPlan.impactReportId ?? null,
     indexDigest: artifacts.currentIndexDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
     riskLevel: artifacts.workOrder.riskLevel,
     scopeClass: artifacts.workOrder.scopeClass,
     capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,
@@ -488,6 +517,7 @@ export function prepareHostDispatchBundle(input: {
     hostTargetRootDigest: artifacts.hostTargetRootDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
     indexDigest: artifacts.currentIndexDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
   };
   const bundleId = `hdb_${sha256Hex(JSON.stringify(stableValue(identity))).slice(0, 16)}`;
   const planParallelGroups = artifacts.specialistPlan.dispatch.parallelEligibleGroups;
@@ -525,6 +555,7 @@ export function prepareHostDispatchBundle(input: {
     impactReportId: artifacts.contextPlan.impactReportId ?? null,
     indexDigest: artifacts.currentIndexDigest,
     currentChangeDigest: artifacts.currentChangeDigest,
+    activeApprovalGatedActions: artifacts.activeApprovalGatedActions,
     riskLevel: artifacts.workOrder.riskLevel,
     scopeClass: artifacts.workOrder.scopeClass,
     capabilityClass: artifacts.workOrder.tokenBudget.capabilityClass,

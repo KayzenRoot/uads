@@ -90,6 +90,23 @@
     "impactReportId": { "type": ["string", "null"], "maxLength": 128 },
     "indexDigest": { "$ref": "#/$defs/digestOrNull" },
     "currentChangeDigest": { "$ref": "#/$defs/digestOrNull" },
+    "activeApprovalGatedActions": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "production deployment",
+          "destructive production database operation",
+          "spending money / material-cost external infrastructure action",
+          "rotating real credentials",
+          "destructive Git history rewrite",
+          "publishing package/release when not already authorized",
+          "transferring assets/funds",
+          "on-chain transaction execution"
+        ]
+      }
+    },
     "riskLevel": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
     "scopeClass": { "enum": ["trivial", "local", "cross-cutting", "architectural"] },
     "capabilityClass": { "enum": ["economy", "balanced", "strong", "critical"] },

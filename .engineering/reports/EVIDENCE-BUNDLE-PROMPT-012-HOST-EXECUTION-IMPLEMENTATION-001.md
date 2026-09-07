@@ -17,8 +17,8 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 | Receipts are global-sidecar-only and bounded | `file` | `src/lib/workspace.ts`, `src/adapters/host-execution.ts` | PASS | atomic current/history; fixed 32-entry retention; no project writes |
 | All three adapters share the contract | `test` | `tests/host-execution.test.ts` HEB15/HEB20 | PASS | Cursor, Codex, Generic Agent Skills |
 | Receipt cannot authorize gates or finalize | `test` | `tests/host-execution.test.ts` HEB17 | PASS | execution evidence/review/finalize state remains unchanged |
-| Focused HEB01–HEB27 suite | `test` | `npm run eval:host-execution` | PASS | latest targeted run: 27 tests, 27 passed; HEB21–HEB27 cover Correction 01 |
-| Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 381 tests passed |
+| Focused HEB01–HEB40 suite | `test` | `npm run eval:host-execution` | PASS | 40 tests passed; HEB21–HEB27 cover Correction 01 and HEB28–HEB40 cover Correction 02 |
+| Full post-correction test suite | `command` | `npm test` | PASS | 49 test files, 394 tests passed |
 | Official post-correction foundation matrix | `command` | `npm run validate` | PASS | lint, typecheck, build, full test suite, all evals, skills/actions/direct-review/CI-receipt/engineering validation passed |
 | Correction 01 security diff scan | `review` | scan `9c05c447-430e-4d42-9919-0eee9704c090` | PASS | complete coverage; 0 reportable findings; TAC status unavailable in this session |
 | Full implementation validation matrix | `command` | `npm run validate` | PASS | post-correction official matrix completed successfully |
@@ -57,6 +57,28 @@ Head Git SHA: `pending; authoritative PR head must be read from GitHub`
 - Hosted exact-head checks and independent audit remain pending until the
   correction commit is pushed and reviewed; no self-approval or merge is
   permitted.
+
+## Correction 02 — Active Approval Intent Classification
+
+- Root cause addressed: `requiresApproval` is a global policy catalog and is
+  not evidence that the current handoff requests an approval-gated action.
+- The planner now emits the fixed-vocabulary
+  `autonomyBoundary.activeApprovalGatedActions` projection from canonical
+  objective, scope, and domain/risk/destructive signals while preserving the
+  non-empty catalog.
+- The active projection is included in the Work Order routing digest and the
+  Host Dispatch Bundle identity. Handoff and every mutating transition enforce
+  only the active projection, returning
+  `APPROVAL_AUTHORIZATION_MISSING` without a durable exact-identity proof.
+- HEB28–HEB40 cover safe planner handoff, production deployment, destructive
+  production database, Web3/on-chain transfer, material-cost infrastructure,
+  credential rotation, Git history rewrite, package publication, tamper,
+  caller-boolean bypass, non-canonical authorization, compatibility, and the
+  exact canonical authorized-publication boundary.
+- The prior fixture behavior that globally cleared `requiresApproval` was
+  removed. Local focused/full validation and the high-severity dependency audit
+  pass on the final working tree; exact hosted checks and independent audit
+  remain pending until this correction is committed and pushed.
 
 ## Privacy review
 

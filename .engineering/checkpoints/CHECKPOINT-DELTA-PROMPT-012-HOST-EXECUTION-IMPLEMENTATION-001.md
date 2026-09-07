@@ -22,15 +22,25 @@ Work Order identity: `ENG-PROMPT-012-HOST-EXECUTION-IMPLEMENTATION-001`
 - Added HEB21–HEB27 coverage for execution/orchestration/host/bundle drift,
   unchanged transition continuity, approval rejection, and completed-receipt
   non-substitution.
+- Applied Correction 02: the planner now preserves the global
+  `requiresApproval` policy catalog while deriving the fixed-vocabulary
+  `activeApprovalGatedActions` projection for the current requested work.
+  Active classification is bound into Work Order and Host Dispatch identity;
+  only a non-empty active projection blocks handoff with
+  `APPROVAL_AUTHORIZATION_MISSING`.
+- Removed the fixture behavior that rewrote `requiresApproval` to an empty
+  array and added HEB28–HEB40 coverage for safe handoff, each active gated
+  class, classification tamper, caller-boolean bypass attempts, lifecycle
+  compatibility, and the canonical authorized-publication boundary.
 - Preserved provider neutrality, global-first/ZPF behavior, existing gate and
   assurance authority, release immutability, and Architecture Freeze v0.2.
-- Recorded local baseline and implementation evidence in the linked Evidence
-  Bundle; hosted checks and independent audit remain pending until the PR head
-  exists.
+- Recorded passing local implementation evidence in the linked Evidence Bundle;
+  hosted checks and independent audit remain pending until the PR head exists.
 
 ## Open items
 
-- Complete all correction local gates and audit exact changed paths.
+- Local correction gates pass; audit the exact changed paths after the single
+  correction commit is pushed.
 - Push one exact branch and open one unmerged PR with required checks.
 - Obtain independent technical audit of exact PR head/tree/base.
 - Maintainer must decide any canonical promotion or merge; the implementer

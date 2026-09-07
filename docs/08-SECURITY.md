@@ -76,8 +76,10 @@ current Host Dispatch artifacts, not merely by comparing the receipt with the
 previously persisted bundle. Execution-run, Work Order/routing, specialist,
 model/runtime, current-change, adapter ownership, target-root, and bundle drift
 fail closed and leave the earlier receipt intact. The existing Work Order
-autonomy boundary is authoritative: when `requiresApproval` is non-empty and
-the repository/runtime has no verifiable durable authorization record for that
-exact current identity, handoff is blocked with
-`APPROVAL_AUTHORIZATION_MISSING`. Receipt state, CLI flags, and prose cannot
-serve as approval evidence.
+autonomy boundary is authoritative, but its `requiresApproval` list is a
+global policy catalog rather than current-action evidence. UADS derives the
+schema-closed `activeApprovalGatedActions` projection from canonical planning
+inputs. When that active list is non-empty and the repository/runtime has no
+verifiable durable authorization record for the exact current identity,
+handoff is blocked with `APPROVAL_AUTHORIZATION_MISSING`. Receipt state, CLI
+flags, booleans, and prose cannot serve as approval evidence.

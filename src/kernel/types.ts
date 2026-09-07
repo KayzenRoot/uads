@@ -10,6 +10,16 @@ export type CapabilityClass = "economy" | "balanced" | "strong" | "critical";
 export type Phase = "intake" | "classify" | "plan" | "implement" | "verify" | "review" | "stopped";
 export type IntakeClassifier = "host-structured" | "fallback-text";
 
+export type ActiveApprovalGatedAction =
+  | "production deployment"
+  | "destructive production database operation"
+  | "spending money / material-cost external infrastructure action"
+  | "rotating real credentials"
+  | "destructive Git history rewrite"
+  | "publishing package/release when not already authorized"
+  | "transferring assets/funds"
+  | "on-chain transaction execution";
+
 export type NormalizedIntake = {
   schema: "uads.intake";
   schemaVersion: "0.2.0";
@@ -149,6 +159,7 @@ export type WorkOrder = {
   autonomyBoundary: {
     safeAutonomous: string[];
     requiresApproval: string[];
+    activeApprovalGatedActions?: ActiveApprovalGatedAction[];
   };
   nextAction: string;
 };

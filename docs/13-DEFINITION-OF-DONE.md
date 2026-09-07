@@ -281,3 +281,25 @@ Complete only when all are true:
 - No receipt state, CLI flag, caller prose, provider call, network operation, credential, or arbitrary command creates approval authority.
 - HEB01-HEB20 and HEB21-HEB27 pass, with the original 49-file/374-test baseline preserved or increased.
 - The correction remains on PR #19, unmerged and unreleased, pending independent re-audit of the exact new head.
+
+## Prompt 012 Implementation 001 - Correction 02
+
+Complete only when all are true:
+
+- The planner preserves the non-empty global `requiresApproval` policy
+  catalog and derives a fixed-vocabulary
+  `autonomyBoundary.activeApprovalGatedActions` list for the current requested
+  work from canonical planning signals.
+- A normal planner-generated handoff, including the catalog's global entries,
+  has an empty active list and is accepted without fixture mutation.
+- Production deployment, destructive production database operations,
+  material-cost external infrastructure actions, real credential rotation,
+  destructive Git history rewrites, unauthorized package/release publication,
+  asset/fund transfers, and on-chain transaction execution fail closed with
+  `APPROVAL_AUTHORIZATION_MISSING` without an exact durable authorization proof.
+- Active classification is schema-closed and bound into Work Order and Host
+  Dispatch identity; tamper, drift, stale active state, caller booleans, and
+  completed receipts cannot authorize a different handoff.
+- HEB01–HEB27 remain green and HEB28–HEB40 prove the correction without
+  changing gate, assurance, review, finalize, release, version, or merge
+  semantics.

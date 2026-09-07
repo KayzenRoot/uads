@@ -19,10 +19,14 @@ The current receipt is stored in the global sidecar with a fixed 32-entry
 history retention bound.
 
 Correction 01 additionally requires current-authority revalidation before a
-mutating transition and fail-closed `APPROVAL_AUTHORIZATION_MISSING` when the
-current Work Order declares approval-gated actions without an exact durable
-authorization proof. The schema remains closed; receipt state is never an
-approval authority.
+mutating transition. Correction 02 distinguishes the non-empty Work Order
+`requiresApproval` policy catalog from the schema-closed,
+planner-derived `autonomyBoundary.activeApprovalGatedActions` projection of
+the current requested work. The active projection is bound into the Work Order
+routing digest and Host Dispatch Bundle identity; only a non-empty active list
+fails closed with `APPROVAL_AUTHORIZATION_MISSING` when no exact durable
+authorization proof exists. The schemas remain closed, old sidecars remain
+readable conservatively, and receipt state is never an approval authority.
 
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 

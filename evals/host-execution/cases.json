@@ -25,5 +25,18 @@
   { "id": "HEB24", "name": "accepted handoff rejects a semantically replaced bundle" },
   { "id": "HEB25", "name": "unchanged accepted handoff transitions normally" },
   { "id": "HEB26", "name": "approval-gated handoff fails closed without proof" },
-  { "id": "HEB27", "name": "completed receipt cannot substitute for approval" }
+  { "id": "HEB27", "name": "completed receipt cannot substitute for approval" },
+  { "id": "HEB28", "name": "global approval catalog does not block safe planner handoff" },
+  { "id": "HEB29", "name": "active production deployment intent fails closed" },
+  { "id": "HEB30", "name": "active destructive production database intent fails closed" },
+  { "id": "HEB31", "name": "active Web3 asset transfer and on-chain intent fail closed" },
+  { "id": "HEB32", "name": "active material-cost infrastructure intent fails closed" },
+  { "id": "HEB33", "name": "active real credential rotation intent fails closed" },
+  { "id": "HEB34", "name": "active destructive Git history rewrite intent fails closed" },
+  { "id": "HEB35", "name": "package publication intent fails closed without canonical authorization" },
+  { "id": "HEB36", "name": "active approval classification tamper fails closed" },
+  { "id": "HEB37", "name": "caller approval booleans cannot bypass active classification" },
+  { "id": "HEB38", "name": "non-canonical package authorization cannot bypass active classification" },
+  { "id": "HEB39", "name": "normal prepare and dispatch remain compatible" },
+  { "id": "HEB40", "name": "only the exact canonical package authorization boundary is recognized" }
 ]
