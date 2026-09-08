@@ -4,6 +4,11 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+### Documentation
+
+- Reconciled the canonical Prompt 012 documentation after the verified
+  `v0.12.1` release; deferred post-V1 capabilities remain explicitly FUTURE.
+
 ## [0.12.1] - 2026-09-08
 
 ### Highlights

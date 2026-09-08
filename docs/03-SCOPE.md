@@ -80,7 +80,7 @@ The built-in catalog contains 11 core roles and 14 domain profiles. Security, pe
 
 Selection uses a bounded minimum-sufficient greedy algorithm. It covers only domains, affected areas, risk signals, gates, dependencies, and evidence obligations present in the Work Order. Missing required coverage blocks dispatch rather than causing an unrelated specialist expansion.
 
-## Prompt 012 scope freeze (planning only; implementation not started)
+## Prompt 012 scope freeze (historical planning record)
 
 The sole NECESSARY next capability is a bounded, provider-neutral host
 execution and receipt boundary for an already validated sidecar Host Dispatch
@@ -104,6 +104,22 @@ retain global-first state, zero project footprint, current Work Order/routing/
 specialist/model/host-root identity checks, explicit approval ownership, and
 fail-closed behavior for stale, replayed, tampered, cross-project, or
 ambiguous receipts.
+
+## Prompt 012 bounded scope (delivered and closed)
+
+The bounded Prompt 012 scope is delivered on `main` and closed. It includes:
+
+- current Host Dispatch Bundle handoff through the host-owned adapter boundary;
+- a schema-closed, sidecar-only Host Execution Receipt;
+- current and immutable-history receipt state with fixed 32-entry retention;
+- current-authority revalidation before mutating receipt transitions; and
+- fail-closed handling for replay, stale, tampered, cross-project, unsupported,
+  and ambiguous handoffs, including active approval-intent checks.
+
+The delivered boundary preserves global-first state, zero project footprint,
+provider neutrality, explicit host ownership, and Architecture Freeze v0.2.
+UADS records bounded host outcome facts only; it does not invoke providers,
+execute arbitrary host commands, own credentials, or create approval proof.
 
 UGAS integration, provider API clients or invocation gateways, dashboards,
 marketplaces, deployment automation, deep specialist expansion, and other
