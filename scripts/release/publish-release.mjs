@@ -46,7 +46,7 @@ if (assets.length < 7 || !assets.includes("github-direct-review-evidence.json") 
 const existing = spawnSync("gh", ["release", "view", tag, "--repo", repo], { cwd: root, windowsHide: true }).status === 0;
 if (!existing) {
   const notes = releaseNotes(version);
-  run("gh", ["release", "create", tag, "--repo", repo, "--title", releaseTitle(version), "--notes", notes, "--prerelease", "--verify-tag", ...assets.map((asset) => path.join(artifactDir, asset))]);
+  run("gh", ["release", "create", tag, "--repo", repo, "--title", releaseTitle(version, notes), "--notes", notes, "--prerelease", "--verify-tag", ...assets.map((asset) => path.join(artifactDir, asset))]);
 }
 process.stdout.write(`published ${tag} at ${head}\n`);
 

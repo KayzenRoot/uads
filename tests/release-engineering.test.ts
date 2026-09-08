@@ -103,4 +103,42 @@ describe("release engineering", () => {
     expect(releaseTitle("0.11.0")).toBe("UADS v0.11.0 - Assurance & Stabilization");
     expect(releaseTitle("0.10.2")).not.toContain("GitHub Release Engineering");
   });
+
+  it("17: derives a deterministic title for a future changelog version", () => {
+    const changelog = [
+      "# Changelog",
+      "",
+      "## [0.12.1] - 2026-09-08",
+      "",
+      "### Highlights",
+      "",
+      "- Release titles now derive from the authoritative changelog.",
+      "",
+      "### Fixed",
+      "",
+      "- The publisher supplies the current changelog section to title derivation.",
+      "",
+    ].join("\n");
+
+    expect(releaseTitle("0.12.1", changelog)).toBe("UADS v0.12.1 - Release titles now derive from the authoritative changelog.");
+  });
+
+  it("18: the exact 0.12.0 failure pattern is resolved by supplying changelog evidence", () => {
+    const changelog = [
+      "## [0.12.0] - 2026-09-07",
+      "",
+      "### Highlights",
+      "",
+      "- Delivered the bounded Host Execution and Receipt Boundary.",
+      "",
+    ].join("\n");
+
+    expect(releaseTitle("0.12.0", changelog)).toBe("UADS v0.12.0 - Delivered the bounded Host Execution and Receipt Boundary.");
+  });
+
+  it("19: missing or malformed future title sources fail closed", () => {
+    expect(() => releaseTitle("0.12.1")).toThrow("release title is not defined for version 0.12.1");
+    expect(() => releaseTitle("0.12.1", "## [0.12.1] - 2026-09-08\n\n### Fixed\n\n- No Highlights section.\n")).toThrow("release title cannot be derived from changelog highlights");
+    expect(() => releaseTitle("0.12.1", "## [0.12.0] - 2026-09-07\n\n### Highlights\n\n- Older version.\n")).toThrow("release changelog section is missing for version 0.12.1");
+  });
 });
