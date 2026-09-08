@@ -28,7 +28,15 @@ when deriving the title, reproducing the failure at `dist/release/release-title.
 
 ## Verification
 
-- Pending local and hosted gates are recorded in the Evidence Bundle.
+- Focused local tests: 23/23 passed; build, lint, typecheck,
+  `validate:engineering`, `npm ci`, and npm audit passed.
+- Exact PR-head Foundation `34220628606` / job `102042637510`: 49 test files,
+  409 tests, HEB01-HEB52, all evals, and finalVerdict PASS.
+- CodeQL `34220628607`, Dependency Review `34220628640`, and Linux/Windows
+  compatibility `34220628622` all passed on the exact head.
+- Complete local Windows test/aggregate attempts did not conclude within the
+  execution window; no failure was emitted and the hosted exact-Node-20
+  Foundation result is the authoritative complete validation evidence.
 - No remote tag or release mutation is part of this correction.
 
 ## Remaining risks

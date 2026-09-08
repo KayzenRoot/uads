@@ -18,10 +18,13 @@ Canonical promotion: `PENDING_MAINTAINER`
   section.
 - Regression tests and `0.12.1` metadata added.
 - Evidence Bundle and correction governance records created.
+- Focused local validation passed; exact PR-head hosted Foundation recorded 49
+  files / 409 tests, HEB01-HEB52, all evals, and finalVerdict PASS.
+- Hosted CodeQL, Dependency Review, and Linux/Windows Node 20 compatibility
+  checks passed.
 
 ## Open items
 
-- Complete local validation and exact PR-head hosted checks.
 - Independent review of the exact correction head.
 - Maintainer decision on protected merge.
 - Future `0.12.1` release publication is outside this delta.

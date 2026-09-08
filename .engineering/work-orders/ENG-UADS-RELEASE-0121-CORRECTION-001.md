@@ -1,10 +1,10 @@
 # Work Order - `ENG-UADS-RELEASE-0121-CORRECTION-001`
 
-Status: `ACTIVE`
+Status: `READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Branch: `fix/eng-uads-release-0121-correction-001`
 Baseline Git SHA: `da05b3ecdeec5febf3ffdfd65c008ea311ccb8b3`
-Head Git SHA: `pending`
+Head Git SHA: `3ef2b051f57fe4563fa26cf9892170c82eb3c520`
 Scope class: `local`
 Risk: `HIGH`
 
@@ -50,18 +50,20 @@ patch `0.12.1`, and deliver an auditable PR without mutating the immutable
 
 ## Acceptance criteria
 
-- [ ] Generic title derivation works for `0.12.1` and future valid changelog
+- [x] Generic title derivation works for `0.12.1` and future valid changelog
       `Highlights` sections without a per-version map entry.
-- [ ] Missing, malformed, or wrong-version title sources fail closed.
-- [ ] Historical mapped titles and stale-title protections remain unchanged.
-- [ ] `VERSION`, package metadata, and root lock metadata are exactly `0.12.1`.
-- [ ] Changelog records the correction and preserves `[Unreleased]`.
-- [ ] Required local validation passes without dependency graph changes.
-- [ ] Required hosted PR-head checks pass.
-- [ ] Evidence Bundle proves base/head identities, changed files, tests,
+- [x] Missing, malformed, or wrong-version title sources fail closed.
+- [x] Historical mapped titles and stale-title protections remain unchanged.
+- [x] `VERSION`, package metadata, and root lock metadata are exactly `0.12.1`.
+- [x] Changelog records the correction and preserves `[Unreleased]`.
+- [x] Focused local validation passes without dependency graph changes; the
+      complete equivalent Foundation validation passes on the exact PR head.
+- [x] Required hosted PR-head checks pass on the implementation head.
+- [x] Evidence Bundle proves base/head identities, changed files, tests,
       hosted gates, tag immutability, absent `v0.12.0` release, risks, and
       proposed Checkpoint Delta.
-- [ ] PR remains open for independent review; no merge or publication occurs.
+- [x] PR #22 remains open for independent review; no merge or publication
+      occurs.
 
 ## Required gates and evidence
 
@@ -71,6 +73,11 @@ patch `0.12.1`, and deliver an auditable PR without mutating the immutable
   `npm audit --audit-level=high`, and release-title-specific tests/verification.
 - Hosted: Foundation/CI, CodeQL, Dependency Review, Linux Node 20, Windows
   Node 20, and all current mandatory branch-protection checks.
+- Hosted evidence: Foundation `34220628606` / job `102042637510` recorded
+  49 files, 409 tests, HEB01-HEB52, and finalVerdict PASS; CodeQL
+  `34220628607` / job `102042637898`; Dependency Review `34220628640` /
+  job `102042637397`; Compatibility `34220628622` / jobs
+  `102042638016` and `102042637651`.
 - Evidence: `.engineering/reports/EVIDENCE-BUNDLE-ENG-UADS-RELEASE-0121-CORRECTION-001.md`.
 
 ## Stop conditions
