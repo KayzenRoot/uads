@@ -26,6 +26,14 @@ Normalized failure records, deterministic signatures, ranked hypotheses, diagnos
 
 Deterministic evidence reuse with content-aware validity, conservative gate policy, operational soft/hard token budgets, provider-neutral QPT snapshot, CLI `cache`/`cost`, and cost evals CC1–CC14. Reuse never skips a required non-reusable gate. Architecture Freeze v0.2 NECESSARY subsystem; precedes provider/model routing.
 
+## UADS V1 canonical closeout (v0.12.1)
+
+The bounded UADS V1 roadmap is complete through Prompt 012 and the verified
+`v0.12.1` release. Prompt 001 through Prompt 012 delivery is represented by
+the current `main` identity; remaining catalog, provider, UGAS, dashboard,
+cloud, marketplace, and deployment items remain explicitly FUTURE and are not
+blockers to V1 completion.
+
 ## Next increments (planned)
 
 1. Broader specialist catalog (still not a marketplace) — FUTURE; the bounded
@@ -76,13 +84,15 @@ was the prerequisite recorded by the historical planning decision.
 ## Prompt 012 - Implementation 001 (delivered)
 
 The bounded, provider-neutral Host Execution and Receipt Boundary is
-implemented and merged on `main` through PR #19. It follows a current
+implemented and merged on `main` through PR #19, and is included in the
+verified `v0.12.1` release. It follows a current
 Host Dispatch Bundle with an ownership-safe handoff, a strict sidecar-only
 Host Execution Receipt, current and immutable history, 32-entry retention,
 current-authority revalidation, and fail-closed replay, stale, tamper, and
 approval-intent checks. HEB01-HEB52 and the complete validation matrix pass
 for the final `main` identity
-`bb27398d8caa80be4a550dc1c1a96e0042fdd808`.
+`312e32946798eb3abbb49a79af08e13efb7719dc` with tree
+`b2a6763045fc1dbb81b6ba2880bf1f77167d7133`.
 
 The common Cursor, Codex, and Generic Agent Skills contract records bounded
 host outcome facts only. UADS does not invoke providers, run arbitrary host

@@ -127,7 +127,22 @@ limits, or model quality.
 
 v0.2 architecture freeze remains in force. Prompt 002 implements the kernel inside that freeze; breaking global-first / ZPF defaults requires a documented freeze bump.
 
-## Prompt 012 architecture decision (planning only; not implemented)
+## Prompt 012 architecture extension (delivered and closed)
+
+The bounded Prompt 012 architecture extension is implemented and merged. It
+extends the existing host-adapter boundary with a current identity-bound Host
+Dispatch Bundle handoff and a schema-closed, sidecar-only Host Execution
+Receipt. Current/history handling, fixed 32-entry retention, current-authority
+revalidation, and fail-closed replay, stale, tamper, and approval-intent
+behavior are part of the delivered contract.
+
+The extension preserves global-first state, zero project footprint, provider
+neutrality, explicit host ownership, and Architecture Freeze v0.2. The kernel
+does not invoke providers, own credentials, execute arbitrary commands, or
+grant deployment or approval authority; the host owns IDE/agent/provider
+execution.
+
+## Prompt 012 architecture decision (historical planning record)
 
 Prompt 012 is frozen to a bounded host execution and receipt boundary after
 the existing validation chain. The host may accept and execute only an

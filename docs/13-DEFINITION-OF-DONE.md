@@ -224,7 +224,11 @@ Complete only when all are true:
 - README and release title are generic/canonical; v0.11.0 metadata is updated only after the complete local and external exact-SHA validation chain passes.
 - Provider gateways, dashboards, deployment, marketplace, and other non-required expansions remain out of scope.
 
-## Prompt 012 pre-implementation scope freeze
+## Prompt 012 pre-implementation scope freeze (historical planning record)
+
+The following section preserves the selection and acceptance language used
+before implementation. It is historical context; the delivered/closed state
+is recorded below and is authoritative for current completion.
 
 The sole selected capability is a bounded, provider-neutral host execution and
 receipt boundary for an already validated Host Dispatch Bundle. The future
@@ -242,11 +246,11 @@ acceptance block. It uses only the pre-freeze roadmap, Prompt 008/009/010/011
 completion records, the current adapter preparation contract, and the
 corresponding source/schema evidence.
 
-## Prompt 012 Host Execution Boundary / Implementation 001
+## Prompt 012 Host Execution Boundary / Implementation 001 (historical acceptance record)
 
-This implementation is ready only when the exact implementation Work Order is
-independently reviewed and all of the following are proven without a release
-or merge in this increment:
+The historical acceptance record required the exact implementation Work Order
+to be independently reviewed and all of the following to be proven before
+release or merge:
 
 - A strict, schema-closed, provider-neutral Host Execution Receipt binds the
   current Host Dispatch Bundle and every required Work Order, routing,
@@ -268,10 +272,10 @@ or merge in this increment:
 - A completed receipt cannot satisfy command evidence, selected gates,
   independent assurance, review, finalize, release, or deployment semantics.
 - HEB01–HEB20, the existing validation matrix, exact-SHA hosted checks, and
-  independent audit evidence pass. The implementation PR remains unmerged;
-  Prompt 012 is not marked complete by the implementer.
+  independent audit evidence pass. The pre-merge record intentionally did not
+  mark Prompt 012 complete; this describes that historical checkpoint only.
 
-## Prompt 012 Implementation 001 - Correction 01
+## Prompt 012 Implementation 001 - Correction 01 (historical acceptance record)
 
 Complete only when all are true:
 
@@ -280,9 +284,11 @@ Complete only when all are true:
 - Approval-gated handoff reads the existing Work Order autonomy boundary and returns `APPROVAL_AUTHORIZATION_MISSING` when no exact durable authorization proof exists.
 - No receipt state, CLI flag, caller prose, provider call, network operation, credential, or arbitrary command creates approval authority.
 - HEB01-HEB20 and HEB21-HEB27 pass, with the original 49-file/374-test baseline preserved or increased.
-- The correction remains on PR #19, unmerged and unreleased, pending independent re-audit of the exact new head.
+- Historical checkpoint: the correction was pending independent re-audit on
+  PR #19 before the protected merge and release that later delivered this
+  capability.
 
-## Prompt 012 Implementation 001 - Correction 02
+## Prompt 012 Implementation 001 - Correction 02 (historical acceptance record)
 
 Complete only when all are true:
 
@@ -307,7 +313,7 @@ Complete only when all are true:
   changing gate, assurance, review, finalize, release, version, or merge
   semantics.
 
-## Prompt 012 Implementation 001 - Correction 03
+## Prompt 012 Implementation 001 - Correction 03 (historical acceptance record)
 
 Complete only when all are true:
 
@@ -324,3 +330,20 @@ Complete only when all are true:
   the old bundle/handoff; and receipts/caller signals cannot authorize it.
 - HEB01–HEB44 and HEB45–HEB52 pass, with the test count at least 49 files and
   398 tests.
+
+## Prompt 012 delivered and closed
+
+PR #19 merged the bounded Host Execution/Receipt Boundary into `main`. The
+complete correction sequence HEB01–HEB52 passed, and the final v0.12.1
+validation passed with at least 49 test files and 409 tests. The post-merge
+evidence, exact-SHA hosted checks, Direct Review, release validation, and
+verified v0.12.1 publication confirm that the implementation is delivered and
+closed.
+
+The completed contract provides current Host Dispatch Bundle handoff,
+schema-closed sidecar-only receipts, current and immutable history with fixed
+32-entry retention, current-authority revalidation, and fail-closed replay,
+stale, tamper, cross-project, unsupported, and approval-intent behavior.
+Provider gateways, live provider-specific adapters, autonomous execution,
+dashboards, deployment, deep UGAS integration, and other deferred capabilities
+remain FUTURE and are not silently promoted by this closeout.
