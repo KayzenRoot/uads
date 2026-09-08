@@ -4,7 +4,7 @@ Status: `READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Branch: `fix/eng-uads-release-0121-correction-001`
 Baseline Git SHA: `da05b3ecdeec5febf3ffdfd65c008ea311ccb8b3`
-Head Git SHA: `3ef2b051f57fe4563fa26cf9892170c82eb3c520`
+Head Git SHA: `0c9a51aeafb3c5e89beedf5732f5c6d46dbacef3`
 Scope class: `local`
 Risk: `HIGH`
 
@@ -73,11 +73,11 @@ patch `0.12.1`, and deliver an auditable PR without mutating the immutable
   `npm audit --audit-level=high`, and release-title-specific tests/verification.
 - Hosted: Foundation/CI, CodeQL, Dependency Review, Linux Node 20, Windows
   Node 20, and all current mandatory branch-protection checks.
-- Hosted evidence: Foundation `34220628606` / job `102042637510` recorded
+- Hosted evidence: Foundation `34221385391` / job `102045063462` recorded
   49 files, 409 tests, HEB01-HEB52, and finalVerdict PASS; CodeQL
-  `34220628607` / job `102042637898`; Dependency Review `34220628640` /
-  job `102042637397`; Compatibility `34220628622` / jobs
-  `102042638016` and `102042637651`.
+  `34221385385` / job `102045062987`; Dependency Review `34221385397` /
+  job `102045062792`; Compatibility `34221385370` / jobs
+  `102045063108` and `102045062831`.
 - Evidence: `.engineering/reports/EVIDENCE-BUNDLE-ENG-UADS-RELEASE-0121-CORRECTION-001.md`.
 
 ## Stop conditions

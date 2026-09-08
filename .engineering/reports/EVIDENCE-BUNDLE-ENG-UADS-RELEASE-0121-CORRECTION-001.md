@@ -3,7 +3,7 @@
 Status: `COMPLETE`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `da05b3ecdeec5febf3ffdfd65c008ea311ccb8b3`
-Head Git SHA: `3ef2b051f57fe4563fa26cf9892170c82eb3c520`
+Head Git SHA: `0c9a51aeafb3c5e89beedf5732f5c6d46dbacef3`
 
 ## Claims
 
@@ -18,7 +18,7 @@ Head Git SHA: `3ef2b051f57fe4563fa26cf9892170c82eb3c520`
 | Changelog correction | file | `CHANGELOG.md` | PASS | `[Unreleased]` preserved; `0.12.1` documents partial `0.12.0` state |
 | Historical immutability | github | `v0.11.1`, `v0.11.0`, and prior release evidence | PASS | Read-only verification found no mutation |
 | Local gates | command | `npm ci`, build, engineering validation, lint, typecheck, focused tests, npm audit | PASS | Complete local Windows suite did not conclude; no failure emitted |
-| Hosted gates | github | Foundation `34220628606`; CodeQL `34220628607`; Dependency Review `34220628640`; Compatibility `34220628622` | PASS | Exact head; 49 files / 409 tests; HEB01-HEB52; all evals; finalVerdict PASS |
+| Hosted gates | github | Foundation `34221385391`; CodeQL `34221385385`; Dependency Review `34221385397`; Compatibility `34221385370` | PASS | Exact head; 49 files / 409 tests; HEB01-HEB52; all evals; finalVerdict PASS |
 | Independent review | github | Correction PR | PENDING | PR must remain open and unmerged |
 
 ## Identity binding
@@ -28,19 +28,21 @@ Head Git SHA: `3ef2b051f57fe4563fa26cf9892170c82eb3c520`
 - Baseline: `.engineering/baselines/ENG-UADS-RELEASE-0121-CORRECTION-001.md`.
 - Correction Delta: `.engineering/checkpoints/CORRECTION-DELTA-ENG-UADS-RELEASE-0121-CORRECTION-001.md`.
 - Checkpoint Delta: `.engineering/checkpoints/CHECKPOINT-DELTA-ENG-UADS-RELEASE-0121-CORRECTION-001.md`.
-- Change summary: PR #22, implementation head `3ef2b051f57fe4563fa26cf9892170c82eb3c520`; governance evidence is bounded to this correction.
+- Change summary: PR #22, audited head `0c9a51aeafb3c5e89beedf5732f5c6d46dbacef3`; governance evidence is bounded to this correction.
 
 ## Hosted proof details
 
-- Foundation: run `34220628606`, job `102042637510`, success; 49 test files,
+- Foundation: run `34221385391`, job `102045063462`, success; 49 test files,
   409 tests, HEB01-HEB52, all evals, npm audit clean, finalVerdict PASS.
-- CodeQL: run `34220628607`, job `102042637898`, success; aggregate CodeQL
-  check `102042938318`, success.
-- Dependency Review: run `34220628640`, job `102042637397`, success.
-- Linux Node 20: run `34220628622`, job `102042638016`, success; evidence
-  digest `597d476e6f48c34b213912cf8d2038f08ed30939eb802aaefb022094bb2b79bb`.
-- Windows Node 20: run `34220628622`, job `102042637651`, success; evidence
-  digest `131d0ff929868e5b5bb4489e36251631a6a497f3f16f301b25d0c4298c0aad9b`.
+- CodeQL: run `34221385385`, job `102045062987`, success; aggregate CodeQL
+  check `102045387618`, success.
+- Dependency Review: run `34221385397`, job `102045062792`, success.
+- Linux Node 20: run `34221385370`, job `102045063108`, success; source tree
+  `2799ef084fcbf60e3ee284a706d4107e36b734ab`; evidence digest
+  `f47671d881432071d5460a5a27396649531f515afabea6f242004ef8a7e2827c`.
+- Windows Node 20: run `34221385370`, job `102045062831`, success; source tree
+  `2799ef084fcbf60e3ee284a706d4107e36b734ab`; evidence digest
+  `c929b509b0d1d4ca80b9f6f5cb6abe99ed916ae864dfc413df52411a96543c6a`.
 - PR: `https://github.com/KayzenRoot/uads/pull/22`, open and merge state
   clean; no merge performed.
 

@@ -18,10 +18,11 @@ verificação local e hospedada e o estado parcial imutável de `v0.12.0`.
 - A correção fornece a seção validada do changelog à derivação genérica de
   títulos e adiciona regressões fail-closed.
 - Nenhuma mutação de runtime, dependência, release histórico ou tag foi feita.
-- O PR #22 está aberto no head `3ef2b051f57fe4563fa26cf9892170c82eb3c520`.
-- O Foundation hospedado `34220628606` aprovou 49 arquivos, 409 testes,
+- O PR #22 está aberto no head `0c9a51aeafb3c5e89beedf5732f5c6d46dbacef3`.
+- O Foundation hospedado `34221385391` aprovou 49 arquivos, 409 testes,
   HEB01-HEB52, todas as evals e `finalVerdict: PASS`.
-- CodeQL, Dependency Review e compatibilidade Linux/Windows Node 20 passaram.
+- CodeQL `34221385385`, Dependency Review `34221385397` e compatibilidade
+  Linux/Windows `34221385370` passaram nesse head.
 
 ## Risks and limitations
 
