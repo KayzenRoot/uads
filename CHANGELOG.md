@@ -4,6 +4,26 @@ All notable changes to UADS (NexLabs) are documented here.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-08
+
+### Highlights
+
+- Release titles now derive from the authoritative changelog.
+
+### Fixed
+
+- The release publisher now supplies the current changelog section to generic
+  title derivation, preventing the 0.12.0 partial-publication failure.
+- Added regression coverage for future-version title derivation and fail-closed
+  handling of missing or malformed title sources.
+
+### Verification
+
+- This corrective patch preserves the immutable annotated `v0.12.0` tag at
+  `da05b3ecdeec5febf3ffdfd65c008ea311ccb8b3`.
+- No GitHub Release exists for `v0.12.0`; this patch remains pending
+  independent audit and protected merge.
+
 ## [0.12.0] - 2026-09-07
 
 ### Highlights
