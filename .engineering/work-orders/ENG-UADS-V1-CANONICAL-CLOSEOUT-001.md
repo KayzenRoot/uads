@@ -1,10 +1,10 @@
 # Work Order — `ENG-UADS-V1-CANONICAL-CLOSEOUT-001`
 
-Status: `ACTIVE`
+Status: `READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Branch: `docs/eng-uads-v1-canonical-closeout-001`
 Baseline Git SHA: `312e32946798eb3abbb49a79af08e13efb7719dc`
-Head Git SHA: `pending`
+Head Git SHA: `see PR #23 exact head; canonical correction commit: 242e46364c904dce5be027aa4890e31da1296150`
 Scope class: `local`
 Risk: `LOW`
 
@@ -49,19 +49,20 @@ auditable documentation/governance-only PR for independent final V1 audit.
 
 ## Acceptance criteria
 
-- [ ] Current Prompt 012 claims in Requirements, Scope, Architecture, and DoD
+- [x] Current Prompt 012 claims in Requirements, Scope, Architecture, and DoD
       match delivered reality; pre-implementation language is clearly marked
       historical.
-- [ ] ROADMAP and Backlog remain semantically consistent with the corrected
+- [x] ROADMAP and Backlog remain semantically consistent with the corrected
       higher-order sources.
-- [ ] Deferred post-V1 capabilities remain explicitly `FUTURE`.
-- [ ] No runtime, test, schema, dependency, workflow, version, tag, release,
+- [x] Deferred post-V1 capabilities remain explicitly `FUTURE`.
+- [x] No runtime, test, schema, dependency, workflow, version, tag, release,
       asset, or historical evidence mutation occurs.
-- [ ] Version metadata remains exactly `0.12.1`; `v0.12.1` and `v0.12.0`
+- [x] Version metadata remains exactly `0.12.1`; `v0.12.1` and `v0.12.0`
       identities remain unchanged.
-- [ ] All required local gates pass and the changed-file search finds no
+- [x] All required local gates pass and the changed-file search finds no
       unresolved current-state Prompt 012 contradiction.
-- [ ] PR is open, exact-head mandatory checks pass, Evidence Bundle is complete,
+- [x] PR #23 is open, exact-head mandatory checks pass, and the Evidence Bundle
+      is complete;
       and the PR remains open for independent audit.
 
 ## Required gates and evidence
@@ -74,6 +75,11 @@ auditable documentation/governance-only PR for independent final V1 audit.
   20, Windows Node 20, and current branch-protection checks.
 - Evidence Bundle:
   `.engineering/reports/EVIDENCE-BUNDLE-ENG-UADS-V1-CANONICAL-CLOSEOUT-001.md`.
+- PR: `https://github.com/KayzenRoot/uads/pull/23`.
+- Exact-head hosted checks: Foundation run `34244636186` / job
+  `102123353963`; CodeQL run `34244636065` / job `102123353252`; Dependency
+  Review run `34244636143` / job `102123352994`; Compatibility run
+  `34244636135` / Linux job `102123360166`, Windows job `102123359694`.
 
 ## Stop conditions
 
