@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/gef-project-profile.schema.json",
+  "title": "UADS GEF Project Profile",
+  "description": "Global, metadata-first project identity and adoption profile. No absolute host paths or secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "projectId",
+    "fingerprint",
+    "fingerprintSource",
+    "repositoryIdentity",
+    "repositoryGeneration",
+    "projectName",
+    "defaultBranch",
+    "packageManager",
+    "commands",
+    "evalFamilies",
+    "governancePaths",
+    "evidencePaths",
+    "hostedGateNames",
+    "supportedExecutorAdapters",
+    "gefVersion",
+    "adoptionMode",
+    "createdAt",
+    "updatedAt",
+    "profileDigest"
+  ],
+  "properties": {
+    "schema": { "const": "uads.gef.project-profile" },
+    "schemaVersion": { "const": "0.1.0" },
+    "projectId": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "fingerprintSource": { "enum": ["remote", "path"] },
+    "repositoryIdentity": { "type": ["string", "null"], "maxLength": 500 },
+    "repositoryGeneration": { "type": "string", "minLength": 1, "maxLength": 5000 },
+    "projectName": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "defaultBranch": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "packageManager": { "enum": ["npm", "pnpm", "yarn", "bun", "unknown"] },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["build", "test", "typecheck", "lint"],
+      "properties": {
+        "build": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "test": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "typecheck": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "lint": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" }
+      }
+    },
+    "evalFamilies": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9:_-]+$" }, "uniqueItems": true },
+    "governancePaths": { "type": "array", "items": { "type": "string", "pattern": "^(?!/)(?![A-Za-z]:)[^\\u0000]+$" }, "uniqueItems": true },
+    "evidencePaths": { "type": "array", "items": { "type": "string", "pattern": "^(?!/)(?![A-Za-z]:)[^\\u0000]+$" }, "uniqueItems": true },
+    "hostedGateNames": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }, "uniqueItems": true },
+    "supportedExecutorAdapters": {
+      "type": "array",
+      "const": ["codex", "cursor", "generic-agent-skills"]
+    },
+    "gefVersion": { "const": "1.0.0" },
+    "adoptionMode": { "enum": ["PROMPT_ONLY", "SHADOW_PLANNED"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "profileDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

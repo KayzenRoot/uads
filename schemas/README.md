@@ -38,4 +38,14 @@ task.
 
 UADS by NexLabs. See `docs/` for Architecture Freeze v0.2.
 
+GEF V1 W0 adds the closed `gef-project-profile.schema.json`,
+`gef-current.schema.json`, and `gef-adoption-gap.schema.json` contracts. They
+contain global metadata only: no absolute repository paths, credentials,
+prompts, commands, or authoritative proof-skipping decisions. Later GEF
+schemas remain staged by wave and must preserve the same fail-closed boundary.
+
+The profile command fields are bounded to the detected package manager's
+`npm run`, `pnpm run`, `yarn run`, or `bun run` form. An unknown package manager
+must persist `null` commands rather than inventing an executable command.
+
 The `ci-gate-receipt.schema.json` contract is the Stage A exact-SHA CI receipt. The `github-direct-review-evidence.schema.json` contract is the Stage B strict, versioned canonical evidence; it binds source CI run/attempt provenance, the Direct Review workflow, bounded test/evaluation/audit summaries, security and Linux/Windows compatibility status, release identity, artifact provenance, and explicit PASS/FAIL/INCOMPLETE verdicts. Corrected-release security proofs also persist the observed GitHub event/ref fields and, for Dependency Review same-tree mode, the exact merged-PR base/source identity. Unavailable counts remain `null` with an uppercase `COUNT_PARSE_UNAVAILABLE:*` reason code. `github-review-index.schema.json` is the small release table of contents containing only independently verifiable canonical pointers and identities; it is not evidence by itself.
