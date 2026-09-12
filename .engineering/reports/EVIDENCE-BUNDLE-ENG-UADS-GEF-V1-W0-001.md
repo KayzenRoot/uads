@@ -3,7 +3,8 @@
 Status: `PARTIAL`
 Repository: `KayzenRoot/uads`
 Baseline Git SHA: `9a075d04abeb0d853dffbd25bdfd4efad52d8130`
-Head Git SHA: `pending corrected candidate commit`
+Head Git SHA: `e6422fe6fc6db9fc0031dbd18fae037080fc59b8`
+Head Git tree: `7a97e9d2ef3309614675b36f30b915d4f1c4d260`
 
 This is the human projection of the W0 evidence manifest. The canonical
 machine record is `EVIDENCE-MANIFEST-ENG-UADS-GEF-V1-W0-001.json`; exact final head,
