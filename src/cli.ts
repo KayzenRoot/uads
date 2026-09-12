@@ -44,6 +44,12 @@ import {
   runAdaptersStatusCommand,
   runAdaptersUninstallCommand,
 } from "./commands/adapters.js";
+import {
+  runGefAdoptCommand,
+  runGefDoctorCommand,
+  runGefProfileShowCommand,
+  runGefStatusCommand,
+} from "./commands/gef.js";
 
 const program = new Command();
 
@@ -150,6 +156,42 @@ adapters
   .option("--json", "JSON output")
   .action((adapter: string | undefined, options: { hostHome?: string; json?: boolean }) => {
     process.stdout.write(runAdaptersDetectCommand({ adapter, hostHome: options.hostHome, json: options.json }));
+  });
+
+const gef = program.command("gef").description("Global Engineering Fabric V1 bootstrap and project registry");
+gef
+  .command("status")
+  .description("Show read-only GEF project registration and source identity status")
+  .option("--project <path>", "project path")
+  .option("--json", "JSON output")
+  .action((options: { project?: string; json?: boolean }) => {
+    process.stdout.write(runGefStatusCommand({ project: options.project, json: options.json }));
+  });
+gef
+  .command("adopt")
+  .description("Register or reconcile the current project in the global GEF sidecar")
+  .option("--project <path>", "project path")
+  .option("--shadow", "record Shadow Assurance as planned; never enable authoritative skipping")
+  .option("--json", "JSON output")
+  .action((options: { project?: string; shadow?: boolean; json?: boolean }) => {
+    process.stdout.write(runGefAdoptCommand({ project: options.project, shadow: options.shadow, json: options.json }));
+  });
+const gefProfile = gef.command("profile").description("Inspect the global GEF project profile");
+gefProfile
+  .command("show")
+  .description("Show the current schema-valid GEF project profile and adoption gap")
+  .option("--project <path>", "project path")
+  .option("--json", "JSON output")
+  .action((options: { project?: string; json?: boolean }) => {
+    process.stdout.write(runGefProfileShowCommand({ project: options.project, json: options.json }));
+  });
+gef
+  .command("doctor")
+  .description("Run read-only GEF storage, registration, and privacy checks")
+  .option("--project <path>", "project path")
+  .option("--json", "JSON output")
+  .action((options: { project?: string; json?: boolean }) => {
+    process.stdout.write(runGefDoctorCommand({ project: options.project, json: options.json }));
   });
 adapters
   .command("status")

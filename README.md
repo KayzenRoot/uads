@@ -19,6 +19,7 @@ This repository is the public open-source UADS product. Releases are published f
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
 - Global specialist registry with 25 bounded built-in profiles, deterministic domain/gate/evidence obligation coverage, independent assurance, and semantic stale-plan binding
 - Common Cursor/Codex/Generic Agent Skills adapters with ownership-safe global installation, sidecar-only Host Dispatch Bundles, and the bounded Host Execution handoff/Receipt Boundary with current-authority revalidation and 32-entry history retention
+- GEF V1 W0 global Project Registry and adoption/status/doctor surfaces under `~/.uads/gef/`; later GEF waves remain explicitly staged
 - Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap
 
@@ -68,6 +69,10 @@ node dist/cli.js adapters status --json
 node dist/cli.js adapters prepare generic-agent-skills --json
 node dist/cli.js adapters handoff generic-agent-skills --json
 node dist/cli.js adapters receipt generic-agent-skills --state <state> --json
+node dist/cli.js gef status --json
+node dist/cli.js gef adopt --json
+node dist/cli.js gef profile show --json
+node dist/cli.js gef doctor --json
 node dist/cli.js review
 ```
 
