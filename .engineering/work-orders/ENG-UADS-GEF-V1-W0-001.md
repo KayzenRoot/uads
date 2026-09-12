@@ -4,8 +4,7 @@ Status: `READY_FOR_REVIEW`
 Repository: `KayzenRoot/uads`
 Branch: `fix/eng-uads-gef-v1-w0-001`
 Baseline Git SHA: `9a075d04abeb0d853dffbd25bdfd4efad52d8130`
-Head Git SHA: `e6422fe6fc6db9fc0031dbd18fae037080fc59b8`
-Head Git tree: `7a97e9d2ef3309614675b36f30b915d4f1c4d260`
+Head Git SHA: `external final executor report after the final correction commit`
 Scope class: `cross-cutting`
 Risk: `HIGH`
 Merge: forbidden until exact-head required gates and independent HEDS approval.
