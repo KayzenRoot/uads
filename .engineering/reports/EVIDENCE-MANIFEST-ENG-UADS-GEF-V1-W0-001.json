@@ -31,7 +31,7 @@
   ],
   "staged": ["GEF-02 through GEF-27"],
   "authoritativeSkippingEnabled": false,
-  "focusedValidation": "recorded in the replacement PR final executor report",
+  "focusedValidation": "local PASS: 11 focused tests, 420 full tests, host 52/52, all evals and validate; final hosted details external",
   "hostedGates": "recorded in the replacement PR final executor report",
   "independentHeds": "required before merge",
   "mergeAllowed": false

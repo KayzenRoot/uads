@@ -32,9 +32,11 @@ processes.
 
 ## Verification
 
-- Focused package-manager and CLI tests: pending until the corrected candidate
-  is built and validated.
-- Required local matrix and exact-head hosted gates: pending.
+- Focused package-manager and CLI tests: 11/11 passed.
+- Required local matrix: 420/420 tests, host-execution 52/52, all evals,
+  engineering validation, lint, typecheck, build, validate, and audit-high
+  passed; one moderate `adm-zip` advisory remains.
+- Exact-head hosted gates: pending until the replacement branch is pushed.
 - Independent HEDS re-review: pending; executor cannot self-approve.
 
 ## Remaining risks

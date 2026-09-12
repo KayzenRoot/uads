@@ -43,6 +43,19 @@ staged; W0 does not claim global GEF readiness.
   schema/privacy, corruption, and shadow behavior.
 - Governance-only wave reconciliation: `docs/17-GEF-V1-CANONICAL-WAVE-MAP.md`.
 
+## Local verification on the final pre-push candidate
+
+- `git diff --check`: PASS.
+- `npm ci`: PASS; one moderate `adm-zip` advisory, no high/critical finding.
+- `npm run validate:engineering`: PASS.
+- `npm run lint`, `npm run typecheck`, `npm run build`: PASS.
+- Focused GEF tests: 11/11 PASS.
+- `npm test`: 50 files / 420 tests PASS.
+- `npm run eval:host-execution`: 52/52 PASS.
+- `npm run validate`: PASS; orchestrator 9/9, execution 9/9, context 19/19,
+  fault 18/18, cost 27/27, model routing 22/22, specialist routing 26/26,
+  adapters 40/40, assurance 22/22, fault-injection 32/32.
+
 ## Final binding
 
 The corrected candidate SHA/tree and exact-head hosted receipts must be
