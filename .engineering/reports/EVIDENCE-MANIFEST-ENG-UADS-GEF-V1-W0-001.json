@@ -1,0 +1,38 @@
+{
+  "schema": "uads.gef.evidence-manifest",
+  "schemaVersion": "0.1.0",
+  "workOrder": "ENG-UADS-GEF-V1-W0-001",
+  "wave": "W0",
+  "repository": "KayzenRoot/uads",
+  "baseSha": "9a075d04abeb0d853dffbd25bdfd4efad52d8130",
+  "headSha": null,
+  "headBinding": "replacement-pr-final-executor-report",
+  "scope": "w0-correction-delta",
+  "changedAreas": [
+    "src/gef",
+    "src/commands/gef.ts",
+    "src/cli.ts",
+    "schemas/gef-*.schema.json",
+    "tests/gef-native.test.ts",
+    "docs/16-GEF-V1-W0.md",
+    "docs/17-GEF-V1-CANONICAL-WAVE-MAP.md",
+    ".engineering/work-orders/ENG-UADS-GEF-V1-W0-001.md",
+    ".engineering/checkpoints/CORRECTION-DELTA-ENG-UADS-GEF-V1-W0-001.md"
+  ],
+  "implemented": [
+    "GEF-01 Global Project Registry",
+    "global storage path contract",
+    "closed W0 schemas",
+    "read-only status and doctor",
+    "adoption gap matrix",
+    "package-manager-aware command metadata",
+    "end-to-end GEF CLI contract coverage",
+    "canonical W0-W8 wave map"
+  ],
+  "staged": ["GEF-02 through GEF-27"],
+  "authoritativeSkippingEnabled": false,
+  "focusedValidation": "recorded in the replacement PR final executor report",
+  "hostedGates": "recorded in the replacement PR final executor report",
+  "independentHeds": "required before merge",
+  "mergeAllowed": false
+}

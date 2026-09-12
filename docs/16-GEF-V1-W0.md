@@ -1,4 +1,6 @@
-# GEF V1 Native Implementation - W0
+# GEF V1 Native Implementation - W0 Correction
+
+Correction identity: `ENG-UADS-GEF-V1-W0-001`
 
 W0 bootstraps the Global Engineering Fabric as global, metadata-first
 infrastructure. It registers a repository by governed remote identity,
@@ -14,10 +16,14 @@ folder name. The resulting profile is path-safe and stored below
 - Global Project Registry with atomic, schema-validated profile/current/gap
   records.
 - `NEW_PROJECT`, `PARTIALLY_GOVERNED`, and `EXISTING_PROJECT` classification.
+- Package-manager-aware bounded command metadata for npm, pnpm, yarn, and bun;
+  unknown package managers persist null commands.
 - Read-only `status`, `profile show`, and `doctor` commands.
 - `adopt --shadow` records an observational plan only; it never enables
   authoritative skipping.
 - Explicit W0-to-W8 adoption gap matrix with only GEF-01 implemented.
+- Canonical detailed W0-W8 component ownership is recorded in
+  `docs/17-GEF-V1-CANONICAL-WAVE-MAP.md`.
 
 ## Reuse and boundaries
 
@@ -43,4 +49,6 @@ uads gef doctor [--project <path>] [--json]
 
 `status` and `doctor` are read-only. `adopt` is the only W0 command that
 creates global GEF records. All records are written atomically and validated
-before persistence.
+before persistence. The correction also executes these five flows through the
+built CLI in fresh processes: `status --json`, `adopt --json`, `adopt
+--shadow --json`, `profile show --json`, and `doctor --json`.

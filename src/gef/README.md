@@ -19,5 +19,6 @@ and global project registry. It is deliberately small and metadata-first.
 W0 does not implement source drift authority, UPIR compilation, context
 compilation, proof carry-forward, hosted gate collection, Shadow Assurance,
 or authoritative test/proof skipping. Those remain explicitly staged for
-later waves. `SHADOW_PLANNED` is descriptive only and always records
-`authoritativeSkippingEnabled: false`.
+later waves. Package command metadata is bounded to the detected npm, pnpm,
+yarn, or bun runner; unknown managers produce null commands. `SHADOW_PLANNED`
+is descriptive only and always records `authoritativeSkippingEnabled: false`.

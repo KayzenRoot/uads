@@ -58,7 +58,12 @@ function packageManager(repoRoot: string): GefPackageManager {
   return "unknown";
 }
 
-function packageMetadata(repoRoot: string): {
+function packageRunner(manager: GefPackageManager): string | null {
+  if (manager === "unknown") return null;
+  return manager;
+}
+
+function packageMetadata(repoRoot: string, manager: GefPackageManager): {
   projectName: string;
   commands: GefCommands;
   evalFamilies: string[];
@@ -79,8 +84,9 @@ function packageMetadata(repoRoot: string): {
   }
 
   const scripts = packageJson.scripts ?? {};
+  const runner = packageRunner(manager);
   const command = (name: string): string | null =>
-    typeof scripts[name] === "string" ? `npm run ${name}` : null;
+    runner && typeof scripts[name] === "string" ? `${runner} run ${name}` : null;
   const evalFamilies = Object.keys(scripts)
     .filter((key) => key.startsWith("eval:"))
     .map((key) => key.slice("eval:".length))
@@ -133,7 +139,8 @@ export function readGefSourceSnapshot(cwd: string): GefSourceSnapshot {
     canonicalProjectId: baseFingerprint.projectId,
     repositoryGeneration: generation,
   };
-  const metadata = packageMetadata(repoRoot);
+  const manager = packageManager(repoRoot);
+  const metadata = packageMetadata(repoRoot, manager);
   const branch = git.branch ?? defaultBranch(repoRoot, git.branch);
   const treeSha = runGit(repoRoot, ["show", "-s", "--format=%T", "HEAD"]);
   const headSha = git.head;
@@ -149,7 +156,7 @@ export function readGefSourceSnapshot(cwd: string): GefSourceSnapshot {
     repositoryGeneration: identity.repositoryGeneration,
     projectName: metadata.projectName,
     defaultBranch: defaultBranch(repoRoot, git.branch),
-    packageManager: packageManager(repoRoot),
+    packageManager: manager,
     commands: metadata.commands,
     evalFamilies: metadata.evalFamilies,
     governancePaths,

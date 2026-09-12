@@ -44,10 +44,10 @@
       "additionalProperties": false,
       "required": ["build", "test", "typecheck", "lint"],
       "properties": {
-        "build": { "type": ["string", "null"], "pattern": "^npm run [a-zA-Z0-9:_-]+$" },
-        "test": { "type": ["string", "null"], "pattern": "^npm run [a-zA-Z0-9:_-]+$" },
-        "typecheck": { "type": ["string", "null"], "pattern": "^npm run [a-zA-Z0-9:_-]+$" },
-        "lint": { "type": ["string", "null"], "pattern": "^npm run [a-zA-Z0-9:_-]+$" }
+        "build": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "test": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "typecheck": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" },
+        "lint": { "type": ["string", "null"], "pattern": "^(npm|pnpm|yarn|bun) run [a-zA-Z0-9:_-]+$" }
       }
     },
     "evalFamilies": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9:_-]+$" }, "uniqueItems": true },
