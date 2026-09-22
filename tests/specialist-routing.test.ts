@@ -414,4 +414,34 @@ describe("specialist registry and deterministic routing", () => {
       selectSpecialistPlan({ ...current, requiredEvidence: ["gate:unit-test"] }).selectionDigest,
     );
   });
+  it("covers Forge-style systems runtime domains without NO_DOMAIN_COVERAGE", () => {
+    const domains = [
+      "rust",
+      "kernel-runtime",
+      "contracts",
+      "event-driven-systems",
+      "state-recovery",
+      "offline-first",
+      "testing",
+      "certification",
+    ];
+    const plan = selectSpecialistPlan(input({
+      objective: "Implement a sovereign Rust kernel runtime with contracts, events, recovery, offline operation, testing, and certification",
+      domains,
+      scopeClass: "architectural",
+      riskLevel: "HIGH",
+      gates: ["unit-test"],
+      requiredEvidence: ["gate:unit-test"],
+    }));
+    expect(plan.status).toBe("SELECTED");
+    expect(plan.blockedReasonCodes).not.toContain("NO_DOMAIN_COVERAGE");
+    expect(plan.selected.map((item) => item.specialistId)).toEqual(
+      expect.arrayContaining(["systems-runtime-specialist", "test-engineer"]),
+    );
+    expect(plan.assurance.map((item) => item.specialistId)).toContain("independent-reviewer");
+    const covered = new Set(plan.coveredObligations.filter((item) => item.coverageKind === "domain").map((item) => item.obligationId.replace(/^domain:/, "")));
+    for (const domain of domains) expect(covered.has(domain)).toBe(true);
+  });
+
+
 });
