@@ -28,11 +28,14 @@ export function classifyScopeSize(intake: NormalizedIntake): ScopeDecision {
     scopeClass = "trivial";
     reasons.push("isolated presentation change");
   } else if (
-    includesAny(text, ["architecture", "auth architecture", "storage model", "change the public contract", "public api contract"])
+    includesAny(text, ["architecture", "auth architecture", "storage model", "change the public contract", "public api contract"]) ||
+    intake.domainSignals.includes("kernel-runtime") ||
+    (intake.domainSignals.includes("state-recovery") && intake.domainSignals.includes("offline-first"))
   ) {
     scopeClass = "architectural";
-    reasons.push("public contract or core architecture is in play");
+    reasons.push("public contract, kernel/runtime, or core architecture is in play");
   } else if (
+    intake.domainSignals.length >= 3 ||
     intake.domainSignals.includes("database") ||
     intake.riskSignals.includes("database-migration") ||
     (intake.domainSignals.includes("api") && intake.domainSignals.includes("security")) ||
@@ -119,6 +122,16 @@ export function classifyRisk(intake: NormalizedIntake, map: RepositoryMap): { le
     if (map.signals.migrations || map.signals.database) {
       reasons.push("repository map corroborates migration/database presence");
     }
+    return { level: "HIGH", reasons };
+  }
+  if (
+    signals.has("kernel-runtime") ||
+    signals.has("state-recovery") ||
+    signals.has("offline-first") ||
+    signals.has("certification") ||
+    (signals.has("event-driven-systems") && signals.has("contracts"))
+  ) {
+    reasons.push("foundational runtime, recovery, offline, contract, or certification surface");
     return { level: "HIGH", reasons };
   }
   if (signals.has("authentication") || signals.has("public-api") || signals.has("infrastructure")) {
