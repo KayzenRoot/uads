@@ -229,4 +229,42 @@ describe("orchestrator kernel", { timeout: 90_000 }, () => {
     });
     expect(inspected.map.projectId).toBe("aaaaaaaaaaaaaaaa");
   });
+  it("classifies foundational Forge-style kernel work as architectural HIGH risk", () => {
+    const { repo, home } = tempDirs();
+    seedRepo(repo);
+    const planned = runPlan({
+      cwd: repo,
+      uadsHome: home,
+      intake: normalizeIntake({
+        schema: "uads.intake",
+        schemaVersion: "0.2.0",
+        objective: "Implement the complete sovereign Forge kernel and contract runtime",
+        domainSignals: [
+          "rust",
+          "kernel-runtime",
+          "contracts",
+          "event-driven-systems",
+          "state-recovery",
+          "offline-first",
+          "testing",
+          "certification",
+        ],
+        riskSignals: [],
+        affectedAreas: ["kernel", "runtime", "state"],
+        classifier: "host-structured",
+      }),
+    });
+    expect(planned.workOrder.scopeClass).toBe("architectural");
+    expect(planned.workOrder.riskLevel).toBe("HIGH");
+    expect(planned.specialistPlan.status).toBe("SELECTED");
+    expect(planned.workOrder.specialists).toContain("systems-runtime-specialist");
+    expect(planned.workOrder.assuranceReviewers).toEqual(
+      expect.arrayContaining(["independent-reviewer", "security-reviewer"]),
+    );
+    expect(planned.workOrder.qualityGates).toEqual(
+      expect.arrayContaining(["static", "unit-test", "architecture-conformance", "contract-test", "rollback-validation", "security-review"]),
+    );
+  });
+
+
 });
