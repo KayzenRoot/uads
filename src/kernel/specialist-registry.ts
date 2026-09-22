@@ -33,7 +33,7 @@ const FUNCTIONS: SpecialistFunction[] = [
   "inspect", "requirements", "architecture", "planning", "implementation", "testing", "independent-review",
   "security-assurance", "performance-assurance", "reliability-assurance", "checkpoint", "frontend", "backend-api",
   "database", "mobile", "platform-cloud", "data-ai", "web3-contract", "finance-math", "game-systems",
-  "documentation", "release", "quality",
+  "documentation", "release", "quality", "systems-runtime",
 ];
 const PROFILE_KEYS = [
   "schema", "schemaVersion", "specialistId", "kind", "status", "purpose", "coveredDomains", "functions",
