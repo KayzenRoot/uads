@@ -32,7 +32,8 @@ export type SpecialistFunction =
   | "game-systems"
   | "documentation"
   | "release"
-  | "quality";
+  | "quality"
+  | "systems-runtime";
 
 export type SpecialistActivation = {
   scopeClasses?: ScopeClass[];
