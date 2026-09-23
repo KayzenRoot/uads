@@ -71,7 +71,7 @@ export const SPECIALISTS: SpecialistDef[] = [
     id: "test-engineer",
     purpose: "Design and run focused tests",
     activation: "non-docs non-style plans",
-    domains: ["quality"],
+    domains: ["quality", "testing"],
     mayImplement: false,
     reviewOnly: true,
     expectedInput: "Work Order + gates",
@@ -81,7 +81,7 @@ export const SPECIALISTS: SpecialistDef[] = [
     id: "independent-reviewer",
     purpose: "Independently review implementation",
     activation: "any plan that includes implementation-agent",
-    domains: ["quality"],
+    domains: ["quality", "certification"],
     mayImplement: false,
     reviewOnly: true,
     expectedInput: "diff + gates",
@@ -117,6 +117,16 @@ export const SPECIALISTS: SpecialistDef[] = [
     reviewOnly: true,
     expectedInput: "dependencies + rollback evidence",
     expectedOutput: "reliability review evidence",
+  },
+  {
+    id: "systems-runtime-specialist",
+    purpose: "Handle systems, kernel/runtime, contracts, event-driven, recovery, and offline-first concerns",
+    activation: "systems/runtime domain signals",
+    domains: ["rust", "kernel-runtime", "contracts", "event-driven-systems", "state-recovery", "offline-first"],
+    mayImplement: false,
+    reviewOnly: true,
+    expectedInput: "runtime architecture + contracts + recovery obligations",
+    expectedOutput: "systems/runtime verification guidance",
   },
   {
     id: "checkpoint-manager",
@@ -161,6 +171,9 @@ export function selectSpecialists(input: {
   }
   if (input.intake.riskSignals.includes("performance-hot-path") || input.domains.includes("performance")) {
     assurance.push("performance-reviewer");
+  }
+  if (input.domains.some((id) => ["rust", "kernel-runtime", "contracts", "event-driven-systems", "state-recovery", "offline-first"].includes(id))) {
+    specialists.push("systems-runtime-specialist");
   }
 
   const uniqueSpecialists = unique(specialists);
@@ -241,6 +254,12 @@ export function selectGates(input: {
   }
   if (input.intake.riskSignals.includes("performance-hot-path") || input.domains.includes("performance")) {
     add("performance-check", "hot-path regression check");
+  }
+  if (input.domains.includes("contracts") || input.domains.includes("event-driven-systems")) {
+    add("contract-test", "systems contracts and event boundaries require contract evidence");
+  }
+  if (input.domains.includes("state-recovery") || input.domains.includes("offline-first")) {
+    add("rollback-validation", "state recovery and offline behavior require rollback/recovery evidence");
   }
   if (input.risk === "HIGH" || input.risk === "CRITICAL") {
     add("security-review", "high/critical plans require security assurance");

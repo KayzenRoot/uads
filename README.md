@@ -17,7 +17,7 @@ This repository is the public open-source UADS product. Releases are published f
 - Context routing, repository map, dependency/impact map
 - Token budget manager and cache-first prompt architecture
 - Provider-neutral model routing, evidence protocol, review ZIP workflow
-- Global specialist registry with 25 bounded built-in profiles, deterministic domain/gate/evidence obligation coverage, independent assurance, and semantic stale-plan binding
+- Global specialist registry with 26 bounded built-in profiles, deterministic domain/gate/evidence obligation coverage, independent assurance, and semantic stale-plan binding
 - Common Cursor/Codex/Generic Agent Skills adapters with ownership-safe global installation, sidecar-only Host Dispatch Bundles, and the bounded Host Execution handoff/Receipt Boundary with current-authority revalidation and 32-entry history retention
 - Two-stage GitHub Direct Review Evidence with exact-SHA CI receipt, canonical workflow artifact, and release cross-checks
 - Staged implementation roadmap

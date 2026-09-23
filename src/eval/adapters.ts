@@ -241,7 +241,7 @@ function prepare(fixture: ReturnType<typeof plannedFixture>): HostDispatchBundle
 function runCase(id: string): void {
   if (id === "AD1") {
     const fixture = install("cursor");
-    assertEval(fixture.resources.length === 25, "Cursor catalog was not installed globally");
+    assertEval(fixture.resources.length === 26, "Cursor catalog was not installed globally");
     assertEval(!fs.existsSync(path.join(fixture.project, ".cursor")), "Cursor install touched the project");
     assertEval(fs.existsSync(getHostAdapterStatePath("cursor", fixture.uadsHome)), "Cursor ownership state is missing");
   } else if (id === "AD2") {

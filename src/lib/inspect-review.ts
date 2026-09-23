@@ -5,7 +5,7 @@ import addFormatsImport from "ajv-formats";
 import { EVIDENCE_FILE_NAMES } from "./evidence.js";
 import { isUnsafeZipEntryName } from "./exclusions.js";
 import { findPackageRoot } from "./version.js";
-import { readZip } from "./zip-read.js";
+import { readZip, readZipCentralDirectoryNames } from "./zip-read.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "./secrets.js";
 import { validateCanonicalReleaseEvidence } from "./release-review.js";
 
@@ -94,6 +94,26 @@ export async function inspectReviewBundle(
   const errors: string[] = [];
   const requireEvidence = options.requireEvidence ?? true;
 
+  let rawNames: string[];
+  try {
+    rawNames = readZipCentralDirectoryNames(zipPath)
+      .filter((name) => !name.endsWith("/"))
+      .map((name) => name.replace(/\\/g, "/"));
+  } catch (error) {
+    return { ok: false, errors: [`zip-unreadable: ${error instanceof Error ? error.message : String(error)}`] };
+  }
+
+  if (new Set(rawNames).size !== rawNames.length) {
+    errors.push("duplicate-entry");
+  }
+  for (const name of rawNames) {
+    if (isUnsafeZipEntryName(name)) errors.push("unsafe-entry-path");
+    for (const marker of EXCLUDED_ENTRY_MARKERS) {
+      if (name.includes(marker)) errors.push(`excluded-path-present:${name}`);
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors: [...new Set(errors)] };
+
   let entries;
   try {
     entries = await readZip(zipPath);
@@ -102,10 +122,6 @@ export async function inspectReviewBundle(
   }
 
   const names = entries.map((entry) => entry.name.replace(/\\/g, "/"));
-  if (new Set(names).size !== names.length) {
-    errors.push("duplicate-entry");
-  }
-
   const nameSet = new Set(names);
   const required = requireEvidence
     ? REQUIRED_REVIEW_ENTRIES
@@ -114,17 +130,6 @@ export async function inspectReviewBundle(
   for (const requiredName of required) {
     if (!nameSet.has(requiredName)) {
       errors.push(`missing-entry:${requiredName}`);
-    }
-  }
-
-  for (const name of names) {
-    if (isUnsafeZipEntryName(name)) {
-      errors.push("unsafe-entry-path");
-    }
-    for (const marker of EXCLUDED_ENTRY_MARKERS) {
-      if (name.includes(marker)) {
-        errors.push(`excluded-path-present:${name}`);
-      }
     }
   }
 
