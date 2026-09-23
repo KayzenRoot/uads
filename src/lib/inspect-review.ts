@@ -5,7 +5,7 @@ import addFormatsImport from "ajv-formats";
 import { EVIDENCE_FILE_NAMES } from "./evidence.js";
 import { isUnsafeZipEntryName } from "./exclusions.js";
 import { findPackageRoot } from "./version.js";
-import { readZip } from "./zip-read.js";
+import { readZip, readZipCentralDirectoryNames } from "./zip-read.js";
 import { containsAbsoluteHostPath, containsUnredactedSecret } from "./secrets.js";
 import { validateCanonicalReleaseEvidence } from "./release-review.js";
 
@@ -95,17 +95,21 @@ export async function inspectReviewBundle(
   const requireEvidence = options.requireEvidence ?? true;
 
   let entries;
+  let rawNames: string[];
   try {
+    rawNames = readZipCentralDirectoryNames(zipPath)
+      .filter((name) => !name.endsWith("/"))
+      .map((name) => name.replace(/\\/g, "/"));
     entries = await readZip(zipPath);
   } catch (error) {
     return { ok: false, errors: [`zip-unreadable: ${error instanceof Error ? error.message : String(error)}`] };
   }
 
-  const names = entries.map((entry) => entry.name.replace(/\\/g, "/"));
-  if (new Set(names).size !== names.length) {
+  if (new Set(rawNames).size !== rawNames.length) {
     errors.push("duplicate-entry");
   }
 
+  const names = entries.map((entry) => entry.name.replace(/\\/g, "/"));
   const nameSet = new Set(names);
   const required = requireEvidence
     ? REQUIRED_REVIEW_ENTRIES
@@ -117,7 +121,7 @@ export async function inspectReviewBundle(
     }
   }
 
-  for (const name of names) {
+  for (const name of rawNames) {
     if (isUnsafeZipEntryName(name)) {
       errors.push("unsafe-entry-path");
     }
