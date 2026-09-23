@@ -290,6 +290,19 @@ export function loadSpecialistRegistry(paths: UadsPaths, schemaRoot?: string): S
   if (normalized.registryDigest !== parsed.value.registryDigest || parsed.value.policyVersion !== SPECIALIST_POLICY_VERSION) {
     throw new SpecialistRegistryError("specialist registry digest or policy version mismatch");
   }
+
+  const currentBuiltins = builtinSpecialistRegistry(schemaRoot);
+  const builtinIds = new Set(currentBuiltins.profiles.map((profile) => profile.specialistId));
+  const preserved = normalized.profiles.filter((profile) => profile.source !== "builtin");
+  const collision = preserved.find((profile) => builtinIds.has(profile.specialistId));
+  if (collision) {
+    throw new SpecialistRegistryError(`persisted non-builtin specialist collides with built-in ID: ${collision.specialistId}`);
+  }
+
+  const reconciled = createSpecialistRegistry([...currentBuiltins.profiles, ...preserved]);
+  if (reconciled.registryDigest !== normalized.registryDigest) {
+    return persistSpecialistRegistry(paths, reconciled, schemaRoot);
+  }
   return normalized;
 }
 
