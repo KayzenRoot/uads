@@ -94,19 +94,31 @@ export async function inspectReviewBundle(
   const errors: string[] = [];
   const requireEvidence = options.requireEvidence ?? true;
 
-  let entries;
   let rawNames: string[];
   try {
     rawNames = readZipCentralDirectoryNames(zipPath)
       .filter((name) => !name.endsWith("/"))
       .map((name) => name.replace(/\\/g, "/"));
-    entries = await readZip(zipPath);
   } catch (error) {
     return { ok: false, errors: [`zip-unreadable: ${error instanceof Error ? error.message : String(error)}`] };
   }
 
   if (new Set(rawNames).size !== rawNames.length) {
     errors.push("duplicate-entry");
+  }
+  for (const name of rawNames) {
+    if (isUnsafeZipEntryName(name)) errors.push("unsafe-entry-path");
+    for (const marker of EXCLUDED_ENTRY_MARKERS) {
+      if (name.includes(marker)) errors.push(`excluded-path-present:${name}`);
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors: [...new Set(errors)] };
+
+  let entries;
+  try {
+    entries = await readZip(zipPath);
+  } catch (error) {
+    return { ok: false, errors: [`zip-unreadable: ${error instanceof Error ? error.message : String(error)}`] };
   }
 
   const names = entries.map((entry) => entry.name.replace(/\\/g, "/"));
@@ -118,17 +130,6 @@ export async function inspectReviewBundle(
   for (const requiredName of required) {
     if (!nameSet.has(requiredName)) {
       errors.push(`missing-entry:${requiredName}`);
-    }
-  }
-
-  for (const name of rawNames) {
-    if (isUnsafeZipEntryName(name)) {
-      errors.push("unsafe-entry-path");
-    }
-    for (const marker of EXCLUDED_ENTRY_MARKERS) {
-      if (name.includes(marker)) {
-        errors.push(`excluded-path-present:${name}`);
-      }
     }
   }
 
