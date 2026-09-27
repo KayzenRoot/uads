@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/gef-current.schema.json",
+  "title": "UADS GEF Current Manifest",
+  "description": "The latest observed source identity for one globally registered project.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "projectId", "fingerprint", "profileDigest", "classification", "adoptionMode", "observedBranch", "observedHeadSha", "observedTreeSha", "observedAt", "currentDigest"],
+  "properties": {
+    "schema": { "const": "uads.gef.current" },
+    "schemaVersion": { "const": "0.1.0" },
+    "projectId": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "profileDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "classification": { "enum": ["NEW_PROJECT", "EXISTING_PROJECT", "PARTIALLY_GOVERNED"] },
+    "adoptionMode": { "enum": ["PROMPT_ONLY", "SHADOW_PLANNED"] },
+    "observedBranch": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "observedHeadSha": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40,64}$" },
+    "observedTreeSha": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40,64}$" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "currentDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

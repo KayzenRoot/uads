@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uads.dev/schemas/gef-adoption-gap.schema.json",
+  "title": "UADS GEF Adoption Gap Matrix",
+  "description": "Explicit W0 implementation/staging state for the GEF native component catalog.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "projectId", "fingerprint", "generatedAt", "components", "authoritativeSkippingEnabled", "gapDigest"],
+  "properties": {
+    "schema": { "const": "uads.gef.adoption-gap" },
+    "schemaVersion": { "const": "0.1.0" },
+    "projectId": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "components": {
+      "type": "array",
+      "minItems": 27,
+      "maxItems": 27,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "wave", "status", "notes"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^GEF-[0-9]{2}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "wave": { "enum": ["W0", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"] },
+          "status": { "enum": ["IMPLEMENTED", "STAGED"] },
+          "notes": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authoritativeSkippingEnabled": { "const": false },
+    "gapDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
