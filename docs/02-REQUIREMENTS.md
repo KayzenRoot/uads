@@ -30,6 +30,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 | F22 | Model routing eval suite (`npm run eval:model-routing`) covers MR1–MR22 and fail-closed adversarial behavior |
 | F23 | Specialist selection derives deterministic domain, gate, evidence, assurance, affected-area, and structured dependency obligations; dispatch/resume reject stale or divergent specialist state |
 | F24 | Cursor, Codex, and Generic Agent Skills adapters detect, install, uninstall, and prepare identity-bound host dispatch bundles using global-only ownership-safe state |
+| F25 | Host adapters accept a current identity-bound Host Dispatch Bundle and record a schema-closed, sidecar-only Host Execution Receipt with current/history handling, fixed retention, current-authority revalidation, and fail-closed replay/stale/tamper/approval-intent behavior |
 
 ## Non-functional
 
@@ -45,7 +46,7 @@ Normative requirements for UADS (NexLabs). Architecture Freeze v0.2.
 
 Provider API clients, vendor price catalogs, 30+ specialist catalog, marketplace, dashboard, cloud control plane, deep UGAS integration, embeddings, provider-model diagnosis, and autonomous provider execution.
 
-## Prompt 012 planning decision (not implemented)
+## Prompt 012 planning decision (historical planning record)
 
 The next implementation scope is frozen to one capability: a bounded,
 provider-neutral host execution and receipt boundary for an identity-bound
@@ -60,6 +61,24 @@ catalog is delivered, while its broader 30+ expansion remains future; Prompt
 execution plans, and host-managed compatibility without provider calls. Live
 provider-specific adapters therefore remain future and are not a predecessor
 for the selected host boundary.
+
+## Prompt 012 delivered requirement state
+
+The bounded Host Execution/Receipt Boundary described by the historical
+planning record is delivered and closed. A current identity-bound Host Dispatch
+Bundle can be handed to the host-owned adapter boundary, which records a
+schema-closed, global-sidecar-only Host Execution Receipt and immutable history
+with fixed 32-entry retention. Current orchestration, host ownership, target
+root, and approval-intent identities are revalidated before mutating receipt
+transitions; replayed, stale, tampered, cross-project, unsupported, or
+ambiguous handoffs fail closed.
+
+The kernel remains provider-neutral. UADS does not invoke providers, own IDE or
+agent execution, accept arbitrary command authority, manage credentials, or
+create approval proof. Provider API clients, live provider-specific adapters,
+provider gateways, autonomous execution, dashboard/control-plane behavior,
+deep UGAS integration, and the other items listed under Future remain FUTURE
+or out of scope.
 # Specialist routing requirements (Prompt 009)
 
 Specialist delegation is global-first and sidecar-only. A normalized Work Order is bound to a deterministic Specialist Selection Plan containing the Work Order digest, routing digest, registry digest, policy digest, and optional change/impact/gate-contract digests. The plan must make selected coverage, assurance, evidence obligations, rejection reasons, conflicts, and dependency groups inspectable without exposing chain-of-thought.

@@ -1,5 +1,12 @@
 # 14 — Backlog
 
+## UADS V1 closeout (v0.12.1)
+
+Prompt 012 is delivered and closed through the verified `v0.12.1` release.
+The remaining entries in this backlog are post-V1/FUTURE scope and are not
+blockers to UADS V1 completion. They must not be silently promoted by a
+documentation reconciliation.
+
 ## Prompt 012 scope freeze (historical planning record)
 
 The sole NECESSARY next capability was bounded provider-neutral host execution
@@ -24,8 +31,9 @@ immutable history with 32-entry retention, current-authority revalidation,
 and fail-closed replay, stale, tamper, and approval-intent handling.
 
 The implementation is externally verified at final `main` SHA
-`bb27398d8caa80be4a550dc1c1a96e0042fdd808` and tree
-`cdc9db75a4e4dd07ac41ec562847a303a375b2ac`. UADS records bounded outcome
+`312e32946798eb3abbb49a79af08e13efb7719dc` and tree
+`b2a6763045fc1dbb81b6ba2880bf1f77167d7133`, with the verified `v0.12.1`
+release as the immutable publication identity. UADS records bounded outcome
 facts only: the host remains responsible for IDE, agent, and provider
 execution, and UADS does not invoke providers or execute arbitrary commands.
 
